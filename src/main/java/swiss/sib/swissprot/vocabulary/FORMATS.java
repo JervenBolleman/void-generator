@@ -11,6 +11,7 @@ import org.eclipse.rdf4j.model.base.InternedIRI;
  */
 public class FORMATS {
 	public static final String NAMESPACE = "http://www.w3.org/ns/formats/";
+	public static final String PREFIX = "formats";
 	
 	public static final IRI RDF_XML = new InternedIRI(NAMESPACE, "RDF_XML");
 	public static final IRI TURTLE = new InternedIRI(NAMESPACE, "Turtle");
@@ -19,4 +20,5 @@ public class FORMATS {
 	public static final IRI JSON = new InternedIRI(NAMESPACE, "SPARQL_Results_JSON");
 	public static final IRI TSV = new InternedIRI(NAMESPACE, "SPARQL_Results_TSV");
 	public static final IRI CSV = new InternedIRI(NAMESPACE, "SPARQL_Results_CSV");
+
 }

@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -34,10 +35,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.SD;
+import org.eclipse.rdf4j.model.vocabulary.VOID;
+import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -51,7 +56,10 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser;
 import org.eclipse.rdf4j.rio.rdfxml.RDFXMLWriter;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
 import org.slf4j.Logger;
@@ -60,6 +68,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import swiss.sib.swissprot.vocabulary.FORMATS;
+import swiss.sib.swissprot.vocabulary.PAV;
+import swiss.sib.swissprot.vocabulary.VOID_EXT;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
 import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
@@ -87,7 +98,7 @@ public class Generate implements Callable<Integer> {
 	private Repository repository;
 
 	private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
-	private ServiceDescription sd;
+	private final ServiceDescription sd;
 
 	@Option(names = "--count-distinct-classes", defaultValue = "true")
 	private boolean countDistinctClasses = true;
@@ -168,6 +179,7 @@ public class Generate implements Callable<Integer> {
 
 	public Generate() {
 		super();
+		this.sd = new ServiceDescription();
 	}
 
 	public void update() {
@@ -230,7 +242,16 @@ public class Generate implements Callable<Integer> {
 			try (OutputStream os = new FileOutputStream(sdFile)) {
 				RDFXMLWriter rh = new RDFXMLWriter(os);
 				rh.startRDF();
-				new ServiceDescriptionStatementGenerator(rh).generateStatements(null, sdg);
+				rh.handleNamespace(RDF.PREFIX, RDF.NAMESPACE);
+				rh.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
+				rh.handleNamespace(SD.PREFIX, SD.NAMESPACE);
+				rh.handleNamespace(VOID_EXT.PREFIX, VOID_EXT.NAMESPACE);
+				rh.handleNamespace(FORMATS.PREFIX, FORMATS.NAMESPACE);
+				rh.handleNamespace(PAV.PREFIX, PAV.NAMESPACE);
+				rh.handleNamespace(VOID_EXT.PREFIX, VOID.NAMESPACE);
+				rh.handleNamespace(XSD.PREFIX, XSD.NAMESPACE);
+
+				new ServiceDescriptionStatementGenerator(rh).generateStatements(iriOfVoid, sdg);
 				rh.endRDF();
 			} catch (Exception e) {
 				log.error("can not store ServiceDescription", e);
@@ -459,10 +480,43 @@ public class Generate implements Callable<Integer> {
 	private void updateGraph(RepositoryConnection connection, IRI voidGraphUri)
 			throws RepositoryException, RDFParseException, IOException {
 		log.debug("Updating " + voidGraphUri);
-		if (!connection.isActive())
-			connection.begin();
-		connection.add(sdFile, voidGraphUri);
-		connection.commit();
+		
+		try (InputStream in=new FileInputStream(sdFile)){
+			RDFXMLParser p = new RDFXMLParser();
+			p.setRDFHandler(new RDFHandler() {
+				
+				@Override
+				public void startRDF() throws RDFHandlerException {
+					if (!connection.isActive())
+						connection.begin();
+				}
+				
+				@Override
+				public void handleStatement(Statement st) throws RDFHandlerException {
+					connection.add(st, voidGraphUri);
+					
+				}
+				
+				@Override
+				public void handleNamespace(String prefix, String uri) throws RDFHandlerException {
+					// TODO Auto-generated method stub
+					
+				}
+				
+				@Override
+				public void handleComment(String comment) throws RDFHandlerException {
+					// TODO Auto-generated method stub
+					
+				}
+				
+				@Override
+				public void endRDF() throws RDFHandlerException {
+					connection.commit();
+				}
+			});
+			p.parse(in);	
+		}
+		
 		log.debug("Updating " + voidGraphUri + " done");
 	}
 

@@ -15,7 +15,7 @@ public class ServiceDescription
 	private long totalTripleCount;
 	private String release;
 	private LocalDate releaseDate;
-	private String location;
+	
 	private String title;
 	private long distinctBnodeObjectCount;
 	private long distinctIriObjectCount;
@@ -32,7 +32,6 @@ public class ServiceDescription
 		gds.clear();
 		totalTripleCount = 0;
 		releaseDate = null;
-		location = null;
 		title = null;
 		distinctBnodeObjectCount = 0L;
 		distinctIriObjectCount = 0L;
@@ -113,16 +112,6 @@ public class ServiceDescription
 	public void deleteGraph(String graphName)
 	{
 		gds.remove(graphName);
-	}
-
-	public String getBase()
-	{
-		return location;
-	}
-
-	public void setLocation(String namespace)
-	{
-		this.location = namespace;
 	}
 
 	public String getTitle()

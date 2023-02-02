@@ -65,13 +65,14 @@ public class ServiceDescriptionStatementGenerator {
 			statement(defaultGraphId, VOID_EXT.DISTINCT_BLANK_NODE_OBJECTS, vf.createLiteral(item.getDistinctBnodeObjectCount()));
 
 		for (GraphDescription gd : item.getGraphs())
-			statementsAboutGraph(defaultDatasetId, gd, item);
+			statementsAboutGraph(defaultDatasetId, gd, item, subject);
 	}
 
-	protected void statementsAboutGraph(Resource defaultDatasetId, GraphDescription gd, ServiceDescription sd) {
+	protected void statementsAboutGraph(Resource defaultDatasetId, GraphDescription gd, ServiceDescription sd, Resource location) {
 		final String rawGraphName = gd.getGraphName();
 		IRI graphName = getIRI(rawGraphName);
-		String host = sd.getBase().substring(0, sd.getBase().length() - "sparql/".length());
+		String locationS = location.stringValue();
+		String host = locationS.substring(0, locationS.length() - "sparql/".length());
 		IRI namedGraph = graphName;
 		statement(defaultDatasetId, SD.NAMED_GRAPH_PROPERTY, namedGraph);
 		String voidLocation = host + "/.well-known/void#";
