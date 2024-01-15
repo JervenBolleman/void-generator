@@ -64,6 +64,14 @@ public class ServiceDescriptionStatementGenerator {
 		if (item.getDistinctBnodeObjectCount() > 0)
 			statement(defaultGraphId, VOID_EXT.DISTINCT_BLANK_NODE_OBJECTS, vf.createLiteral(item.getDistinctBnodeObjectCount()));
 
+		long distinctSubjects = item.getDistinctSubjectCount();
+		if (distinctSubjects > 0)
+			statement(defaultGraphId, VOID.DISTINCT_SUBJECTS, vf.createLiteral(distinctSubjects));
+		if (item.getDistinctIriSubjectCount() > 0)
+			statement(defaultGraphId, VOID_EXT.DISTINCT_IRI_REFERENCE_SUBJECTS, vf.createLiteral(item.getDistinctIriSubjectCount()));
+		if (item.getDistinctBnodeSubjectCount() > 0)
+			statement(defaultGraphId, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS, vf.createLiteral(item.getDistinctBnodeSubjectCount()));
+		
 		for (GraphDescription gd : item.getGraphs())
 			statementsAboutGraph(defaultDatasetId, gd, item, subject);
 	}
@@ -105,6 +113,7 @@ public class ServiceDescriptionStatementGenerator {
 					statement(ppr, VOID.DISTINCT_OBJECTS, vf.createLiteral(pp.getDistinctObjectCount()));
 			}
 		}
+		
 		for (PredicatePartition predicate : gd.getPredicates()) {
 			IRI dataSetPropertyPartition = getResourceForPartition(namedGraph,
 					getIRI(predicate.getPredicate()), voidLocation);
@@ -146,7 +155,7 @@ public class ServiceDescriptionStatementGenerator {
 		if (gd.getDistinctIriSubjectCount() > 0)
 			statement(graph, VOID_EXT.DISTINCT_IRI_REFERENCE_SUBJECTS, vf.createLiteral(gd.getDistinctIriSubjectCount()));
 		if (gd.getDistinctBnodeSubjectCount() > 0)
-			statement(graph, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS, vf.createLiteral(gd.getDistinctIriSubjectCount()));
+			statement(graph, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS, vf.createLiteral(gd.getDistinctBnodeSubjectCount()));
 	}
 
 	private void generateClassPartitions(IRI namedGraph, ClassPartition cp, PredicatePartition pp, IRI ppr,

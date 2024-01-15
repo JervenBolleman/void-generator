@@ -159,12 +159,18 @@ public class ServiceDescription
 		return distinctIriObjectCount + distinctBnodeObjectCount + distinctLiteralObjectCount;
 	}
 
+	
+	public long getDistinctSubjectCount()
+	{
+		return distinctIriSubjectCount + distinctBnodeSubjectCount;
+	}
+	
 	public void setDistinctBnodeSubjectCount(long distinctBnodeSubjectCount)
 	{
 		this.distinctBnodeSubjectCount = distinctBnodeSubjectCount;
 	}
 
-	public long getDistinctIriBnodeCount()
+	public long getDistinctBnodeSubjectCount()
 	{
 		return this.distinctBnodeSubjectCount;
 	}
