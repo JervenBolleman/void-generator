@@ -111,6 +111,9 @@ public class Generate implements Callable<Integer> {
 	@Option(names = "--count-detailed-void-statistics", defaultValue = "true")
 	private boolean detailedCount = true;
 
+	@Option(names = "--ontology-graph-name", description = "ontology graph name (can be added multiple times")
+	List<String> ontologyGraphNames;
+	
 	@Option(names = { "-s", "--void-file" }, required = true)
 	private File sdFile;
 
@@ -480,43 +483,43 @@ public class Generate implements Callable<Integer> {
 	private void updateGraph(RepositoryConnection connection, IRI voidGraphUri)
 			throws RepositoryException, RDFParseException, IOException {
 		log.debug("Updating " + voidGraphUri);
-		
-		try (InputStream in=new FileInputStream(sdFile)){
+
+		try (InputStream in = new FileInputStream(sdFile)) {
 			RDFXMLParser p = new RDFXMLParser();
 			p.setRDFHandler(new RDFHandler() {
-				
+
 				@Override
 				public void startRDF() throws RDFHandlerException {
 					if (!connection.isActive())
 						connection.begin();
 				}
-				
+
 				@Override
 				public void handleStatement(Statement st) throws RDFHandlerException {
 					connection.add(st, voidGraphUri);
-					
+
 				}
-				
+
 				@Override
 				public void handleNamespace(String prefix, String uri) throws RDFHandlerException {
 					// TODO Auto-generated method stub
-					
+
 				}
-				
+
 				@Override
 				public void handleComment(String comment) throws RDFHandlerException {
 					// TODO Auto-generated method stub
-					
+
 				}
-				
+
 				@Override
 				public void endRDF() throws RDFHandlerException {
 					connection.commit();
 				}
 			});
-			p.parse(in);	
+			p.parse(in);
 		}
-		
+
 		log.debug("Updating " + voidGraphUri + " done");
 	}
 
