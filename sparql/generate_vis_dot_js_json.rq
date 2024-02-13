@@ -1,108 +1,59 @@
-PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-PREFIX wikibase: <http://wikiba.se/ontology#>
-PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-PREFIX wd: <http://www.wikidata.org/entity/>
-PREFIX vg: <http://biohackathon.org/resource/vg#>
-PREFIX up: <http://purl.uniprot.org/core/>
-PREFIX uniprotkb: <http://purl.uniprot.org/uniprot/>
-PREFIX uberon: <http://purl.obolibrary.org/obo/uo#>
-PREFIX taxon: <http://purl.uniprot.org/taxonomy/>
-PREFIX sp: <http://spinrdf.org/sp#>
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX sio: <http://semanticscience.org/resource/>
-PREFIX sh: <http://www.w3.org/ns/shacl#>
-PREFIX schema: <http://schema.org/>
-PREFIX sachem: <http://bioinfo.uochb.cas.cz/rdf/v1.0/sachem#>
-PREFIX rh: <http://rdf.rhea-db.org/>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX pubmed: <http://rdf.ncbi.nlm.nih.gov/pubmed/>
-PREFIX ps: <http://www.wikidata.org/prop/statement/>
-PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
-PREFIX patent: <http://data.epo.org/linked-data/def/patent/>
-PREFIX p: <http://www.wikidata.org/prop/>
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
-PREFIX orthodbGroup: <http://purl.orthodb.org/odbgroup/>
-PREFIX orthodb: <http://purl.orthodb.org/>
-PREFIX orth: <http://purl.org/net/orth#>
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX np: <http://nextprot.org/rdf#>
-PREFIX nextprot: <http://nextprot.org/rdf/entry/>
-PREFIX mnx: <https://rdf.metanetx.org/schema/>
-PREFIX mnet: <https://rdf.metanetx.org/mnet/>
-PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
-PREFIX lscr: <http://purl.org/lscr#>
-PREFIX lipidmaps: <https://www.lipidmaps.org/rdf/>
-PREFIX keywords: <http://purl.uniprot.org/keywords/>
-PREFIX insdcschema: <http://ddbj.nig.ac.jp/ontologies/nucleotide/>
-PREFIX insdc: <http://identifiers.org/insdc/>
-PREFIX identifiers: <http://identifiers.org/>
-PREFIX glyconnect: <https://purl.org/glyconnect/>
-PREFIX glycan: <http://purl.jp/bio/12/glyco/glycan#>
-PREFIX genex: <http://purl.org/genex#>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX faldo: <http://biohackathon.org/resource/faldo#>
-PREFIX eunisSpecies: <http://eunis.eea.europa.eu/rdf/species-schema.rdf#>
-PREFIX ensembltranscript: <http://rdf.ebi.ac.uk/resource/ensembl.transcript/>
-PREFIX ensemblterms: <http://rdf.ebi.ac.uk/terms/ensembl/>
-PREFIX ensemblprotein: <http://rdf.ebi.ac.uk/resource/ensembl.protein/>
-PREFIX ensemblexon: <http://rdf.ebi.ac.uk/resource/ensembl.exon/>
-PREFIX ensembl: <http://rdf.ebi.ac.uk/resource/ensembl/>
-PREFIX ec: <http://purl.uniprot.org/enzyme/>
-PREFIX dcterms: <http://purl.org/dc/terms/>
-PREFIX dc: <http://purl.org/dc/terms/>
-PREFIX chebislash: <http://purl.obolibrary.org/obo/chebi/>
-PREFIX chebihash: <http://purl.obolibrary.org/obo/chebi#>
-PREFIX cco: <http://rdf.ebi.ac.uk/terms/chembl#>
-PREFIX busco: <http://busco.ezlab.org/schema#>
-PREFIX bibo: <http://purl.org/ontology/bibo/>
-PREFIX allie: <http://allie.dbcls.jp/>
-PREFIX SWISSLIPID: <https://swisslipids.org/rdf/SLM_>
-PREFIX GO: <http://purl.obolibrary.org/obo/GO_>
-PREFIX ECO: <http://purl.obolibrary.org/obo/ECO_>
-PREFIX CHEBI: <http://purl.obolibrary.org/obo/CHEBI_>
 PREFIX void:<http://rdfs.org/ns/void#>
 SELECT 
-DISTINCT ?node (GROUP_CONCAT(?edge; separator=", ") AS ?edges)
-FROM <https://sparql.rhea-db.org/.well-known/void> 
-FROM <https://sparql.rhea-db.org/.well-known/sparql-examples> 
+(CONCAT("nodes = [", GROUP_CONCAT(?node; separator=", "),"]; edges = [", (IF(COUNT(?edges) > 0, 
+        (GROUP_CONCAT(?edges; separator=", ")), " "
+      )), "]") AS ?allEdges)
+FROM <https://sparql.uniprot.org/.well-known/void> 
+FROM <https://sparql.uniprot.org/.well-known/sparql-examples> 
 WHERE {
-  ?s <http://www.w3.org/ns/sparql-service-description#graph> ?graph . 
-  ?graph void:classPartition ?cp1 .
-  ?cp1 void:class ?class1 .
-  ?cp1 void:propertyPartition ?pp1 .
-  ?pp1 void:property ?prop .
-  ?pp1 void:classPartition ?cp2 .
-  ?cp2 void:class ?class2 .
-  OPTIONAL{
-  ?pref1 sh:namespace ?namespace1 ;
-          sh:prefix ?prefix1 .
-  FILTER(STRSTARTS(STR(?class1),STR(?namespace1)))
-  BIND(CONCAT(?prefix1, ":", SUBSTR(STR(?class1), STRLEN(STR(?namespace1))+1)) AS ?class1prefixstr)
+  {
+  SELECT 
+    (CONCAT("{id:'", ?nodeId, "', label:'", (SAMPLE(?class1str)), "', group:'", (SAMPLE(?graphstr)), "',"," value:'",STRLEN(STR(SUM(?pp1triples))),"',"," shape:'box'}") AS ?node)  
+        (GROUP_CONCAT(?edge; separator=", ") AS ?edges) 
+        WHERE {
+    ?s <http://www.w3.org/ns/sparql-service-description#graph> ?graph . 
+    ?graph void:classPartition ?cp1 .
+    ?cp1 void:class ?class1 .
+    ?cp1 void:propertyPartition ?pp1 .
+    ?pp1 void:property ?prop .
+    ?pp1 void:triples ?pp1triples .
+    ?pp1 void:classPartition ?cp2 .
+    ?cp2 void:class ?class2 .
+    OPTIONAL{
+      ?pref1 sh:namespace ?namespace1 ;
+            sh:prefix ?prefix1 .
+      FILTER(STRSTARTS(STR(?class1),STR(?namespace1)))
+    }
+    OPTIONAL{
+      ?pref2 sh:namespace ?namespace2 ;
+            sh:prefix ?prefix2 .
+      FILTER(STRSTARTS(STR(?class2),STR(?namespace2)))
+    }
+    OPTIONAL{
+      ?pref3 sh:namespace ?namespace3 ;
+            sh:prefix ?prefix3.
+      FILTER(STRSTARTS(STR(?prop),STR(?namespace3)))	 
+    }
+    OPTIONAL{
+      ?pref4 sh:namespace ?namespace4 ;
+            sh:prefix ?prefix4.
+       FILTER(STRSTARTS(STR(?graph),STR(?namespace4)))
+    }
+    BIND(CONCAT(?prefix1, ":", SUBSTR(STR(?class1), STRLEN(STR(?namespace1))+1)) AS ?class1prefixstr)
+    BIND(CONCAT(?prefix2, ":", SUBSTR(STR(?class2), STRLEN(STR(?namespace2))+1)) AS ?class2prefixstr)
+    BIND(CONCAT(?prefix3, ":", SUBSTR(STR(?prop), STRLEN(STR(?namespace3))+1)) AS ?propprefixstr)
+    BIND(CONCAT(?prefix4, ":", SUBSTR(STR(?graph), STRLEN(STR(?namespace4))+1)) AS ?graphprefixstr)
+    BIND(IF(BOUND(?prefix1), ?class1prefixstr, STR(?class1)) AS ?class1str)
+    BIND(IF(BOUND(?prefix2), ?class2prefixstr, STR(?class2)) AS ?class2str)
+    BIND(IF(BOUND(?prefix3), ?propprefixstr, STR(?prop)) AS ?prop2str)
+    BIND(IF(BOUND(?prefix4), ?graphprefixstr, MD5(STR(?graph))) AS ?graphstr)
+    BIND(CONCAT(?class1str,"-",?graphstr) AS ?nodeId)
+    BIND(CONCAT("{from:'", ?class1str,"-",?graphstr, "', to:'",?class2str,"-",?graphstr,"', value:'",STRLEN(STR(?pp1triples)),"', arrows: 'to', label:'",?prop2str,"'}") AS ?edge)
+
+    ?graph void:classPartition ?cp3 .
+    ?cp3 void:class ?class2 .
+    }  GROUP BY ?nodeId
   }
-  OPTIONAL{
-  	?pref2 sh:namespace ?namespace2 ;
-          sh:prefix ?prefix2 .
-    FILTER(STRSTARTS(STR(?class2),STR(?namespace2)))
- 	 BIND(CONCAT(?prefix2, ":", SUBSTR(STR(?class2), STRLEN(STR(?namespace2))+1)) AS ?class2prefixstr)
-  }
-  OPTIONAL{
-  	?pref3 sh:namespace ?namespace3 ;
-          sh:prefix ?prefix3.
-    FILTER(STRSTARTS(STR(?prop),STR(?namespace3)))
- 	 BIND(CONCAT(?prefix3, ":", SUBSTR(STR(?prop), STRLEN(STR(?namespace3))+1)) AS ?propprefixstr)
-  }
-  OPTIONAL{
-  	?pref4 sh:namespace ?namespace4 ;
-          sh:prefix ?prefix4.
-     FILTER(STRSTARTS(STR(?graph),STR(?namespace4)))
- 	 BIND(CONCAT(?prefix4, ":", SUBSTR(STR(?graph), STRLEN(STR(?namespace4))+1)) AS ?graphprefixstr)
-  }
-  BIND(IF(BOUND(?class1prefixstr), ?class1prefixstr, STR(?class1)) AS ?class1str)
-  BIND(IF(BOUND(?class2refixstr), ?class2prefixstr, STR(?class2)) AS ?class2str)
-  BIND(IF(BOUND(?graphprefixstr), ?graphprefixstr, STR(?graph)) AS ?graphstr)
-  BIND(CONCAT("{id:'", ?class1str,"-",?graphstr, "', label:'", ?class1str, "', group:'", ?graphstr, "', shape:'box'},") AS ?node)
-  BIND(CONCAT("{from:'", ?class1str,"-",?graphstr, "', to:'",?class2str,"-",?graphstr,"', arrows: 'to', label:'",?propprefixstr,"'}") AS ?edge)
-  ?graph void:classPartition ?cp3 .
-  ?cp3 void:class ?class2 .
-} GROUP BY ?node
+  BIND(1 AS ?g)
+ 
+} GROUP BY ?g
