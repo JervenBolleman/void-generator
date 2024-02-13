@@ -170,7 +170,10 @@ public class Generate implements Callable<Integer> {
 		} else
 			this.knownPredicates = new HashSet<>();
 		if (repositoryLocator.startsWith("http")) {
-			repository = new SPARQLRepository(repositoryLocator);
+			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
+			sr.enableQuadMode(true);
+			sr.setAdditionalHttpHeaders(Map.of("User-Agent", "void-generator"));
+			repository = sr;
 		} else {
 			repository = new VirtuosoRepository(repositoryLocator, user, password);
 		}
