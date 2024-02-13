@@ -61,6 +61,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser;
 import org.eclipse.rdf4j.rio.rdfxml.RDFXMLWriter;
+import org.eclipse.rdf4j.rio.rdfxml.util.RDFXMLPrettyWriter;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,7 +247,8 @@ public class Generate implements Callable<Integer> {
 		try {
 			readLock.lock();
 			try (OutputStream os = new FileOutputStream(sdFile)) {
-				RDFXMLWriter rh = new RDFXMLWriter(os);
+				RDFXMLWriter rh = new RDFXMLPrettyWriter(os);
+				
 				rh.startRDF();
 				rh.handleNamespace(RDF.PREFIX, RDF.NAMESPACE);
 				rh.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
