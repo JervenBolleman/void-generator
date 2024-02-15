@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<head>
+<style>
+html,
+body {
+  font: 10pt arial;
+}
+#mynetwork {
+  width: 1000px;
+  height: 1000px;
+  border: 1px solid lightgray;
+}
+
+</style>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script type="text/javascript">
+var endpoint = "https://sparql.uniprot.org/";
+var query = "PREFIX sh:<http://www.w3.org/ns/shacl%23> PREFIX sd:<http://www.w3.org/ns/sparql-service-description%23> PREFIX void:<http://rdfs.org/ns/void%23> PREFIX void_ext:<http://ldf.fi/void-ext%23>"
++encodeURIComponent(`SELECT
+DISTINCT
+(IF(BOUND(?namespaceFrom), CONCAT(?prefixFrom, ":", SUBSTR(STR(?classFrom), STRLEN(STR(?namespaceFrom))+1)), ?classFrom) AS ?fromId)
+?classFrom
+(IF(BOUND(?namespaceToDataype), CONCAT(?prefixToDataype, ":", SUBSTR(STR(?datatypeTo), STRLEN(STR(?namespaceToDataype))+1)), ?datatypeTo) AS ?toDatatypeId)
+?datatypeTo
+(IF(BOUND(?namespaceToClass), CONCAT(?prefixToClass, ":", SUBSTR(STR(?classTo), STRLEN(STR(?namespaceToClass))+1)), ?classTo) AS ?toClassId)
+?classTo
+(IF(BOUND(?namespaceProp), CONCAT(?prefixProp, ":", SUBSTR(STR(?prop), STRLEN(STR(?namespaceProp))+1)), ?prop) AS ?propId)
+?prop
+(IF(BOUND(?namespaceGraph), CONCAT(?prefixGraph, ":", SUBSTR(STR(?graph), STRLEN(STR(?namespaceGraph))+1)), ?graph) AS ?graphId)
+?triples
+WHERE {
+  {
+   SELECT * 
+   WHERE {
+  ?s sd:graph ?graph .
+  ?graph void:classPartition ?cp1 .
+  ?cp1 void:class ?classFrom .
+  ?cp1 void:propertyPartition ?pp1 .
+  ?pp1 void:property ?prop .
+  ?pp1 void:triples ?triples .
+  {
+    ?pp1 void_ext:datatypePartition ?cp2 .
+    ?cp2 void_ext:datatype ?datatypeTo .
+   
+  } UNION {
+    ?pp1 void:classPartition ?cp2 .
+    ?cp2 void:class ?classTo .
+    ?graph void:classPartition ?cp3 .
+    ?cp3 void:class ?classTo .
+    
+}
+    }
+  }
+    OPTIONAL{
+      [] sh:namespace ?namespaceToClass ;
+        sh:prefix ?prefixToClass .
+    FILTER(STRSTARTS(STR(?classTo),STR(?namespaceToClass)))
+  }
+     OPTIONAL{
+      [] sh:namespace ?namespaceToDataype ;
+        sh:prefix ?prefixToDataype .
+    FILTER(STRSTARTS(STR(?datatypeTo),STR(?namespaceToDataype)))
+  }
+OPTIONAL{
+    [] sh:namespace ?namespaceFrom ;
+        sh:prefix ?prefixFrom .
+    FILTER(STRSTARTS(STR(?classFrom),STR(?namespaceFrom)))
+}
+OPTIONAL{
+    [] sh:namespace ?namespaceProp ;
+        sh:prefix ?prefixProp .
+    FILTER(STRSTARTS(STR(?prop),STR(?namespaceProp)))
+}
+OPTIONAL{
+    [] sh:namespace ?namespaceGraph ;
+        sh:prefix ?prefixGraph.
+    FILTER(STRSTARTS(STR(?graph),STR(?namespaceGraph)))
+}
+} ORDER BY ?classFrom ?classTo ?datatypeTo ?graph ?triples`);
+
+function asImage(node, datatypes){
+//console.log(datatypes)
+var nw = ((node.value.length*25)+30);
+var height=65
+var middle = "";
+var maxl=0;
+if (datatypes !== undefined) {
+	height+=(datatypes.length*47)+45;
+	middle='<table style="font-size:35px;"><tr><th>predicate</th><th>datatype</th><th>triples</th></tr>'
+		+ datatypes.map((dt)=>`<tr><td><a href="${dt.predIri}">${dt.predId}</a></td> <td><a href="${dt.dtIri}">${dt.id}</a></td> <td style="text-align:right;">${dt.count.toLocaleString()}</td></tr>`).join(" ")
+		+ "</table>";
+        maxl = Math.max(...datatypes.map((dt)=>`${dt.predId}${dt.id}${dt.count.toLocaleString()}`.length * 25));
+	nw = Math.max(nw, maxl+30);
+}
+var start=`<svg xmlns="http://www.w3.org/2000/svg" width="${nw}" height="${height}">` +
+		  '<rect x="0" y="0" width="100%" height="100%" fill="white" stroke-width="20" stroke="black" ></rect>' +
+		  '<foreignObject x="15" y="10" width="100%" height="100%">' +
+		  '<div xmlns="http://www.w3.org/1999/xhtml" style="font-family:monospace;">' +
+		  `<em style='font-size:40px'>${node.value}</em><br/>`;
+
+var end = "</div>" +
+		  "</foreignObject>" +
+		  "</svg>";
+
+var url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(start+middle+end);
+//console.log(url)
+return url;
+}
+function addNode(node, graphId, count, nodesMap, nodeDatypesMap){
+    var nodeId = `${node.value}-${graphId.value}`
+    if (nodesMap.has(nodeId)){
+        var prior = nodesMap.get(nodeId);
+	prior.value = prior.value + count;
+    } else {
+	var url = asImage(node, nodeDatypesMap.get(nodeId));
+    	nodesMap.set(nodeId, {
+		id: nodeId, 
+		//label: node.value,
+		shape: 'image', 
+		group: graphId.value, 
+		value: count,
+		image: url})
+    }
+}
+function retrieveData() {}
+const request = new Request(`${endpoint}sparql/?query=${query}&ac=1`);
+request.headers.append("Accept","application/sparql-results+json")
+fetch(request)
+.then((response)=>response.json())
+.then((results) => {
+    var nodesMap = new Map();
+    var edgesMap = new Map();
+    var nodeDatypesMap = new Map();
+    for(r in results.results.bindings){
+	var row=results.results.bindings[r];
+	
+	if (row.toDatatypeId) {
+        	var row=results.results.bindings[r];
+		var fromId=`${row.fromId.value}-${row.graphId.value}`;
+		var next = {id:row.toDatatypeId.value, dtIri: row.toDatatype, predIri: row.prop.value, predId:row.propId.value, count:parseInt(row.triples.value), };
+	        if(nodeDatypesMap.has(fromId)) {
+			nodeDatypesMap.get(fromId).push(next);
+                } else {
+			nodeDatypesMap.set(fromId, [next]);
+		}
+	}
+    }
+    for(r in results.results.bindings){
+        var row=results.results.bindings[r];
+        if (row.fromId.value !== 'rdf:Statement'
+		&& row.propId.value !== 'rdf:object' 
+		&& row.propId.value !== 'rdf:subject' 
+		&& row.propId.value !== 'rdf:predicate' 
+		&& !row.toDatatypeId){
+   	    var fromId=`${row.fromId.value}-${row.graphId.value}`;
+            var toId=`${row.toClassId.value}-${row.graphId.value}`;
+            var propId=`${row.propId.value}`;
+	    var count =  parseInt(row.triples.value);
+	    addNode(row.fromId, row.graphId, count, nodesMap, nodeDatypesMap);
+	    addNode(row.toClassId, row.graphId, count, nodesMap, nodeDatypesMap);
+	    if (nodesMap.has(propId)){
+		var prior = nodesMap.get(propId);
+		prior.value = prior.value + (row.triples.value *1);
+	    } else {
+            	nodesMap.set(propId, {id: propId, label: propId, shape: 'box', group: 'predicate', value: count })
+	    }
+            var fromProp=fromId+propId;
+            var toProp=propId+toId;
+            if (edgesMap.has(fromProp)){
+                var temp=edgesMap.get(fromProp);
+                temp.value += count;
+                temp.title='triples:'+temp.value.toLocaleString();
+            } else {
+                edgesMap.set(fromProp, {from:fromId, to:propId, arrows:"to", value: count, title:'triples:'+count.toLocaleString()})
+            }
+            if (edgesMap.has(toProp)){
+                var temp=edgesMap.get(toProp);
+                temp.value += count;
+                temp.title='triples:'+temp.value.toLocaleString();
+            } else {
+                edgesMap.set(toProp, {from:propId, to:toId, arrows:"to", value: count, title:'triples:'+count.toLocaleString(), color:{inherit:'to'}})
+            }
+        }
+    }
+    var nodes = Array.from(nodesMap.values());
+    var edges = Array.from(edgesMap.values());
+    draw(nodes, edges);
+});
+
+function draw(nodes, edges){
+// Instantiate our network object.
+  var container = document.getElementById('mynetwork');
+ var data = {
+    nodes: nodes,
+    edges: edges,
+  };
+  var options = {
+    nodes: {
+
+      scaling: {
+//   label: {enabled: true},
+//       customScalingFunction: function(min, max, total, value) {
+//	  console.log(value, total, value / total)
+//          var r = value / total;
+//if (r < min) {
+//  return min;
+//} else if (r > max) {
+//return max;
+//}
+//     	  return r;
+//        },
+//        min: 0.1,
+//        max: 1,
+      },
+    },
+    edges: {
+
+    },
+    layout: {
+        improvedLayout:false,
+    },
+    physics: {
+        solver: 'forceAtlas2Based',
+    }
+};
+network = new vis.Network(container, data, options);
+}
+
+
+window.addEventListener("load", () => {
+  retrieveData();
+});
+</script>
+</head>
+<body>
+<div id="mynetwork"></div>
+</body>
