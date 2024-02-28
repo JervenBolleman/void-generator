@@ -146,7 +146,10 @@ public class Generate implements Callable<Integer> {
 
 	@Option(names = { "--password" }, description = "Virtuoso password", defaultValue = "dba")
 	private String password;
-
+	
+	@Option(names = { " --add-void-graph-to-store", "-a"}, description = "immediatly attempt to store the void graph into the store and add it to the total count", defaultValue = "false")
+	private boolean add=false;
+	
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -315,11 +318,13 @@ public class Generate implements Callable<Integer> {
 	private void saveResults(IRI graphUri, Consumer<ServiceDescription> saver) {
 		sd.setTotalTripleCount(sd.getGraphs().stream().mapToLong(GraphDescription::getTripleCount).sum());
 		saver.accept(sd);
-		try (RepositoryConnection connection = repository.getConnection()) {
-			clearGraph(connection, graphUri);
-			updateGraph(connection, graphUri);
-		} catch (RepositoryException | MalformedQueryException | IOException e) {
-			log.error("Generating stats for SD failed", e);
+		if (add) {
+			try (RepositoryConnection connection = repository.getConnection()) {
+				clearGraph(connection, graphUri);
+				updateGraph(connection, graphUri);
+			} catch (RepositoryException | MalformedQueryException | IOException e) {
+				log.error("Generating stats for SD failed", e);
+			}
 		}
 	}
 
