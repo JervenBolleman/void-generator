@@ -121,7 +121,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		if (subpredicatePartition.getTripleCount() > 0) {
 			try {
 				writeLock.lock();
-				source.putPredicateParition(subpredicatePartition);
+				source.putPredicatePartition(subpredicatePartition);
 			} finally {
 				writeLock.unlock();
 			}

@@ -43,7 +43,7 @@ public class ClassPartition
 		return predicateParitions.get(predicate);
 	}
 
-	public void putPredicateParition(PredicatePartition predicatePartition)
+	public void putPredicatePartition(PredicatePartition predicatePartition)
 	{
 		predicateParitions.put(predicatePartition.getPredicate(), predicatePartition);
 	}
