@@ -47,6 +47,21 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.rdf4j</groupId>
+      <artifactId>rdf4j-rio-api</artifactId>
+      <version>${rdf4j.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpclient-osgi</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpcore-osgi</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.rdf4j</groupId>
       <artifactId>rdf4j-rio-rdfxml</artifactId>
       <version>${rdf4j.version}</version>
     </dependency>
