@@ -12,8 +12,7 @@ import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -210,19 +209,21 @@ public class Generate implements Callable<Integer> {
 				distinctObjectIris, limit);
 
 		waitForCountToFinish(futures);
-		log.debug("Starting the count of the void data itself using " + oneThirdOfCpus);
-		countTheVoidDataItself(executors, futures, iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
-				repository instanceof VirtuosoRepository, limit);
-		waitForCountToFinish(futures);
-		saveResults(iriOfVoid, saver);
+		if (add) {
+			log.debug("Starting the count of the void data itself using " + oneThirdOfCpus);
+			countTheVoidDataItself(executors, futures, iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
+					repository instanceof VirtuosoRepository, limit);
+			waitForCountToFinish(futures);
+			saveResults(iriOfVoid, saver);
 
-		log.debug("Starting the count of the void data itself a second time using " + oneThirdOfCpus);
+	
+			log.debug("Starting the count of the void data itself a second time using " + oneThirdOfCpus);
 
-		countTheVoidDataItself(executors, futures, iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
-				repository instanceof VirtuosoRepository, limit);
-		waitForCountToFinish(futures);
-		saveResults(iriOfVoid, saver);
-
+			countTheVoidDataItself(executors, futures, iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
+					repository instanceof VirtuosoRepository, limit);
+			waitForCountToFinish(futures);
+			saveResults(iriOfVoid, saver);
+		}
 		executors.shutdown();
 	}
 
@@ -298,8 +299,8 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	public static List<String> findAllNonVirtuosoGraphs(RepositoryConnection connection) throws RepositoryException {
-		List<String> res = new ArrayList<>();
+	public static Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection) throws RepositoryException {
+		Set<String> res = new HashSet<>();
 
 		final TupleQuery graphs = connection.prepareTupleQuery(QueryLanguage.SPARQL,
 				"SELECT DISTINCT ?g WHERE {GRAPH ?g { ?s ?p ?o}}");
@@ -382,17 +383,18 @@ public class Generate implements Callable<Integer> {
 		CopyOnWriteArrayList<Future<Exception>> futures = new CopyOnWriteArrayList<>();
 		Lock writeLock = rwLock.writeLock();
 		boolean isvirtuoso = repository instanceof VirtuosoRepository;
-		List<String> allGraphs = Collections.emptyList();
-		try (RepositoryConnection connection = repository.getConnection()) {
-			allGraphs = findAllNonVirtuosoGraphs(connection);
+		if (graphNames.isEmpty()) {
+			try (RepositoryConnection connection = repository.getConnection()) {
+				graphNames = findAllNonVirtuosoGraphs(connection);
+			}
 		}
 		if (countDistinctObjects) {
-			countDistinctObjects(executors, sd, saver, distinctObjectIris, futures, writeLock, isvirtuoso, allGraphs,
+			countDistinctObjects(executors, sd, saver, distinctObjectIris, futures, writeLock, isvirtuoso, graphNames,
 					limit);
 		}
 
 		if (countDistinctSubjects) {
-			countDistinctSubjects(executors, sd, saver, distinctSubjectIris, futures, writeLock, isvirtuoso, allGraphs,
+			countDistinctSubjects(executors, sd, saver, distinctSubjectIris, futures, writeLock, isvirtuoso, graphNames,
 					limit);
 		}
 
@@ -410,7 +412,7 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctObjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris,
-			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, List<String> allGraphs,
+			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
 			Semaphore limit) {
 		futures.add(
 				executors.submit(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
@@ -429,7 +431,7 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctSubjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, List<String> allGraphs,
+			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
 			Semaphore limit) {
 		if (!isvirtuoso) {
 			futures.add(executors
