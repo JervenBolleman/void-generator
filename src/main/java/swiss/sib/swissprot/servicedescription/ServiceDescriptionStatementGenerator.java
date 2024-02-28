@@ -26,17 +26,17 @@ public class ServiceDescriptionStatementGenerator {
 		this.vf = SimpleValueFactory.getInstance();
 	}
 
-	public void generateStatements(Resource subject, ServiceDescription item){
-		item.getTotalTripleCount();
+	public void generateStatements(IRI iriOfVoid, ServiceDescription item){
+		
 		Resource defaultDatasetId = vf.createBNode(Long.toHexString(id++));
 		Resource defaultGraphId = vf.createBNode(Long.toHexString(id++));
-		statement(subject, RDF.PROPERTY, SD.SERVICE);
-		statement(subject, SD.DEFAULT_DATASET, defaultDatasetId);
-		statement(subject, SD.ENDPOINT, subject);
-		supportedFormats(subject);
-		statement(subject, SD.SUPPORTED_LANGUAGE, SD.SPARQL_11_QUERY);
-		statement(subject, SD.PROPERTY_FEATURE, SD.UNION_DEFAULT_GRAPH);
-		statement(subject, SD.PROPERTY_FEATURE, SD.BASIC_FEDERATED_QUERY);
+		statement(iriOfVoid, RDF.PROPERTY, SD.SERVICE);
+		statement(iriOfVoid, SD.DEFAULT_DATASET, defaultDatasetId);
+		statement(iriOfVoid, SD.ENDPOINT, iriOfVoid);
+		supportedFormats(iriOfVoid);
+		statement(iriOfVoid, SD.SUPPORTED_LANGUAGE, SD.SPARQL_11_QUERY);
+		statement(iriOfVoid, SD.PROPERTY_FEATURE, SD.UNION_DEFAULT_GRAPH);
+		statement(iriOfVoid, SD.PROPERTY_FEATURE, SD.BASIC_FEDERATED_QUERY);
 		statement(defaultDatasetId, RDF.PROPERTY, SD.DATASET);
 		statement(defaultDatasetId, SD.DEFAULT_GRAPH, defaultGraphId);
 		if (item.getRelease() != null)
@@ -73,18 +73,17 @@ public class ServiceDescriptionStatementGenerator {
 			statement(defaultGraphId, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS, vf.createLiteral(item.getDistinctBnodeSubjectCount()));
 		
 		for (GraphDescription gd : item.getGraphs())
-			statementsAboutGraph(defaultDatasetId, gd, item, subject);
+			statementsAboutGraph(defaultDatasetId, gd, item, iriOfVoid);
 	}
 
-	protected void statementsAboutGraph(Resource defaultDatasetId, GraphDescription gd, ServiceDescription sd, Resource location) {
+	protected void statementsAboutGraph(Resource defaultDatasetId, GraphDescription gd, ServiceDescription sd, IRI iriOfVoid) {
 		final String rawGraphName = gd.getGraphName();
 		IRI graphName = getIRI(rawGraphName);
-		String locationS = location.stringValue();
-		String host = locationS.substring(0, locationS.length() - "sparql/".length());
+		String voidLocation = iriOfVoid.stringValue();
+
 		IRI namedGraph = graphName;
 		statement(defaultDatasetId, SD.NAMED_GRAPH_PROPERTY, namedGraph);
-		String voidLocation = host + "/.well-known/void#";
-		IRI graph = vf.createIRI(voidLocation, "_graph_" + graphName.getLocalName());
+		IRI graph = vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName());
 		statement(namedGraph, SD.NAMED_GRAPH_CLASS, graph);
 		statement(namedGraph, SD.GRAPH_PROPERTY, graphName);
 

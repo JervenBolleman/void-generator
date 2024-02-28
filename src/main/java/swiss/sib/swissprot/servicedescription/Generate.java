@@ -203,7 +203,7 @@ public class Generate implements Callable<Integer> {
 		ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris = readGraphsWithSerializedBitMaps(
 				this.distinctObjectIrisFile);
 		Consumer<ServiceDescription> saver = (sdg) -> writeServiceDescriptionAndGraphs(distinctSubjectIris,
-				distinctObjectIris, sdg);
+				distinctObjectIris, sdg, iriOfVoid);
 
 		CopyOnWriteArrayList<Future<Exception>> futures = scheduleCounters(executors, sd, saver, distinctSubjectIris,
 				distinctObjectIris, limit);
@@ -246,7 +246,7 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void writeServiceDescriptionAndGraphs(ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, ServiceDescription sdg) {
+			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, ServiceDescription sdg, IRI iriOfVoid) {
 		final Lock readLock = rwLock.readLock();
 		try {
 			readLock.lock();
