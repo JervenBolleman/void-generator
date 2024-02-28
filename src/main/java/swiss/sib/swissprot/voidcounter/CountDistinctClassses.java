@@ -75,7 +75,6 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 					
 					Binding classesCount = classes.next().getBinding("count");
 					Value value = classesCount.getValue();
-					log.error(cp.getClazz() + " "+value);
 					if (value.isLiteral()) {
 						Literal lv = (Literal) value;
 						cp.setTripleCount(lv.longValue());
