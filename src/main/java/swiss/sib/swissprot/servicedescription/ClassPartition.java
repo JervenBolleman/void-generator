@@ -81,12 +81,12 @@ public class ClassPartition
 		return Collections.unmodifiableCollection(predicateParitions.values());
 	}
 
-	public void setCount(long valueOf)
+	public void setTripleCount(long valueOf)
 	{
 		this.count = valueOf;
 	}
 
-	public long getCount()
+	public long getTripleCount()
 	{
 		return count;
 	}

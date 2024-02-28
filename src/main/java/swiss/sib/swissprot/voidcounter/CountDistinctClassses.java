@@ -7,6 +7,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -52,9 +53,9 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 	@Override
 	protected List<ClassPartition> run(RepositoryConnection connection)
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
+		List<ClassPartition> classesList = new ArrayList<>();
 		try (TupleQueryResult classes = VirtuosoFromSQL.runTupleQuery(
 				"SELECT DISTINCT ?clazz FROM <" + gd.getGraphName() + "> WHERE {?thing a ?clazz } ", connection)) {
-			List<ClassPartition> classesList = new ArrayList<>();
 			while (classes.hasNext()) {
 				Binding classesCount = classes.next().getBinding("clazz");
 				Value value = classesCount.getValue();
@@ -63,8 +64,26 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 					classesList.add(new ClassPartition(clazz));
 				}
 			}
-			return classesList;
 		}
+		for (ClassPartition cp : classesList) {
+			String countTriples = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH <" + gd.getGraphName()
+					+ "> {?thing a <" + cp.getClazz().stringValue() + "> }}";
+			
+			try (TupleQueryResult classes = VirtuosoFromSQL
+					.runTupleQuery(countTriples, connection)) {
+				while (classes.hasNext()) {
+					
+					Binding classesCount = classes.next().getBinding("count");
+					Value value = classesCount.getValue();
+					log.error(cp.getClazz() + " "+value);
+					if (value.isLiteral()) {
+						Literal lv = (Literal) value;
+						cp.setTripleCount(lv.longValue());
+					}
+				}
+			}
+		}
+		return classesList;
 	}
 
 	@Override

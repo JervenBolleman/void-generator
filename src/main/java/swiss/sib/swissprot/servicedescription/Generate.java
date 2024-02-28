@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -55,12 +56,13 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;
+import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.RDFWriter;
+import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser;
-import org.eclipse.rdf4j.rio.rdfxml.RDFXMLWriter;
-import org.eclipse.rdf4j.rio.rdfxml.util.RDFXMLPrettyWriter;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,7 +115,7 @@ public class Generate implements Callable<Integer> {
 
 	@Option(names = "--ontology-graph-name", description = "ontology graph name (can be added multiple times")
 	List<String> ontologyGraphNames;
-	
+
 	@Option(names = { "-s", "--void-file" }, required = true)
 	private File sdFile;
 
@@ -145,10 +147,11 @@ public class Generate implements Callable<Integer> {
 
 	@Option(names = { "--password" }, description = "Virtuoso password", defaultValue = "dba")
 	private String password;
-	
-	@Option(names = { " --add-void-graph-to-store", "-a"}, description = "immediatly attempt to store the void graph into the store and add it to the total count", defaultValue = "false")
-	private boolean add=false;
-	
+
+	@Option(names = { " --add-void-graph-to-store",
+			"-a" }, description = "immediatly attempt to store the void graph into the store and add it to the total count", defaultValue = "false")
+	private boolean add = false;
+
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -216,14 +219,13 @@ public class Generate implements Callable<Integer> {
 			waitForCountToFinish(futures);
 			saveResults(iriOfVoid, saver);
 
-	
 			log.debug("Starting the count of the void data itself a second time using " + oneThirdOfCpus);
 
 			countTheVoidDataItself(executors, futures, iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
 					repository instanceof VirtuosoRepository, limit);
 			waitForCountToFinish(futures);
-			saveResults(iriOfVoid, saver);
 		}
+		saveResults(iriOfVoid, saver);
 		executors.shutdown();
 	}
 
@@ -250,9 +252,10 @@ public class Generate implements Callable<Integer> {
 		final Lock readLock = rwLock.readLock();
 		try {
 			readLock.lock();
+			Optional<RDFFormat> f = Rio.getWriterFormatForFileName(sdFile.getName());
 			try (OutputStream os = new FileOutputStream(sdFile)) {
-				RDFXMLWriter rh = new RDFXMLPrettyWriter(os);
-				
+				RDFWriter rh = Rio.createWriter(f.orElseGet(() -> RDFFormat.TURTLE), os);
+
 				rh.startRDF();
 				rh.handleNamespace(RDF.PREFIX, RDF.NAMESPACE);
 				rh.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
@@ -412,8 +415,8 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctObjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris,
-			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
-			Semaphore limit) {
+			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
+			Collection<String> allGraphs, Semaphore limit) {
 		futures.add(
 				executors.submit(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
 		if (!isvirtuoso) {
@@ -431,8 +434,8 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctSubjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
-			Semaphore limit) {
+			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
+			Collection<String> allGraphs, Semaphore limit) {
 		if (!isvirtuoso) {
 			futures.add(executors
 					.submit(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
