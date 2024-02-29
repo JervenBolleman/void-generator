@@ -3,6 +3,10 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.query.QueryLanguage;
+import org.eclipse.rdf4j.query.TupleQuery;
+import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -33,7 +37,14 @@ public class TripleCount extends QueryCallable<Long> {
 	}
 
 	protected Long run(RepositoryConnection connection) throws RepositoryException {
-		return connection.size(connection.getValueFactory().createIRI(gd.getGraphName()));
+		TupleQuery pq = connection.prepareTupleQuery(QueryLanguage.SPARQL, "SELECT (COUNT(*) AS ?count) WHERE { GRAPH <"+gd.getGraphName()+"> {?s ?p ?o}}");
+		try (TupleQueryResult qr = pq.evaluate()){
+			if (qr.hasNext()) {
+				long size = ((Literal) qr.next().getBinding("count")).longValue();
+				return size;
+			}
+		}
+		return 0L;
 	}
 
 	protected void set(Long size) {
