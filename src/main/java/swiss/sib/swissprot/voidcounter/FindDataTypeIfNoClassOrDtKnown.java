@@ -29,6 +29,13 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
+
+/**
+ * This code is run if we can not find a class earlier or if it was not give.
+ * 
+ * @author jbollema
+ *
+ */
 public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 
 	private final PredicatePartition predicatePartition;
@@ -93,14 +100,16 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 	private void pureSparql(Resource predicate, PredicatePartition predicatePartition, final Resource sourceType,
 			RepositoryConnection localConnection, Set<IRI> datatypes) {
 		final String dataTypeQuery = "SELECT ?dt {GRAPH <" + gd.getGraphName() + "> { ?subject a <" + sourceType
-				+ "> . ?subject <" + predicate + "> ?target . BIND(datatype(?target) as ?dt) }} LIMIT 1";
+				+ "> . ?subject <" + predicate + "> ?target . FILTER(isLiteral(?target)) . BIND(datatype(?target) as ?dt) }} LIMIT 1";
 
 		try (TupleQueryResult eval = VirtuosoFromSQL.runTupleQuery(dataTypeQuery, localConnection)) {
 			while (eval.hasNext()) {
 				final BindingSet next = eval.next();
 				if (next.hasBinding("dt")) {
 					final Binding binding = next.getBinding("dt");
-					datatypes.add((IRI) binding.getValue());
+					if (binding.getValue() != null ) {
+						datatypes.add((IRI) binding.getValue());
+					}
 				}
 			}
 		}
