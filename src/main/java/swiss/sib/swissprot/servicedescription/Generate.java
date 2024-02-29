@@ -12,7 +12,9 @@ import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -208,7 +210,7 @@ public class Generate implements Callable<Integer> {
 		Consumer<ServiceDescription> saver = (sdg) -> writeServiceDescriptionAndGraphs(distinctSubjectIris,
 				distinctObjectIris, sdg, iriOfVoid);
 
-		CopyOnWriteArrayList<Future<Exception>> futures = scheduleCounters(executors, sd, saver, distinctSubjectIris,
+		List<Future<Exception>> futures = scheduleCounters(executors, sd, saver, distinctSubjectIris,
 				distinctObjectIris, limit);
 
 		waitForCountToFinish(futures);
@@ -332,7 +334,7 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private void countTheVoidDataItself(ExecutorService executors, CopyOnWriteArrayList<Future<Exception>> futures,
+	private void countTheVoidDataItself(ExecutorService executors, List<Future<Exception>> futures,
 			IRI voidGraph, Consumer<ServiceDescription> saver,
 			ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
 			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, boolean isVirtuoso, Semaphore limit) {
@@ -380,10 +382,10 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private CopyOnWriteArrayList<Future<Exception>> scheduleCounters(ExecutorService executors, ServiceDescription sd,
+	private List<Future<Exception>> scheduleCounters(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
 			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, Semaphore limit) {
-		CopyOnWriteArrayList<Future<Exception>> futures = new CopyOnWriteArrayList<>();
+		List<Future<Exception>> futures = Collections.synchronizedList(new ArrayList<>());
 		Lock writeLock = rwLock.writeLock();
 		boolean isvirtuoso = repository instanceof VirtuosoRepository;
 		if (graphNames.isEmpty()) {
@@ -415,7 +417,7 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctObjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris,
-			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
+			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
 			Collection<String> allGraphs, Semaphore limit) {
 		futures.add(
 				executors.submit(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
@@ -434,7 +436,7 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctSubjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			CopyOnWriteArrayList<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
+			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
 			Collection<String> allGraphs, Semaphore limit) {
 		if (!isvirtuoso) {
 			futures.add(executors
@@ -449,7 +451,7 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void countSpecificThingsPerGraph(ExecutorService executors, ServiceDescription sd, Set<IRI> knownPredicates,
-			CopyOnWriteArrayList<Future<Exception>> futures, String graphName, Semaphore limit) {
+			List<Future<Exception>> futures, String graphName, Semaphore limit) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (countDistinctClasses && findPredicates && detailedCount) {
 			futures.add(executors.submit(
@@ -465,7 +467,7 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void scheduleBigCountsPerGraph(ExecutorService executors, ServiceDescription sd,
-			CopyOnWriteArrayList<Future<Exception>> futures, String graphName, Consumer<ServiceDescription> saver,
+			List<Future<Exception>> futures, String graphName, Consumer<ServiceDescription> saver,
 			Semaphore limit) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		Lock writeLock = rwLock.writeLock();

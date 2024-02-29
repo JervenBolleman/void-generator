@@ -7,6 +7,7 @@ import java.util.TreeMap;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.query.algebra.evaluation.util.ValueComparator;
 
 
 
@@ -14,7 +15,7 @@ public class ClassPartition
     implements Comparable<ClassPartition>
 {
 	private IRI clazz;
-	private Map<IRI, PredicatePartition> predicateParitions = Collections.synchronizedMap(new TreeMap<>());
+	private Map<IRI, PredicatePartition> predicateParitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private long count;
 
 	public void setClazz(IRI clazz)

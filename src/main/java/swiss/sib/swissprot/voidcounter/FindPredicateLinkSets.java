@@ -75,7 +75,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			PredicatePartition predicatePartition, ClassPartition source) {
 
 		try (RepositoryConnection localConnection = repository.getConnection()) {
-			final String query = "SELECT (COUNT(?subject) AS ?count)  {GRAPH <" + gd.getGraphName() + "> {?subject a <"
+			final String query = "SELECT (COUNT(?subject) AS ?count) WHERE {GRAPH <" + gd.getGraphName() + "> {?subject a <"
 					+ source.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target .}}";
 			try (TupleQueryResult triples = VirtuosoFromSQL.runTupleQuery(query, localConnection)) {
 				if (triples.hasNext()) {

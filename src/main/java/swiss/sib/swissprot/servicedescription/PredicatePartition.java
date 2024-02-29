@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.query.algebra.evaluation.util.ValueComparator;
 
 
 public class PredicatePartition
@@ -13,9 +15,9 @@ public class PredicatePartition
 {
 
 	private IRI predicate;
-	private final Map<IRI, ClassPartition> classPartitions = Collections.synchronizedMap(new TreeMap<>());
-	private final Map<IRI, DataTypePartition> dataTypePartitions = Collections.synchronizedMap(new TreeMap<>());
-	private final Map<IRI, SubjectPartition> subjectPartitions = Collections.synchronizedMap(new TreeMap<>());
+	private final Map<IRI, ClassPartition> classPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
+	private final Map<IRI, DataTypePartition> dataTypePartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
+	private final Map<Resource, SubjectPartition> subjectPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private long tripleCount;
 	private long subjectCount;
 	private long objectCount;
