@@ -7,6 +7,7 @@ import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -26,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 
@@ -43,19 +44,26 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 	private final GraphDescription gd;
 	private final Lock writeLock;
 	public static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
+	private final AtomicInteger finishedQueries;
 
 	public FindDataTypeIfNoClassOrDtKnown(PredicatePartition predicatePartition, ClassPartition source,
-			Repository repository, GraphDescription gd, Lock writeLock, Semaphore limiter) {
+			Repository repository, GraphDescription gd, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.gd = gd;
 		this.writeLock = writeLock;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
 	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
-		return findDatatypeIfNoClassOrDtKnown(source, predicatePartition);
+		try {
+			return findDatatypeIfNoClassOrDtKnown(source, predicatePartition);
+		} finally {
+			finishedQueries.incrementAndGet();
+		}
 	}
 
 	private Set<IRI> findDatatypeIfNoClassOrDtKnown(ClassPartition source, PredicatePartition predicatePartition)
@@ -102,7 +110,7 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 		final String dataTypeQuery = "SELECT ?dt {GRAPH <" + gd.getGraphName() + "> { ?subject a <" + sourceType
 				+ "> . ?subject <" + predicate + "> ?target . FILTER(isLiteral(?target)) . BIND(datatype(?target) as ?dt) }} LIMIT 1";
 
-		try (TupleQueryResult eval = VirtuosoFromSQL.runTupleQuery(dataTypeQuery, localConnection)) {
+		try (TupleQueryResult eval = Helper.runTupleQuery(dataTypeQuery, localConnection)) {
 			while (eval.hasNext()) {
 				final BindingSet next = eval.next();
 				if (next.hasBinding("dt")) {

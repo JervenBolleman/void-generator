@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -23,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class FindPredicates extends QueryCallable<List<PredicatePartition>> {
 	private final GraphDescription gd;
@@ -32,20 +33,23 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 	private final ExecutorService execs;
 	private static final Logger log = LoggerFactory.getLogger(FindPredicates.class);
 	private final Lock writeLock;
+	private AtomicInteger finishedQueries;
 
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
-			List<Future<Exception>> futures, ExecutorService execs, Lock writeLock, Semaphore limiter) {
+			List<Future<Exception>> futures, ExecutorService execs, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.knownPredicates = knownPredicates;
 		this.futures = futures;
 		this.execs = execs;
 		this.writeLock = writeLock;
+		scheduledQueries.incrementAndGet();
+		this.finishedQueries = finishedQueries;
 	}
 
 	private List<PredicatePartition> findPredicates(GraphDescription gd, RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		try (TupleQueryResult predicateQuery = VirtuosoFromSQL
+		try (TupleQueryResult predicateQuery = Helper
 				.runTupleQuery("SELECT ?predicate (COUNT(?object) AS ?count) WHERE { GRAPH <" + gd.getGraphName()
 						+ "> { ?subject ?predicate ?object }} GROUP BY ?predicate", connection)) {
 			List<PredicatePartition> res = new ArrayList<>();
@@ -65,6 +69,8 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 				}
 			}
 			return res;
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 	}
 
@@ -97,7 +103,6 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 					predicates2.add(predicate);
 				} else {
 					predicates2.add(predicate);
-					log.warn("Predicate not set in known vocabularies " + predicate.getPredicate());
 				}
 		} finally {
 			writeLock.unlock();

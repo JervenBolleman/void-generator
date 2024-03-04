@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
@@ -59,7 +60,7 @@ public final class CountDistinctIriSubjects
 		{
 			final String countDistinctSubjectQuery = "SELECT (COUNT(DISTINCT(?subject)) AS ?types) FROM <"
 			    + gd.getGraphName() + "> WHERE {?subject ?predicate ?object . FILTER(isIri(?s))}";
-			return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(countDistinctSubjectQuery, localConnection))
+			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, localConnection))
 			    .longValue();
 		}
 	}
@@ -76,7 +77,7 @@ public final class CountDistinctIriSubjects
 		else
 		{
 			final String countDistinctSubjectQuery = "SELECT (COUNT(DISTINCT(?subject)) AS ?types) WHERE {?subject ?predicate ?object . FILTER(isIri(?s))}";
-			return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(countDistinctSubjectQuery, localConnection))
+			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, localConnection))
 			    .longValue();
 		}
 	}

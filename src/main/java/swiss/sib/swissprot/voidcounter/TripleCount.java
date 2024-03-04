@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.Literal;
@@ -19,11 +20,14 @@ public class TripleCount extends QueryCallable<Long> {
 	private final GraphDescription gd;
 	private static final Logger log = LoggerFactory.getLogger(TripleCount.class);
 	private final Lock writeLock;
+	private final AtomicInteger finishedQueries;
 
-	public TripleCount(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter) {
+	public TripleCount(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.writeLock = writeLock;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -43,6 +47,8 @@ public class TripleCount extends QueryCallable<Long> {
 				long size = ((Literal) qr.next().getBinding("count")).longValue();
 				return size;
 			}
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 		return 0L;
 	}

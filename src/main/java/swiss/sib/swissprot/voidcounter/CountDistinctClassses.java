@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -21,17 +22,22 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class CountDistinctClassses extends QueryCallable<List<ClassPartition>> {
 	private final GraphDescription gd;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctClassses.class);
 	private final Lock writeLock;
+	private final AtomicInteger finishedQueries;
+	private final AtomicInteger scheduledQueries;
 
-	public CountDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter) {
+	public CountDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.writeLock = writeLock;
+		this.scheduledQueries = scheduledQueries;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -54,7 +60,7 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 	protected List<ClassPartition> run(RepositoryConnection connection)
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
 		List<ClassPartition> classesList = new ArrayList<>();
-		try (TupleQueryResult classes = VirtuosoFromSQL.runTupleQuery(
+		try (TupleQueryResult classes = Helper.runTupleQuery(
 				"SELECT DISTINCT ?clazz FROM <" + gd.getGraphName() + "> WHERE {?thing a ?clazz } ", connection)) {
 			while (classes.hasNext()) {
 				Binding classesCount = classes.next().getBinding("clazz");
@@ -64,12 +70,15 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 					classesList.add(new ClassPartition(clazz));
 				}
 			}
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
+		scheduledQueries.addAndGet(classesList.size());
 		for (ClassPartition cp : classesList) {
 			String countTriples = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH <" + gd.getGraphName()
 					+ "> {?thing a <" + cp.getClazz().stringValue() + "> }}";
 			
-			try (TupleQueryResult classes = VirtuosoFromSQL
+			try (TupleQueryResult classes = Helper
 					.runTupleQuery(countTriples, connection)) {
 				while (classes.hasNext()) {
 					
@@ -80,6 +89,8 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 						cp.setTripleCount(lv.longValue());
 					}
 				}
+			} finally {
+				finishedQueries.incrementAndGet();
 			}
 		}
 		return classesList;

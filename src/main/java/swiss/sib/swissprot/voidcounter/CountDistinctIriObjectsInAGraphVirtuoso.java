@@ -2,6 +2,7 @@ package swiss.sib.swissprot.voidcounter;
 
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -19,10 +20,10 @@ public final class CountDistinctIriObjectsInAGraphVirtuoso extends CountDistinct
 	
 	public CountDistinctIriObjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64Bitmap> graphIriIds,
-			String graphIri, Semaphore limit) {
+			String graphIri, Semaphore limit, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, sd, saver, graphIri, writeLock, sd::setDistinctIriObjectCount, GraphDescription::setDistinctIriObjectCount,
 		 graphIriIds,
-		  limit);
+		  limit, scheduledQueries, finishedQueries);
 
 	}
 

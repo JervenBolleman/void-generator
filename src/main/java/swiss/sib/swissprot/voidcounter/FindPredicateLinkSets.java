@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -21,7 +22,7 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	public static final Logger log = LoggerFactory.getLogger(FindPredicateLinkSets.class);
@@ -36,9 +37,13 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	private PredicatePartition subpredicatePartition;
 
+	private final AtomicInteger scheduledQueries;
+
+	private final AtomicInteger finishedQueries;
+
 	public FindPredicateLinkSets(Repository repository, Set<ClassPartition> classes, PredicatePartition predicate,
 			ClassPartition source, Lock writeLock, List<Future<Exception>> futures, Semaphore limit,
-			ExecutorService execs, GraphDescription gd) {
+			ExecutorService execs, GraphDescription gd, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limit);
 		this.classes = classes;
 		this.pp = predicate;
@@ -47,6 +52,9 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		this.futures = futures;
 		this.execs = execs;
 		this.gd = gd;
+		this.scheduledQueries = scheduledQueries;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	private void findDatatypeOrSubclassPartitions(final Repository repository, Set<ClassPartition> targetClasses,
@@ -61,14 +69,14 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		final IRI predicate = predicatePartition.getPredicate();
 		for (ClassPartition target : targetClasses) {
 			futures.add(execs.submit(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition,
-					source, repository, writeLock, limiter)));
+					source, repository, writeLock, limiter, scheduledQueries, finishedQueries)));
 
 			Future<Exception> future = execs.submit(new IsSourceClassLinkedToTargetClass(repository, predicate, target,
-					predicatePartition, source, gd, writeLock, limiter));
+					predicatePartition, source, gd, writeLock, limiter, scheduledQueries, finishedQueries));
 			futures.add(future);
 		}
 		futures.add(execs.submit(
-				new FindDataTypeIfNoClassOrDtKnown(predicatePartition, source, repository, gd, writeLock, limiter)));
+				new FindDataTypeIfNoClassOrDtKnown(predicatePartition, source, repository, gd, writeLock, limiter, scheduledQueries, finishedQueries)));
 	}
 
 	private long countTriplesInPredicateClassPartition(final Repository repository,
@@ -77,13 +85,15 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		try (RepositoryConnection localConnection = repository.getConnection()) {
 			final String query = "SELECT (COUNT(?subject) AS ?count) WHERE {GRAPH <" + gd.getGraphName() + "> {?subject a <"
 					+ source.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target .}}";
-			try (TupleQueryResult triples = VirtuosoFromSQL.runTupleQuery(query, localConnection)) {
+			try (TupleQueryResult triples = Helper.runTupleQuery(query, localConnection)) {
 				if (triples.hasNext()) {
 					return ((Literal) triples.next().getBinding("count").getValue()).longValue();
 				}
 			}
 		} catch (MalformedQueryException | QueryEvaluationException e) {
 			log.error("query failed", e);
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 
 		return 0;

@@ -23,12 +23,14 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -78,7 +80,7 @@ import swiss.sib.swissprot.vocabulary.VOID_EXT;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
 import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForAllGraphs;
+import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForAllGraphsAtOnce;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsInAGraphVirtuoso;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsInAGraphVirtuoso;
@@ -158,6 +160,9 @@ public class Generate implements Callable<Integer> {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
 	}
+
+	private final AtomicInteger scheduledQueries = new AtomicInteger();
+	private final AtomicInteger finishedQueries = new AtomicInteger();
 
 	private static final ValueFactory VF = SimpleValueFactory.getInstance();
 
@@ -304,9 +309,11 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	public static Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection) throws RepositoryException {
+	public static Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries2,
+			AtomicInteger finishedQueries2) throws RepositoryException {
 		Set<String> res = new HashSet<>();
 
+		scheduledQueries2.incrementAndGet();
 		final TupleQuery graphs = connection.prepareTupleQuery(QueryLanguage.SPARQL,
 				"SELECT DISTINCT ?g WHERE {GRAPH ?g { ?s ?p ?o}}");
 		try (final TupleQueryResult foundGraphs = graphs.evaluate()) {
@@ -316,6 +323,8 @@ public class Generate implements Callable<Integer> {
 				if (!VIRTUOSO_GRAPHS.contains(graphIRI))
 					res.add(graphIRI);
 			}
+		} finally {
+			finishedQueries2.incrementAndGet();
 		}
 		return res;
 
@@ -334,9 +343,8 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private void countTheVoidDataItself(ExecutorService executors, List<Future<Exception>> futures,
-			IRI voidGraph, Consumer<ServiceDescription> saver,
-			ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
+	private void countTheVoidDataItself(ExecutorService executors, List<Future<Exception>> futures, IRI voidGraph,
+			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
 			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, boolean isVirtuoso, Semaphore limit) {
 		String voidGraphUri = voidGraph.toString();
 		if (!graphNames.contains(voidGraphUri)) {
@@ -344,9 +352,9 @@ public class Generate implements Callable<Integer> {
 			Lock writeLock = rwLock.writeLock();
 			if (isVirtuoso) {
 				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
-						writeLock, distinctSubjectIris, voidGraphUri, limit)));
+						writeLock, distinctSubjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
 				futures.add(executors.submit(new CountDistinctIriObjectsInAGraphVirtuoso(sd, repository, saver,
-						writeLock, distinctObjectIris, voidGraphUri, limit)));
+						writeLock, distinctObjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
 			}
 			countSpecificThingsPerGraph(executors, sd, knownPredicates, futures, voidGraphUri, limit);
 		}
@@ -356,24 +364,27 @@ public class Generate implements Callable<Integer> {
 		INTERRUPTED: // We want to wait for all threads to finish even if interrupted waiting for the
 						// results.
 		try {
+			
 			while (!futures.isEmpty()) {
+				log.info("Queries " + finishedQueries.get() +"/" + scheduledQueries.get());
 				final int last = futures.size() - 1;
 				final Future<Exception> next = futures.get(last);
 				if (next.isDone() || next.isCancelled())
 					futures.remove(last);
 				else {
 					try {
-						Exception exception = next.get();
+						Exception exception = next.get(1, TimeUnit.MINUTES);
 						futures.remove(last);
 						if (exception != null) {
 							log.error("Something failed", exception);
 						}
 					} catch (CancellationException | ExecutionException e) {
 						log.error("Counting subjects or objects failed", e);
+					} catch (TimeoutException e) {
+						//This is ok we just try again in the loop.
 					}
 				}
 			}
-			Thread.sleep(1000);
 		} catch (InterruptedException e) {
 			// Clear interrupted flag
 			Thread.interrupted();
@@ -390,7 +401,7 @@ public class Generate implements Callable<Integer> {
 		boolean isvirtuoso = repository instanceof VirtuosoRepository;
 		if (graphNames.isEmpty()) {
 			try (RepositoryConnection connection = repository.getConnection()) {
-				graphNames = findAllNonVirtuosoGraphs(connection);
+				graphNames = findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
 		if (countDistinctObjects) {
@@ -417,37 +428,38 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctObjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris,
-			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
-			Collection<String> allGraphs, Semaphore limit) {
-		futures.add(
-				executors.submit(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
+			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
+			Semaphore limit) {
+		futures.add(executors.submit(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit,
+				scheduledQueries, finishedQueries)));
 		if (!isvirtuoso) {
-			futures.add(
-					executors.submit(new CountDistinctIriObjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
+			futures.add(executors.submit(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock,
+					limit, scheduledQueries, finishedQueries)));
 		} else {
 			for (String graphName : allGraphs) {
 				futures.add(executors.submit(new CountDistinctIriObjectsInAGraphVirtuoso(sd, repository, saver,
-						writeLock, distinctObjectIris, graphName, limit)));
+						writeLock, distinctObjectIris, graphName, limit, scheduledQueries, finishedQueries)));
 			}
 		}
-		futures.add(
-				executors.submit(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
+		futures.add(executors.submit(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock,
+				limit, scheduledQueries, finishedQueries)));
 	}
 
 	private void countDistinctSubjects(ExecutorService executors, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso,
-			Collection<String> allGraphs, Semaphore limit) {
+			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
+			Semaphore limit) {
 		if (!isvirtuoso) {
-			futures.add(executors
-					.submit(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit)));
+			futures.add(executors.submit(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock,
+					limit, scheduledQueries, finishedQueries)));
 		} else {
 			for (String graphName : allGraphs) {
 				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
-						writeLock, distinctSubjectIris, graphName, limit)));
+						writeLock, distinctSubjectIris, graphName, limit, scheduledQueries, finishedQueries)));
 			}
 		}
-		futures.add(executors.submit(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit)));
+		futures.add(executors.submit(
+				new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, scheduledQueries, finishedQueries)));
 	}
 
 	private void countSpecificThingsPerGraph(ExecutorService executors, ServiceDescription sd, Set<IRI> knownPredicates,
@@ -455,30 +467,32 @@ public class Generate implements Callable<Integer> {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (countDistinctClasses && findPredicates && detailedCount) {
 			futures.add(executors.submit(
-					new FindPredicatesAndClasses(gd, repository, executors, futures, knownPredicates, rwLock, limit)));
+					new FindPredicatesAndClasses(gd, repository, executors, futures, knownPredicates, rwLock, limit, scheduledQueries, finishedQueries)));
 		} else {
 			Lock writeLock = rwLock.writeLock();
-			if (findPredicates)
+			if (findPredicates) {
 				futures.add(executors.submit(
-						new FindPredicates(gd, repository, knownPredicates, futures, executors, writeLock, limit)));
-			if (countDistinctClasses)
-				futures.add(executors.submit(new CountDistinctClassses(gd, repository, writeLock, limit)));
+						new FindPredicates(gd, repository, knownPredicates, futures, executors, writeLock, limit, scheduledQueries, finishedQueries)));
+			}
+			if (countDistinctClasses) {
+				futures.add(executors.submit(new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)));
+			}
 		}
 	}
 
 	private void scheduleBigCountsPerGraph(ExecutorService executors, ServiceDescription sd,
-			List<Future<Exception>> futures, String graphName, Consumer<ServiceDescription> saver,
-			Semaphore limit) {
+			List<Future<Exception>> futures, String graphName, Consumer<ServiceDescription> saver, Semaphore limit) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		Lock writeLock = rwLock.writeLock();
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			futures.add(executors.submit(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit)));
+			futures.add(executors.submit(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit, scheduledQueries, finishedQueries)));
 		}
 		if (countDistinctSubjects) {
-			futures.add(executors.submit(new CountDistinctBnodeSubjects(gd, repository, writeLock, limit)));
+			futures.add(executors.submit(new CountDistinctBnodeSubjects(gd, repository, writeLock, limit,
+					scheduledQueries, finishedQueries)));
 		}
-		futures.add(executors.submit(new TripleCount(gd, repository, writeLock, limit)));
+		futures.add(executors.submit(new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)));
 	}
 
 	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
@@ -581,9 +595,12 @@ public class Generate implements Callable<Integer> {
 		private final Set<IRI> knownPredicates;
 		private final ReadWriteLock rwLock;
 		private final Semaphore limit;
+		private final AtomicInteger scheduledQueries;
+		private final AtomicInteger finishedQueries;
 
 		private FindPredicatesAndClasses(GraphDescription gd, Repository repository, ExecutorService execs,
-				List<Future<Exception>> futures, Set<IRI> knownPredicates, ReadWriteLock rwLock, Semaphore limit) {
+				List<Future<Exception>> futures, Set<IRI> knownPredicates, ReadWriteLock rwLock, Semaphore limit,
+				AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 			this.gd = gd;
 			this.repository = repository;
 			this.execs = execs;
@@ -591,16 +608,19 @@ public class Generate implements Callable<Integer> {
 			this.knownPredicates = knownPredicates;
 			this.rwLock = rwLock;
 			this.limit = limit;
+			this.scheduledQueries = scheduledQueries;
+			this.finishedQueries = finishedQueries;
 		}
 
 		@Override
 		public Exception call() {
 			final Lock writeLock = rwLock.writeLock();
-			Exception call = new FindPredicates(gd, repository, knownPredicates, futures, execs, writeLock, limit)
-					.call();
+			Exception call = new FindPredicates(gd, repository, knownPredicates, futures, execs, writeLock, limit,
+					scheduledQueries, finishedQueries).call();
 			if (call != null)
 				return call;
-			call = new CountDistinctClassses(gd, repository, writeLock, limit).call();
+			call = new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)
+					.call();
 			if (call != null)
 				return call;
 
@@ -620,7 +640,7 @@ public class Generate implements Callable<Integer> {
 				for (ClassPartition source : classes) {
 					if (!RDF.TYPE.equals(predicate.getPredicate()))
 						futures.add(execs.submit(new FindPredicateLinkSets(repository, classes, predicate, source,
-								writeLock, futures, limit, execs, gd)));
+								writeLock, futures, limit, execs, gd, scheduledQueries, finishedQueries)));
 				}
 			}
 			return null;

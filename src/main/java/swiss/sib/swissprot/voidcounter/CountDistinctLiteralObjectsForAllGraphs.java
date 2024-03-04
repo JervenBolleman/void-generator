@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -17,7 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable<Long> {
@@ -28,13 +29,17 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 	private final Lock writeLock;
+	private final AtomicInteger finishedQueries;
 
 	public CountDistinctLiteralObjectsForAllGraphs(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter) {
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -56,14 +61,18 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		if (connection instanceof VirtuosoRepositoryConnection) {
-			Connection vrc = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
-			long countOfLiterals = getCount(vrc, COUNT_DISTINCT_INLINE_VALUES)
-					+ getCount(vrc, SELECT_OBJECTS_IN_RDF_OBJ);
-			return countOfLiterals;
-		} else {
-			return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(COUNT_OBJECTS_WITH_SPARQL, connection))
-					.longValue();
+		try {
+			if (connection instanceof VirtuosoRepositoryConnection) {
+				Connection vrc = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
+				long countOfLiterals = getCount(vrc, COUNT_DISTINCT_INLINE_VALUES)
+						+ getCount(vrc, SELECT_OBJECTS_IN_RDF_OBJ);
+				return countOfLiterals;
+			} else {
+				return ((Literal) Helper.getFirstNumberResultFromTupleQuery(COUNT_OBJECTS_WITH_SPARQL, connection))
+						.longValue();
+			}
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 	}
 

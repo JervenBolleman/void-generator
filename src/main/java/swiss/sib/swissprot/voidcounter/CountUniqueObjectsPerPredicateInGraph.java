@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
@@ -76,7 +77,7 @@ public class CountUniqueObjectsPerPredicateInGraph
 		{
 			final String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) as ?types) FROM <"
 			    + gd.getGraphName() + "> WHERE {?subject <" + predicate + "> ?object}";
-			return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(countDistinctSubjectQuery, connection))
+			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
 			    .longValue();
 		}
 	}

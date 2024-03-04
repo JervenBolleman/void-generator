@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -18,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
@@ -28,15 +29,19 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private final Consumer<ServiceDescription> saver;
 	private final String graphname;
 	private final Lock writeLock;
+	private final AtomicInteger finishedQueries;
 
 	public CountDistinctLiteralObjects(GraphDescription gd, ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter) {
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
+		this.finishedQueries = finishedQueries;
 		this.graphname = gd.getGraphName();
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -52,23 +57,27 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct literal " + gd.getDistinctLiteralObjectCount() + " objects for " + graphname);	
+		log.debug("Counted distinct literal " + gd.getDistinctLiteralObjectCount() + " objects for " + graphname);
 	}
 
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		if (connection instanceof VirtuosoRepositoryConnection) {
-			return virtuosoOptimized(connection);
-		} else {
-			return pureSparql(connection);
+		try {
+			if (connection instanceof VirtuosoRepositoryConnection) {
+				return virtuosoOptimized(connection);
+			} else {
+				return pureSparql(connection);
+			}
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 	}
 
 	private Long pureSparql(RepositoryConnection connection) {
 		String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) AS ?types) FROM <" + graphname
 				+ "> WHERE {?subject ?predicate ?object . FILTER (isLiteral(?object))}";
-		return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(countDistinctSubjectQuery, connection)).longValue();
+		return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection)).longValue();
 	}
 
 	private Long virtuosoOptimized(RepositoryConnection connection) {

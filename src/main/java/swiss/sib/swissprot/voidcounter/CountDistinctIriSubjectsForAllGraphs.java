@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -14,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Long> {
@@ -25,13 +26,17 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 	private final Lock writeLock;
+	private final AtomicInteger finishedQueries;
 
 	public CountDistinctIriSubjectsForAllGraphs(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter) {
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -53,9 +58,12 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		assert !(connection instanceof VirtuosoRepositoryConnection);
-
-		return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(countDistinctSubjectIriQuery, connection))
-				.longValue();
+		try {
+			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectIriQuery, connection))
+					.longValue();
+		} finally {
+			finishedQueries.incrementAndGet();
+		}
 
 	}
 

@@ -6,14 +6,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
-import org.eclipse.rdf4j.query.Binding;
-import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
@@ -77,24 +70,6 @@ public class VirtuosoFromSQL {
 		}
 	}
 
-	public static Value getFirstResultFromTupleQuery(String sq, RepositoryConnection connection)
-			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		try (TupleQueryResult classes = runTupleQuery(sq, connection)) {
-			if (classes.hasNext()) {
-				Binding types = classes.next().getBinding("types");
-				return types.getValue();
-			} else {
-				return SimpleValueFactory.getInstance().createLiteral(0);
-			}
-		}
-	}
-	
-	public static TupleQueryResult runTupleQuery(String sq, RepositoryConnection connection)
-			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, sq);
-		return q.evaluate();
-	}
-	
 	public static long getSingleLongFromSql(String sql, VirtuosoRepositoryConnection connection) {
 		Connection vrc = connection.getQuadStoreConnection();
 		try (java.sql.Statement stat = vrc.createStatement()) {

@@ -7,6 +7,7 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -31,11 +32,12 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 	private final Consumer<Long> allSetter;
 	private final BiConsumer<GraphDescription, Long> graphSetter;
 	private final Map<String, Roaring64Bitmap> graphIriIds;
+	private final AtomicInteger finishedQueries;
 
 	public CountDistinctIriInAGraphVirtuoso(Repository repository, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, String graphIri, Lock writeLock, Consumer<Long> allSetter,
 			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64Bitmap> graphIriIds2,
-			Semaphore limiter) {
+			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
@@ -44,6 +46,8 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		this.allSetter = allSetter;
 		this.graphSetter = graphSetter;
 		this.graphIriIds = graphIriIds2;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	protected Roaring64Bitmap findUniqueIriIds(final Connection quadStoreConnection) {
@@ -54,6 +58,8 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 			extractUniqueIRIIdsPerGraph(createStatement, roaringBitmap);
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 		return roaringBitmap;
 	}

@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -23,8 +24,8 @@ import org.slf4j.Logger;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.virtuoso.IriIdToIri;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<Long> {
@@ -40,12 +41,18 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 
 	private final Lock writeLock;
 
+	private final AtomicInteger scheduledQueries;
+	private final AtomicInteger finishedQueries;
+
 	public CountDistinctBnodeObjectsForAllGraphs(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter) {
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
+		this.scheduledQueries = scheduledQueries;
+		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -75,8 +82,13 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 			graphIriIds.clear();
 			return iricounts;
 		} else {
-			return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(countDistinctObjectIriQuery, connection))
-					.longValue();
+			try {
+				scheduledQueries.incrementAndGet();
+				return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctObjectIriQuery, connection))
+						.longValue();
+			} finally {
+				finishedQueries.incrementAndGet();
+			}
 		}
 	}
 
@@ -115,10 +127,12 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 
 	protected void findUniqueBnodeIds(final Connection quadStoreConnection) {
 		try (final Statement createStatement = quadStoreConnection.createStatement()) {
+			scheduledQueries.incrementAndGet();
 			extractUniqueIRIIdsPerGraph(createStatement);
 		} catch (SQLException e) {
 			log.error("Counting unique BNode ids encountered an issue", e);
 		}
+		finishedQueries.incrementAndGet();
 	}
 
 	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement) throws SQLException {
