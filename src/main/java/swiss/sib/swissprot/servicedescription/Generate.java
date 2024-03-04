@@ -9,9 +9,6 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,19 +37,15 @@ import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.SD;
 import org.eclipse.rdf4j.model.vocabulary.VOID;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
-import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.query.Update;
 import org.eclipse.rdf4j.query.UpdateExecutionException;
@@ -74,6 +67,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.vocabulary.FORMATS;
 import swiss.sib.swissprot.vocabulary.PAV;
 import swiss.sib.swissprot.vocabulary.VOID_EXT;
@@ -86,11 +80,9 @@ import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsInAGraphVirtuoso;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjects;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjectsForAllGraphs;
-import swiss.sib.swissprot.voidcounter.FindPredicateLinkSets;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
 import swiss.sib.swissprot.voidcounter.TripleCount;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
-import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 @Command(name = "void-generate", mixinStandardHelpOptions = true, version = "0.1", description = "Generate a void file")
 public class Generate implements Callable<Integer> {
@@ -314,9 +306,7 @@ public class Generate implements Callable<Integer> {
 		Set<String> res = new HashSet<>();
 
 		scheduledQueries2.incrementAndGet();
-		final TupleQuery graphs = connection.prepareTupleQuery(QueryLanguage.SPARQL,
-				"SELECT DISTINCT ?g WHERE {GRAPH ?g { ?s ?p ?o}}");
-		try (final TupleQueryResult foundGraphs = graphs.evaluate()) {
+		try (final TupleQueryResult foundGraphs = Helper.runTupleQuery("SELECT DISTINCT ?g WHERE {GRAPH ?g { ?s ?p ?o}}", connection)) {
 			while (foundGraphs.hasNext()) {
 				final BindingSet next = foundGraphs.next();
 				final String graphIRI = next.getBinding("g").getValue().stringValue();
@@ -500,7 +490,7 @@ public class Generate implements Callable<Integer> {
 					scheduledQueries, finishedQueries)));
 		}
 		futures.add(
-				executors.submit(new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)));
+				executors.submit(new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver, sd)));
 	}
 
 	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
@@ -574,109 +564,6 @@ public class Generate implements Callable<Integer> {
 		} catch (UpdateExecutionException e1) {
 			log.error("Clearing graph failed", e1);
 			connection.rollback();
-		}
-	}
-
-	public static Value getFirstResultFromTupleQuery(String sq, RepositoryConnection connection)
-			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		try (TupleQueryResult classes = runTupleQuery(sq, connection)) {
-			if (classes.hasNext()) {
-				Binding types = classes.next().getBinding("types");
-				return types.getValue();
-			} else {
-				return SimpleValueFactory.getInstance().createLiteral(0);
-			}
-		}
-	}
-
-	public static TupleQueryResult runTupleQuery(String sq, RepositoryConnection connection)
-			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, sq);
-		return q.evaluate();
-	}
-
-	private static final class FindPredicatesAndClasses implements Callable<Exception> {
-		private final GraphDescription gd;
-		private final Repository repository;
-		private final ExecutorService execs;
-		private final List<Future<Exception>> futures;
-		private final Set<IRI> knownPredicates;
-		private final ReadWriteLock rwLock;
-		private final Semaphore limit;
-		private final AtomicInteger scheduledQueries;
-		private final AtomicInteger finishedQueries;
-		private final Consumer<ServiceDescription> saver;
-		private final ServiceDescription sd;
-
-		private FindPredicatesAndClasses(GraphDescription gd, Repository repository, ExecutorService execs,
-				List<Future<Exception>> futures, Set<IRI> knownPredicates, ReadWriteLock rwLock, Semaphore limit,
-				AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
-				ServiceDescription sd) {
-			this.gd = gd;
-			this.repository = repository;
-			this.execs = execs;
-			this.futures = futures;
-			this.knownPredicates = knownPredicates;
-			this.rwLock = rwLock;
-			this.limit = limit;
-			this.scheduledQueries = scheduledQueries;
-			this.finishedQueries = finishedQueries;
-			this.saver = saver;
-			this.sd = sd;
-		}
-
-		@Override
-		public Exception call() {
-			final Lock writeLock = rwLock.writeLock();
-			Exception call = new FindPredicates(gd, repository, knownPredicates, futures, execs, writeLock, limit,
-					scheduledQueries, finishedQueries, saver, sd).call();
-			if (call != null)
-				return call;
-
-			call = new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver,
-					sd).call();
-			if (call != null)
-				return call;
-
-			Set<ClassPartition> classes;
-			Set<PredicatePartition> predicates;
-
-			final Lock readLock = rwLock.readLock();
-			try {
-				readLock.lock();
-				classes = new HashSet<>(gd.getClasses());
-				predicates = new HashSet<>(gd.getPredicates());
-			} finally {
-				readLock.unlock();
-			}
-
-			for (PredicatePartition predicate : predicates) {
-				for (ClassPartition source : classes) {
-					if (!RDF.TYPE.equals(predicate.getPredicate()))
-						futures.add(execs.submit(new FindPredicateLinkSets(repository, classes, predicate, source,
-								writeLock, futures, limit, execs, gd, scheduledQueries, finishedQueries, saver, sd)));
-				}
-			}
-			return null;
-		}
-
-	}
-
-	public static long getSingleLongFromSql(String sql, VirtuosoRepositoryConnection connection) {
-		Connection vrc = connection.getQuadStoreConnection();
-		try (java.sql.Statement stat = vrc.createStatement()) {
-			stat.setFetchSize(1);
-			try (ResultSet rs = stat.executeQuery(sql)) {
-				if (rs.next())
-					return rs.getLong(1);
-				else {
-					log.debug("FAILED to get result for:" + sql);
-					throw new RepositoryException("FAILED to get result for:" + sql);
-				}
-			}
-		} catch (SQLException e) {
-			log.debug("FAILED connection:" + sql);
-			throw new RepositoryException(e);
 		}
 	}
 }
