@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -14,24 +15,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.jdbc4.VirtuosoConnection;
 
-public final class CountDistinctIriObjectsForAllGraphs extends QueryCallable<Long> {
+public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallable<Long> {
 	private final String countDistinctObjectIriQuery = "SELECT (count(distinct(?object)) as ?types) WHERE {?subject ?predicate ?object . FILTER (isIri(?object))}";
 
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsForAllGraphs.class);
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsForAllGraphsAtOnce.class);
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 
 	private final Lock writeLock;
 
-	public CountDistinctIriObjectsForAllGraphs(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter) {
+	private final AtomicInteger scheduledQueries;
+
+	private final AtomicInteger finishedQueries;
+
+	public CountDistinctIriObjectsForAllGraphsAtOnce(ServiceDescription sd, Repository repository,
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
+		this.scheduledQueries = scheduledQueries;
+		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -54,9 +61,13 @@ public final class CountDistinctIriObjectsForAllGraphs extends QueryCallable<Lon
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 
 		assert !(connection instanceof VirtuosoConnection);
-
-		return ((Literal) VirtuosoFromSQL.getFirstResultFromTupleQuery(countDistinctObjectIriQuery, connection))
-				.longValue();
+		try {
+			scheduledQueries.incrementAndGet();
+			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctObjectIriQuery, connection))
+					.longValue();
+		} finally {
+			finishedQueries.incrementAndGet();
+		}
 	}
 
 	@Override
