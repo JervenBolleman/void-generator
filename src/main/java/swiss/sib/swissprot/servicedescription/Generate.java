@@ -356,7 +356,7 @@ public class Generate implements Callable<Integer> {
 				futures.add(executors.submit(new CountDistinctIriObjectsInAGraphVirtuoso(sd, repository, saver,
 						writeLock, distinctObjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
 			}
-			countSpecificThingsPerGraph(executors, sd, knownPredicates, futures, voidGraphUri, limit);
+			countSpecificThingsPerGraph(executors, sd, knownPredicates, futures, voidGraphUri, limit, saver);
 		}
 	}
 
@@ -364,9 +364,9 @@ public class Generate implements Callable<Integer> {
 		INTERRUPTED: // We want to wait for all threads to finish even if interrupted waiting for the
 						// results.
 		try {
-			
+
 			while (!futures.isEmpty()) {
-				log.info("Queries " + finishedQueries.get() +"/" + scheduledQueries.get());
+				log.info("Queries " + finishedQueries.get() + "/" + scheduledQueries.get());
 				final int last = futures.size() - 1;
 				final Future<Exception> next = futures.get(last);
 				if (next.isDone() || next.isCancelled())
@@ -381,7 +381,7 @@ public class Generate implements Callable<Integer> {
 					} catch (CancellationException | ExecutionException e) {
 						log.error("Counting subjects or objects failed", e);
 					} catch (TimeoutException e) {
-						//This is ok we just try again in the loop.
+						// This is ok we just try again in the loop.
 					}
 				}
 			}
@@ -390,6 +390,11 @@ public class Generate implements Callable<Integer> {
 			Thread.interrupted();
 			// Try again to get all of the results.
 			break INTERRUPTED;
+		}
+		if (finishedQueries.get() == scheduledQueries.get()) {
+			log.info("Ran " + finishedQueries.get() + " queries");
+		} else {
+			log.error("Scheduled more queries than finished: " + finishedQueries.get() + "/" + scheduledQueries.get());
 		}
 	}
 
@@ -421,7 +426,7 @@ public class Generate implements Callable<Integer> {
 		// Ensure that we first do the big counts before starting on counting the
 		// smaller sets.
 		for (String graphName : graphNames) {
-			countSpecificThingsPerGraph(executors, sd, knownPredicates, futures, graphName, limit);
+			countSpecificThingsPerGraph(executors, sd, knownPredicates, futures, graphName, limit, saver);
 		}
 		return futures;
 	}
@@ -463,19 +468,20 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void countSpecificThingsPerGraph(ExecutorService executors, ServiceDescription sd, Set<IRI> knownPredicates,
-			List<Future<Exception>> futures, String graphName, Semaphore limit) {
+			List<Future<Exception>> futures, String graphName, Semaphore limit, Consumer<ServiceDescription> saver) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (countDistinctClasses && findPredicates && detailedCount) {
-			futures.add(executors.submit(
-					new FindPredicatesAndClasses(gd, repository, executors, futures, knownPredicates, rwLock, limit, scheduledQueries, finishedQueries)));
+			futures.add(executors.submit(new FindPredicatesAndClasses(gd, repository, executors, futures,
+					knownPredicates, rwLock, limit, scheduledQueries, finishedQueries, saver, sd)));
 		} else {
 			Lock writeLock = rwLock.writeLock();
 			if (findPredicates) {
-				futures.add(executors.submit(
-						new FindPredicates(gd, repository, knownPredicates, futures, executors, writeLock, limit, scheduledQueries, finishedQueries)));
+				futures.add(executors.submit(new FindPredicates(gd, repository, knownPredicates, futures, executors,
+						writeLock, limit, scheduledQueries, finishedQueries, saver, sd)));
 			}
 			if (countDistinctClasses) {
-				futures.add(executors.submit(new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)));
+				futures.add(executors.submit(new CountDistinctClassses(gd, repository, writeLock, limit,
+						scheduledQueries, finishedQueries, saver, sd)));
 			}
 		}
 	}
@@ -486,13 +492,15 @@ public class Generate implements Callable<Integer> {
 		Lock writeLock = rwLock.writeLock();
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			futures.add(executors.submit(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit, scheduledQueries, finishedQueries)));
+			futures.add(executors.submit(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit,
+					scheduledQueries, finishedQueries)));
 		}
 		if (countDistinctSubjects) {
 			futures.add(executors.submit(new CountDistinctBnodeSubjects(gd, repository, writeLock, limit,
 					scheduledQueries, finishedQueries)));
 		}
-		futures.add(executors.submit(new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)));
+		futures.add(
+				executors.submit(new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)));
 	}
 
 	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
@@ -597,10 +605,13 @@ public class Generate implements Callable<Integer> {
 		private final Semaphore limit;
 		private final AtomicInteger scheduledQueries;
 		private final AtomicInteger finishedQueries;
+		private final Consumer<ServiceDescription> saver;
+		private final ServiceDescription sd;
 
 		private FindPredicatesAndClasses(GraphDescription gd, Repository repository, ExecutorService execs,
 				List<Future<Exception>> futures, Set<IRI> knownPredicates, ReadWriteLock rwLock, Semaphore limit,
-				AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+				AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
+				ServiceDescription sd) {
 			this.gd = gd;
 			this.repository = repository;
 			this.execs = execs;
@@ -610,17 +621,20 @@ public class Generate implements Callable<Integer> {
 			this.limit = limit;
 			this.scheduledQueries = scheduledQueries;
 			this.finishedQueries = finishedQueries;
+			this.saver = saver;
+			this.sd = sd;
 		}
 
 		@Override
 		public Exception call() {
 			final Lock writeLock = rwLock.writeLock();
 			Exception call = new FindPredicates(gd, repository, knownPredicates, futures, execs, writeLock, limit,
-					scheduledQueries, finishedQueries).call();
+					scheduledQueries, finishedQueries, saver, sd).call();
 			if (call != null)
 				return call;
-			call = new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries)
-					.call();
+
+			call = new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver,
+					sd).call();
 			if (call != null)
 				return call;
 
@@ -640,7 +654,7 @@ public class Generate implements Callable<Integer> {
 				for (ClassPartition source : classes) {
 					if (!RDF.TYPE.equals(predicate.getPredicate()))
 						futures.add(execs.submit(new FindPredicateLinkSets(repository, classes, predicate, source,
-								writeLock, futures, limit, execs, gd, scheduledQueries, finishedQueries)));
+								writeLock, futures, limit, execs, gd, scheduledQueries, finishedQueries, saver, sd)));
 				}
 			}
 			return null;

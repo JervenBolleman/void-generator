@@ -8,6 +8,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class FindPredicates extends QueryCallable<List<PredicatePartition>> {
@@ -34,15 +36,19 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 	private static final Logger log = LoggerFactory.getLogger(FindPredicates.class);
 	private final Lock writeLock;
 	private AtomicInteger finishedQueries;
+	private final Consumer<ServiceDescription> saver;
+	private final ServiceDescription sd;
 
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
-			List<Future<Exception>> futures, ExecutorService execs, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			List<Future<Exception>> futures, ExecutorService execs, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.knownPredicates = knownPredicates;
 		this.futures = futures;
 		this.execs = execs;
 		this.writeLock = writeLock;
+		this.saver = saver;
+		this.sd = sd;
 		scheduledQueries.incrementAndGet();
 		this.finishedQueries = finishedQueries;
 	}
@@ -71,6 +77,7 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			return res;
 		} finally {
 			finishedQueries.incrementAndGet();
+			saver.accept(sd);
 		}
 	}
 

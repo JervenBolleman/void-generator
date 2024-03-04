@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class CountDistinctClassses extends QueryCallable<List<ClassPartition>> {
@@ -30,13 +32,19 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 	private final Lock writeLock;
 	private final AtomicInteger finishedQueries;
 	private final AtomicInteger scheduledQueries;
+	private final Consumer<ServiceDescription> saver;
+	private final ServiceDescription sd;
 
-	public CountDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+	public CountDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
+			AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
+			ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.writeLock = writeLock;
 		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
+		this.saver = saver;
+		this.sd = sd;
 		scheduledQueries.incrementAndGet();
 	}
 
@@ -53,7 +61,6 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 	@Override
 	protected void logEnd() {
 		log.debug("Counted distinct classes:" + gd.getDistinctClassesCount() + " for " + gd.getGraphName());
-
 	}
 
 	@Override
@@ -77,11 +84,10 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 		for (ClassPartition cp : classesList) {
 			String countTriples = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH <" + gd.getGraphName()
 					+ "> {?thing a <" + cp.getClazz().stringValue() + "> }}";
-			
-			try (TupleQueryResult classes = Helper
-					.runTupleQuery(countTriples, connection)) {
+
+			try (TupleQueryResult classes = Helper.runTupleQuery(countTriples, connection)) {
 				while (classes.hasNext()) {
-					
+
 					Binding classesCount = classes.next().getBinding("count");
 					Value value = classesCount.getValue();
 					if (value.isLiteral()) {
@@ -93,6 +99,7 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 				finishedQueries.incrementAndGet();
 			}
 		}
+		saver.accept(sd);
 		return classesList;
 	}
 
