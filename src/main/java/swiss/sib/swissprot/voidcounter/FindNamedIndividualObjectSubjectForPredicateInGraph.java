@@ -3,6 +3,7 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -19,7 +20,7 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.SubjectPartition;
-import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<IRI>> {
 
@@ -29,15 +30,18 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 	private final GraphDescription gd;
 	private final ClassPartition cp;
 	private final Lock writeLock;
+	private final AtomicInteger finishedQueries;
 
 	public FindNamedIndividualObjectSubjectForPredicateInGraph(GraphDescription gd,
 			PredicatePartition predicatePartition, ClassPartition cp, Repository repository, Lock writeLock,
-			Semaphore limiter) {
+			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.predicatePartition = predicatePartition;
 		this.cp = cp;
 		this.writeLock = writeLock;
+		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -60,8 +64,8 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 	@Override
 	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
 		final String query = "SELECT DISTINCT ?target  WHERE { GRAPH <" + gd.getGraphName() + "> { ?subject a <"
-				+ cp.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target . ?target a <" + OWL.NAMEDINDIVIDUAL + ">}";
-		try (final TupleQueryResult tr = VirtuosoFromSQL.runTupleQuery(query, connection)) {
+				+ cp.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target . ?target a <" + OWL.NAMEDINDIVIDUAL + ">}}";
+		try (final TupleQueryResult tr = Helper.runTupleQuery(query, connection)) {
 			Set<IRI> namedObjects = new HashSet<>();
 			while (tr.hasNext()) {
 				final BindingSet next = tr.next();
@@ -73,6 +77,8 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 				}
 			}
 			return namedObjects;
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 	}
 
