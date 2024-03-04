@@ -27,8 +27,6 @@ public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallab
 
 	private final Lock writeLock;
 
-	private final AtomicInteger scheduledQueries;
-
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctIriObjectsForAllGraphsAtOnce(ServiceDescription sd, Repository repository,
@@ -37,7 +35,7 @@ public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallab
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
-		this.scheduledQueries = scheduledQueries;
+		scheduledQueries.incrementAndGet();
 		this.finishedQueries = finishedQueries;
 	}
 
@@ -62,7 +60,6 @@ public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallab
 
 		assert !(connection instanceof VirtuosoConnection);
 		try {
-			scheduledQueries.incrementAndGet();
 			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctObjectIriQuery, connection))
 					.longValue();
 		} finally {

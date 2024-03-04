@@ -58,8 +58,6 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 			extractUniqueIRIIdsPerGraph(createStatement, roaringBitmap);
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
-		} finally {
-			finishedQueries.incrementAndGet();
 		}
 		return roaringBitmap;
 	}
@@ -80,6 +78,7 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		} else {
 			rb = graphIriIds.get(graphIri);
 		}
+		finishedQueries.incrementAndGet();
 		setAll();
 		return rb.getLongCardinality();
 	}

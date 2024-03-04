@@ -64,28 +64,28 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 			throws QueryEvaluationException, RepositoryException, MalformedQueryException
 
 	{
-		if (gd != null)
-			return countDistinctBnodeSubjectsInGraph(connection);
-		else
-			return countDistinctBnodeSubjects(connection);
+		try {
+			if (gd != null)
+				return countDistinctBnodeSubjectsInGraph(connection);
+			else
+				return countDistinctBnodeSubjects(connection);
+		} finally {
+			finishedQueries.incrementAndGet();
+		}
 	}
 
 	private Long countDistinctBnodeSubjectsInGraph(RepositoryConnection connection) {
-		try {
-			if (connection instanceof VirtuosoRepositoryConnection) {
-				// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-				// Plus trick from sqlbif.c
-				String sql = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-						+ gd.getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0";
-				return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
-			} else {
-				final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?types) FROM <"
-						+ gd.getGraphName() + "> WHERE {?subject ?predicate ?object . FILTER(isBlank(?subject))}";
-				return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
-						.longValue();
-			}
-		} finally {
-			finishedQueries.incrementAndGet();
+		if (connection instanceof VirtuosoRepositoryConnection) {
+			// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
+			// Plus trick from sqlbif.c
+			String sql = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+					+ gd.getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0";
+			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
+		} else {
+			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?types) FROM <"
+					+ gd.getGraphName() + "> WHERE {?subject ?predicate ?object . FILTER(isBlank(?subject))}";
+			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
+					.longValue();
 		}
 	}
 

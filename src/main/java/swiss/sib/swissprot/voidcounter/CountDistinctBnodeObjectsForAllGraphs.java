@@ -41,7 +41,6 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 
 	private final Lock writeLock;
 
-	private final AtomicInteger scheduledQueries;
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctBnodeObjectsForAllGraphs(ServiceDescription sd, Repository repository,
@@ -51,8 +50,8 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
-		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
+		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -73,22 +72,22 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		if (connection instanceof VirtuosoRepositoryConnection) {
-			// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-			final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
-			findUniqueBnodeIds(quadStoreConnection);
-			setGraphUniqueIriCounts(quadStoreConnection);
-			final long iricounts = setAll();
-			graphIriIds.clear();
-			return iricounts;
-		} else {
-			try {
-				scheduledQueries.incrementAndGet();
+		try {
+			if (connection instanceof VirtuosoRepositoryConnection) {
+				// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
+				final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection)
+						.getQuadStoreConnection();
+				findUniqueBnodeIds(quadStoreConnection);
+				setGraphUniqueIriCounts(quadStoreConnection);
+				final long iricounts = setAll();
+				graphIriIds.clear();
+				return iricounts;
+			} else {
 				return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctObjectIriQuery, connection))
 						.longValue();
-			} finally {
-				finishedQueries.incrementAndGet();
 			}
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
 	}
 
@@ -127,12 +126,10 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 
 	protected void findUniqueBnodeIds(final Connection quadStoreConnection) {
 		try (final Statement createStatement = quadStoreConnection.createStatement()) {
-			scheduledQueries.incrementAndGet();
 			extractUniqueIRIIdsPerGraph(createStatement);
 		} catch (SQLException e) {
 			log.error("Counting unique BNode ids encountered an issue", e);
 		}
-		finishedQueries.incrementAndGet();
 	}
 
 	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement) throws SQLException {
