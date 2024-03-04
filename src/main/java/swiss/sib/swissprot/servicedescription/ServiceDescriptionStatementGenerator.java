@@ -97,7 +97,7 @@ public class ServiceDescriptionStatementGenerator {
 		statement(namedGraph, SD.GRAPH_PROPERTY, graphName);
 
 		statement(graph, RDF.TYPE, SD.GRAPH_CLASS);
-		statement(graph, VOID.TRIPLES, vf.createLiteral(gd.getTripleCount()));
+		statement(graph, VOID.ENTITIES, vf.createLiteral(gd.getTripleCount()));
 		long distinctClasses = gd.getDistinctClassesCount();
 		if (distinctClasses > 0)
 			statement(graph, VOID.CLASSES, vf.createLiteral(distinctClasses));
