@@ -14,7 +14,6 @@ body {
 </style>
 <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 <script type="text/javascript">
-var endpoint = "https://sparql.uniprot.org/";
 var query = "PREFIX sh:<http://www.w3.org/ns/shacl%23> PREFIX sd:<http://www.w3.org/ns/sparql-service-description%23> PREFIX void:<http://rdfs.org/ns/void%23> PREFIX void_ext:<http://ldf.fi/void-ext%23>"
 +encodeURIComponent(`SELECT
 DISTINCT
@@ -122,7 +121,7 @@ function addNode(node, graphId, count, nodesMap, nodeDatypesMap){
 		image: url})
     }
 }
-function retrieveData() {}
+function retrieveData(endpoint) {
 const request = new Request(`${endpoint}sparql/?query=${query}&ac=1`);
 request.headers.append("Accept","application/sparql-results+json")
 fetch(request)
@@ -226,12 +225,16 @@ function draw(nodes, edges){
 network = new vis.Network(container, data, options);
 }
 
-
-window.addEventListener("load", () => {
-  retrieveData();
-});
+}
+//window.addEventListener("load", () => {
+//  retrieveData(endpoint);
+//});
 </script>
 </head>
 <body>
+<form>
+	<input id="sparqlendpoint" type="text"/>
+	<button type="button" onclick="console.log(document.getElementById('sparqlendpoint').value);retrieveData(document.getElementById('sparqlendpoint').value);" >visualize</button>
+</form>
 <div id="mynetwork"></div>
 </body>
