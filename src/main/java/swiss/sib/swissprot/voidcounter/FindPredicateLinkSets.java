@@ -76,9 +76,10 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
 			ClassPartition source, Repository repository, Lock writeLock) {
 		final IRI predicate = predicatePartition.getPredicate();
+		futures.add(execs.submit(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition,
+				source, repository, writeLock, limiter, scheduledQueries, finishedQueries)));
+
 		for (ClassPartition target : targetClasses) {
-			futures.add(execs.submit(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition,
-					source, repository, writeLock, limiter, scheduledQueries, finishedQueries)));
 
 			Future<Exception> future = execs.submit(new IsSourceClassLinkedToTargetClass(repository, predicate, target,
 					predicatePartition, source, gd, writeLock, limiter, scheduledQueries, finishedQueries));
