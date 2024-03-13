@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<head>
+<style>
+html,
+body {
+  font: 10pt arial;
+}
+</style>
+<script type="text/javascript">
+var endpoint = "https://sparql.uniprot.org/sparql/";
+var query = "PREFIX sh:<http://www.w3.org/ns/shacl%23> PREFIX sd:<http://www.w3.org/ns/sparql-service-description%23> PREFIX void:<http://rdfs.org/ns/void%23> PREFIX void_ext:<http://ldf.fi/void-ext%23>"
++encodeURIComponent(`SELECT
+DISTINCT
+(IF(BOUND(?namespaceFrom), CONCAT(?prefixFrom, ":", SUBSTR(STR(?classFrom), STRLEN(STR(?namespaceFrom))+1)), ?classFrom) AS ?fromId)
+?classFrom
+(IF(BOUND(?namespaceToDataype), CONCAT(?prefixToDataype, ":", SUBSTR(STR(?datatypeTo), STRLEN(STR(?namespaceToDataype))+1)), ?datatypeTo) AS ?toDatatypeId)
+?datatypeTo
+(IF(BOUND(?namespaceToClass), CONCAT(?prefixToClass, ":", SUBSTR(STR(?classTo), STRLEN(STR(?namespaceToClass))+1)), ?classTo) AS ?toClassId)
+?classTo
+(IF(BOUND(?namespaceProp), CONCAT(?prefixProp, ":", SUBSTR(STR(?prop), STRLEN(STR(?namespaceProp))+1)), ?prop) AS ?propId)
+?prop
+(IF(BOUND(?namespaceGraph), CONCAT(?prefixGraph, ":", SUBSTR(STR(?graph), STRLEN(STR(?namespaceGraph))+1)), ?graph) AS ?graphId)
+?graphIri
+?triples
+WHERE {
+  {
+   SELECT * 
+   WHERE {
+   ?graphIri sd:graph ?graph .
+  ?s sd:graph ?graph .
+  ?graph void:classPartition ?cp1 .
+  ?cp1 void:class ?classFrom .
+  ?cp1 void:propertyPartition ?pp1 .
+  ?pp1 void:property ?prop .
+  ?pp1 void:triples ?triples .
+  {
+    ?pp1 void_ext:datatypePartition ?cp2 .
+    ?cp2 void_ext:datatype ?datatypeTo .
+   
+  } UNION {
+    ?pp1 void:classPartition ?cp2 .
+    ?cp2 void:class ?classTo .
+    ?graph void:classPartition ?cp3 .
+    ?cp3 void:class ?classTo .  
+}
+    }
+  }
+    OPTIONAL{
+      [] sh:namespace ?namespaceToClass ;
+        sh:prefix ?prefixToClass .
+    FILTER(STRSTARTS(STR(?classTo),STR(?namespaceToClass)))
+  }
+     OPTIONAL{
+      [] sh:namespace ?namespaceToDataype ;
+        sh:prefix ?prefixToDataype .
+    FILTER(STRSTARTS(STR(?datatypeTo),STR(?namespaceToDataype)))
+  }
+OPTIONAL{
+    [] sh:namespace ?namespaceFrom ;
+        sh:prefix ?prefixFrom .
+    FILTER(STRSTARTS(STR(?classFrom),STR(?namespaceFrom)))
+}
+OPTIONAL{
+    [] sh:namespace ?namespaceProp ;
+        sh:prefix ?prefixProp .
+    FILTER(STRSTARTS(STR(?prop),STR(?namespaceProp)))
+}
+OPTIONAL{
+    [] sh:namespace ?namespaceGraph ;
+        sh:prefix ?prefixGraph.
+    FILTER(STRSTARTS(STR(?graph),STR(?namespaceGraph)))
+}
+} ORDER BY ?classFrom ?classTo ?datatypeTo ?graph ?triples`);
+
+function addNode(node, rdf_type, graphId, count, nodesMap, nodeDatatypesMap){
+    var nodeId = `${node.value}-${graphId.value}`
+    if (nodesMap.has(nodeId)){
+        var prior = nodesMap.get(nodeId);
+	    prior.count = prior.count + count;
+    } else {
+    	nodesMap.set(nodeId, {
+		id: nodeId, 
+        rdf_type: rdf_type.value,
+		label: node.value,
+		literals: nodeDatatypesMap.get(nodeId), 
+		group: graphId.value, 
+		count: count})
+    }
+}
+function retrieveData(endpoint) {
+const request = new Request(`${endpoint}?query=${query}&ac=1`);
+request.headers.append("Accept","application/sparql-results+json")
+fetch(request)
+.then((response)=>response.json())
+.then((results) => attachRetrievedData(results));
+}
+
+function processDatatypes(results, nodeDatatypesMap, graphsMap) {
+    for(r in results.results.bindings){
+	    var row=results.results.bindings[r];
+	
+    	if (row.toDatatypeId) {
+        	var row=results.results.bindings[r];
+	    	var fromId=`${row.fromId.value}-${row.graphId.value}`;
+		    var next = {id:row.toDatatypeId.value, dtIri: row.toDatatype, predIri: row.prop.value, predId:row.propId.value, count:parseInt(row.triples.value), };
+	        if(nodeDatatypesMap.has(fromId)) {
+			    nodeDatatypesMap.get(fromId).push(next);
+            } else {
+			    nodeDatatypesMap.set(fromId, [next]);
+	    	}
+    	}
+        graphsMap.set(row.graphId.value, row.graphIri);
+    }
+}
+
+function processRdfTypes(results, nodesMap, edgesMap, nodeDatatypesMap) {
+    const ignores = new Set([ 'rdf:Statement' ,'rdf:object' , 'rdf:subject', 'rdf:predicate']);
+    for(r in results.results.bindings){
+        var row=results.results.bindings[r];
+
+        if (! (ignores.has(row.fromId.value) || row.toDatatypeId)) {
+   	        var fromId=`${row.fromId.value}-${row.graphId.value}`;
+            var toId=`${row.toClassId.value}-${row.graphId.value}`;
+            var propId=`${row.propId.value}`;
+	        var count =  parseInt(row.triples.value);
+	        addNode(row.fromId, row.classFrom, row.graphId, count, nodesMap, nodeDatatypesMap);
+	        addNode(row.toClassId, row.classTo, row.graphId, count, nodesMap, nodeDatatypesMap);
+	        if (nodesMap.has(propId)){
+    		    var prior = nodesMap.get(propId);
+	    	    prior.count = prior.count + (row.triples.value *1);
+	        } else {
+            	nodesMap.set(propId, {id: propId, label: propId, shape: 'box', group: 'predicate', count: count })
+	        }
+            var fromProp=fromId+propId;
+            var toProp=propId+toId;
+            if (edgesMap.has(fromProp)) {
+                var temp=edgesMap.get(fromProp);
+                temp.count += count;
+                temp.title='triples:'+temp.count.toLocaleString();
+            } else {
+                edgesMap.set(fromProp, {from:fromId, to:propId, arrows:"to", count: count, title:'triples:'+count.toLocaleString()})
+            }
+            if (edgesMap.has(toProp)){
+                var temp=edgesMap.get(toProp);
+                temp.count += count;
+                temp.title='triples:'+temp.count.toLocaleString();
+            } else {
+                edgesMap.set(toProp, {from:propId, to:toId, arrows:"to", count: count, title:'triples:'+count.toLocaleString(), color:{inherit:'to'}})
+            }
+        }
+    }
+}
+
+function mergeNodesByType(nodesMap){
+    let types = new Map();
+    for (let [nodeId, node] of nodesMap.entries()) {
+        if (typeof node.rdf_type === "undefined"){ 
+            //console.log("No class relation: ", node)
+        } else if (types.has(node.rdf_type)){
+            let prior = types.get(node.rdf_type).literals;
+            if (prior === null || typeof prior === "undefined" ) {
+                types.get(node.rdf_type).literals = node.literals;
+            } else if (node.literals !== null && typeof node.literals !== "undefined") {
+                for (lit of node.literals.values()) {
+                    let found=false;
+                    for (pr of prior.values()) {
+                        if (pr.value === lit.value){
+                            found=true;
+                            console.log(pr, lit)
+                            pr.count = pr.count + lit.count;
+                        }
+                    }
+                    if (!found) {
+                        prior.push(lit);
+                    }
+                }
+            }
+        } else {
+            types.set(node.rdf_type, node)
+        }
+    }
+    return types;
+}
+
+async function attachRetrievedData(results) {
+
+    const container = document.getElementById('mynetwork');
+    container.innerHTML =''; 
+    let nodesMap = new Map();
+    let edgesMap = new Map();
+    let nodeDatatypesMap = new Map();
+    let graphsMap = new Map();
+    
+    processDatatypes(results, nodeDatatypesMap, graphsMap);
+    processRdfTypes(results, nodesMap, edgesMap, nodeDatatypesMap);  
+    console.log("Starting", document.getElementById('mynetwork'));
+    container.append('endpoint:\n');
+    container.append(` - ${endpoint}:\n`);
+    container.append(' - graph:\n');
+
+    for (let [graphId, graph] of graphsMap.entries()) {
+	    container.append(`   - ${graph.value}\n`)
+    }
+
+    let types = mergeNodesByType(nodesMap)
+    let seenNodeLabels = new Set()
+    container.append("\n\n\n")
+    var modelYaml = "";
+    let nodesPromises = [];
+    for (let[key, node] of types) {
+         let datatypeYamlPromises = [];
+         if (typeof node.literals !== "undefined") {
+            let datatypeMap = node.literals;
+            for (let [datatypeId, datatype] of datatypeMap.entries()) {
+                datatypeYamlPromises.push(datatypeToYaml(datatype, node, endpoint))
+            }
+        }
+        var nodeLabel = node.label.split(':')[1].replaceAll(/[_-]/g,'');
+        if (seenNodeLabels.has(nodeLabel)) {
+            nodeLabel = nodeLabel + seenNodes.size;
+        }
+        seenNodeLabels.add(nodeLabel)
+        let typeLabelPromise = Promise.resolve(`:\n  - a:\n    - ${node.label}\n`);
+
+        let typeExamplePromise = attachExampleOfType(node.rdf_type, endpoint);
+        let typeText = Promise.resolve("- "+nodeLabel + " ");
+       
+        let dtp = Promise.allSettled(datatypeYamlPromises).then((values) => allDatatypesToYaml(values));
+        let p = Promise.allSettled([typeText, typeExamplePromise, typeLabelPromise, dtp]).then((values) => {
+            container.append(values.map((v) => v.value)
+                .join(''));
+            container.append("\n");
+        });
+        await p;
+    }
+    console.log("Done")
+}
+
+function allDatatypesToYaml(values){
+    return values.map((v) => v.value).join("\n") + '\n';
+}
+
+function datatypeToYaml(datatype, node, endpoint){
+    const colonOrDash = /[:-]/g
+    return attachExampleOfTypePredicate(node.rdf_type, datatype, endpoint).then((val) => {
+        
+        let datatypePredicateLabel = datatype.predId.toLowerCase().replace(colonOrDash, '_');
+        let nodeLabel = node.label.split(':')[1].toLowerCase().replace(colonOrDash, '_');
+        let d = `  - ${datatype.predId}`
+            console.log(node, datatype)
+        if (node.count !== datatype.count){
+            d+= '*'
+        } else {
+            console.log(node, datatype)
+        }
+        d += `:\n    - ${nodeLabel}_${datatypePredicateLabel}_`
+        if (datatype.id === 'xsd:string'){
+            d += "string"
+        } else if (datatype.id === 'xsd:int' || datatype.id === 'xsd:nonNegativeInteger' ) {
+            d += "integer_value";
+        } else if (datatype.id === 'xsd:float') {
+            d += "float";
+        } else if (datatype.id === 'xsd:boolean') {
+            d += "boolean";
+        } else if (datatype.id === 'xsd:date') {
+            d += "date";
+        } else {
+            console.log(datatype)
+        }
+        return d +": " + val
+    });
+}
+
+async function attachExampleOfType(iriOfType, endpoint){
+    const exampleQuery= encodeURIComponent(`SELECT * { ?ex a <${iriOfType}> . FILTER(! isBlank(?ex))} LIMIT 2`);
+    const request3 = new Request(`${endpoint}?query=${exampleQuery}&ac=1`, { cache: "force-cache" });
+    request3.headers.append("Accept","application/sparql-results+json");
+    return fetch(request3)
+        .then((response) => response.json())
+        .then((results) => {
+            return results.results.bindings.map((row) => `<${row.ex.value}>`).join(' ');
+        });
+}
+
+async function attachExampleOfTypePredicate(iriOfType, predicate, endpoint){
+    const exampleQuery= encodeURIComponent(`SELECT * { ?ex a <${iriOfType}> ; <${predicate.predIri}> ?val .} LIMIT 1`);
+    const request3 = new Request(`${endpoint}?query=${exampleQuery}&ac=1`, { cache: "force-cache" });
+    request3.headers.append("Accept","application/sparql-results+json");
+    return fetch(request3)
+        .then((response) => response.json())
+        .then((results) => {
+            return results.results.bindings
+                .map((row) => row.val.value)
+                .map(v => v.replace(':', '')) //TODO wait for rdf-config fix
+                .map((v) => { 
+                    if (v.length < 60) { 
+                        return `"${v}"` ;
+                    } else { 
+                        return '"'+v.substring(0, 59) + "…\"";
+                    }})
+                .join(' ');
+        });
+}
+
+function retrievePrefixes(endpoint) {
+    const prefixQuery= "PREFIX%20sh:%3Chttp://www.w3.org/ns/shacl%23%3E%20SELECT%20?prefix%20?namespace%20WHERE%20{%20[]%20sh:namespace%20?namespace%20;%20sh:prefix%20?prefix}%20ORDER%20BY%20?prefix";
+    const request2 = new Request(`${endpoint}?query=${prefixQuery}&ac=1`);
+    request2.headers.append("Accept","application/sparql-results+json")
+    fetch(request2)
+        .then((response)=>response.json())
+        .then((results) => {
+    const container = document.getElementById('mynetwork');
+    container.innerHTML=''
+    for(r in results.results.bindings){
+	    var row=results.results.bindings[r];
+        container.append(row.prefix.value);
+        container.append(': <');
+        container.append(row.namespace.value);
+        container.append(">\n")
+    }    
+
+    container.append("\n")
+});
+}
+
+function makeRdfConfig(endpoint) {
+    //retrievePrefixes(endpoint);
+    retrieveData(endpoint);
+}
+
+</script>
+</head>
+<body>
+    <form>
+    <input id="sparqlendpoint" type="text" value="https://sparql.uniprot.org/sparql/"/>
+    <button type="button" onclick="console.log(document.getElementById('sparqlendpoint').value);makeRdfConfig(document.getElementById('sparqlendpoint').value);" >visualize</button>
+</form>
+
+    <pre id="mynetwork"></pre>
+</body>
