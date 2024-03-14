@@ -122,7 +122,7 @@ function addNode(node, graphId, count, nodesMap, nodeDatypesMap){
     }
 }
 function retrieveData(endpoint) {
-const request = new Request(`${endpoint}sparql/?query=${query}&ac=1`);
+const request = new Request(`${endpoint}?query=${query}&ac=1`);
 request.headers.append("Accept","application/sparql-results+json")
 fetch(request)
 .then((response)=>response.json())
@@ -233,7 +233,7 @@ network = new vis.Network(container, data, options);
 </head>
 <body>
 <form>
-	<input id="sparqlendpoint" type="text"/>
+	<input id="sparqlendpoint" type="text" value="https://sparql.uniprot.org/sparql/"/>
 	<button type="button" onclick="console.log(document.getElementById('sparqlendpoint').value);retrieveData(document.getElementById('sparqlendpoint').value);" >visualize</button>
 </form>
 <div id="mynetwork"></div>
