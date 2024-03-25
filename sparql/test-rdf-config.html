@@ -7,34 +7,6 @@ body {
 }
 </style>
 <script type="text/javascript">
-let endpoint = "https://sparql.uniprot.org/sparql/";
-const query = "PREFIX sh:<http://www.w3.org/ns/shacl%23> PREFIX sd:<http://www.w3.org/ns/sparql-service-description%23> PREFIX void:<http://rdfs.org/ns/void%23> PREFIX void_ext:<http://ldf.fi/void-ext%23> "
-+encodeURIComponent(`SELECT
-DISTINCT
-?classFrom
-?datatypeTo
-?classTo
-?propIri
-(SUM(?triples) AS ?sumTriples)
-WHERE {
-  ?graphIri sd:graph ?graph .
-  ?s sd:graph ?graph .
-  ?graph void:classPartition ?cp1 .
-  ?cp1 void:class ?classFrom .
-  ?cp1 void:propertyPartition ?pp1 .
-  ?pp1 void:property ?propIri .
-  ?pp1 void:triples ?triples .
-  {
-    ?pp1 void_ext:datatypePartition ?cp2 .
-    ?cp2 void_ext:datatype ?datatypeTo .
-  } UNION {
-    ?pp1 void:classPartition ?cp2 .
-    ?cp2 void:class ?classTo .
-    ?graph void:classPartition ?cp3 .
-    ?cp3 void:class ?classTo .  
-  }
-} GROUP BY ?classFrom ?classTo ?datatypeTo ?propIri ORDER BY ?classFrom ?classTo ?datatypeTo ?propIri`);
-
 function addNode(rdf_type, count, nodesMap, nodeDatatypesMap){
     const nodeId = rdf_type.value;
     if (nodesMap.has(nodeId)){
@@ -77,11 +49,37 @@ function nicePrefixedIri(iri, prefixes) {
 }
 
 function retrieveData(endpoint, prefixes) {
+    const query = "PREFIX sh:<http://www.w3.org/ns/shacl%23> PREFIX sd:<http://www.w3.org/ns/sparql-service-description%23> PREFIX void:<http://rdfs.org/ns/void%23> PREFIX void_ext:<http://ldf.fi/void-ext%23> " +encodeURIComponent(`SELECT
+DISTINCT
+?classFrom
+?datatypeTo
+?classTo
+?propIri
+(SUM(?triples) AS ?sumTriples)
+WHERE {
+  ?graphIri sd:graph ?graph .
+  ?s sd:graph ?graph .
+  ?graph void:classPartition ?cp1 .
+  ?cp1 void:class ?classFrom .
+  ?cp1 void:propertyPartition ?pp1 .
+  ?pp1 void:property ?propIri .
+  ?pp1 void:triples ?triples .
+  {
+    ?pp1 void_ext:datatypePartition ?cp2 .
+    ?cp2 void_ext:datatype ?datatypeTo .
+  } UNION {
+    ?pp1 void:classPartition ?cp2 .
+    ?cp2 void:class ?classTo .
+    ?graph void:classPartition ?cp3 .
+    ?cp3 void:class ?classTo .  
+  }
+} GROUP BY ?classFrom ?classTo ?datatypeTo ?propIri ORDER BY ?classFrom ?classTo ?datatypeTo ?propIri`);
+
     const request = new Request(`${endpoint}?query=${query}&ac=1`);
     request.headers.append("Accept","application/sparql-results+json")
     fetch(request)
         .then((response)=>response.json())
-        .then((results) => attachRetrievedData(results, prefixes));
+        .then((results) => attachRetrievedData(results, prefixes, endpoint));
 }
 
 function processDatatypes(results, nodeDatatypesMap) {
@@ -171,7 +169,7 @@ function mergeNodesByType(nodesMap){
     return types;
 }
 
-async function attachRetrievedData(results, prefixes) {
+async function attachRetrievedData(results, prefixes, endpoint) {
     const container = document.getElementById('modelyaml');
     container.innerHTML =''; 
     let nodesMap = new Map();
@@ -360,7 +358,7 @@ async function makeRdfConfig(endpoint) {
 <body>
     <form>
     <input id="sparqlendpoint" type="text" value="https://sparql.uniprot.org/sparql/"/>
-    <button type="button" onclick="console.log(document.getElementById('sparqlendpoint').value);makeRdfConfig(document.getElementById('sparqlendpoint').value);" >visualize</button>
+    <button type="button" onclick="makeRdfConfig(document.getElementById('sparqlendpoint').value);" >visualize</button>
 </form>
     <h1>endpoint.yaml</h1>
     <pre id="endpointyaml"></pre>
