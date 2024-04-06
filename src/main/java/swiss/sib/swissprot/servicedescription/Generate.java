@@ -43,10 +43,8 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.SD;
 import org.eclipse.rdf4j.model.vocabulary.VOID;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
-import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.query.Update;
 import org.eclipse.rdf4j.query.UpdateExecutionException;
 import org.eclipse.rdf4j.repository.Repository;
@@ -67,7 +65,6 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.vocabulary.FORMATS;
 import swiss.sib.swissprot.vocabulary.PAV;
 import swiss.sib.swissprot.vocabulary.VOID_EXT;
@@ -89,8 +86,7 @@ public class Generate implements Callable<Integer> {
 
 	protected static final Logger log = LoggerFactory.getLogger(Generate.class);
 
-	private static final Set<String> VIRTUOSO_GRAPHS = Set.of("http://www.openlinksw.com/schemas/virtrdf#",
-			"http://www.w3.org/ns/ldp#", "urn:activitystreams-owl:map", "urn:core:services:sparql");
+
 
 	private Set<String> graphNames;
 	private Repository repository;
@@ -301,25 +297,6 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	public static Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries2,
-			AtomicInteger finishedQueries2) throws RepositoryException {
-		Set<String> res = new HashSet<>();
-
-		scheduledQueries2.incrementAndGet();
-		try (final TupleQueryResult foundGraphs = Helper.runTupleQuery("SELECT DISTINCT ?g WHERE {GRAPH ?g { ?s ?p ?o}}", connection)) {
-			while (foundGraphs.hasNext()) {
-				final BindingSet next = foundGraphs.next();
-				final String graphIRI = next.getBinding("g").getValue().stringValue();
-				if (!VIRTUOSO_GRAPHS.contains(graphIRI))
-					res.add(graphIRI);
-			}
-		} finally {
-			finishedQueries2.incrementAndGet();
-		}
-		return res;
-
-	}
-
 	private void saveResults(IRI graphUri, Consumer<ServiceDescription> saver) {
 		sd.setTotalTripleCount(sd.getGraphs().stream().mapToLong(GraphDescription::getTripleCount).sum());
 		saver.accept(sd);
@@ -396,7 +373,7 @@ public class Generate implements Callable<Integer> {
 		boolean isvirtuoso = repository instanceof VirtuosoRepository;
 		if (graphNames.isEmpty()) {
 			try (RepositoryConnection connection = repository.getConnection()) {
-				graphNames = findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
+				graphNames = FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
 		if (countDistinctObjects) {
