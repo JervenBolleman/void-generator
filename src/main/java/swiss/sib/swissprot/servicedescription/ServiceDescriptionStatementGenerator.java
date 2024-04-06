@@ -32,18 +32,18 @@ public class ServiceDescriptionStatementGenerator {
 
 		Resource defaultDatasetId = vf.createBNode(Long.toHexString(id++));
 		Resource defaultGraphId = vf.createBNode(Long.toHexString(id++));
-		statement(iriOfVoid, RDF.PROPERTY, SD.SERVICE);
+		statement(iriOfVoid, RDF.TYPE, SD.SERVICE);
 		statement(iriOfVoid, SD.DEFAULT_DATASET, defaultDatasetId);
 		statement(iriOfVoid, SD.ENDPOINT, iriOfVoid);
 		supportedFormats(iriOfVoid);
 		statement(iriOfVoid, SD.SUPPORTED_LANGUAGE, SD.SPARQL_11_QUERY);
 		statement(iriOfVoid, SD.PROPERTY_FEATURE, SD.UNION_DEFAULT_GRAPH);
 		statement(iriOfVoid, SD.PROPERTY_FEATURE, SD.BASIC_FEDERATED_QUERY);
-		statement(defaultDatasetId, RDF.PROPERTY, SD.DATASET);
+		statement(defaultDatasetId, RDF.TYPE, SD.DATASET);
 		statement(defaultDatasetId, SD.DEFAULT_GRAPH, defaultGraphId);
 		if (item.getRelease() != null)
 			statement(defaultDatasetId, PAV.VERSION, vf.createLiteral(item.getRelease()));
-		statement(defaultGraphId, RDF.PROPERTY, SD.GRAPH_CLASS);
+		statement(defaultGraphId, RDF.TYPE, SD.GRAPH_CLASS);
 		if (item.getTotalTripleCount() > 0) {
 			statement(defaultGraphId, VOID.TRIPLES, vf.createLiteral(item.getTotalTripleCount()));
 		}
@@ -93,8 +93,8 @@ public class ServiceDescriptionStatementGenerator {
 		IRI namedGraph = graphName;
 		statement(defaultDatasetId, SD.NAMED_GRAPH_PROPERTY, namedGraph);
 		IRI graph = vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName());
-		statement(namedGraph, SD.NAMED_GRAPH_CLASS, graph);
-		statement(namedGraph, SD.GRAPH_PROPERTY, graphName);
+		statement(namedGraph, SD.NAME, graphName);
+		statement(namedGraph, SD.GRAPH_PROPERTY, graph);
 
 		statement(graph, RDF.TYPE, SD.GRAPH_CLASS);
 		statement(graph, VOID.ENTITIES, vf.createLiteral(gd.getTripleCount()));
