@@ -108,7 +108,7 @@ public class ServiceDescriptionStatementGenerator {
 			statement(dataSetClassPartition, RDF.TYPE, VOID.DATASET);
 			statement(dataSetClassPartition, VOID.CLASS, iriOfType);
 			if (cp.getTripleCount() > 0) {
-				statement(dataSetClassPartition, VOID.TRIPLES, vf.createLiteral(cp.getTripleCount()));
+				statement(dataSetClassPartition, VOID.ENTITIES, vf.createLiteral(cp.getTripleCount()));
 			}
 			for (PredicatePartition pp : cp.getPredicatePartitions()) {
 				IRI ppr = getResourceForSubPartition(namedGraph, cp.getClazz(), pp.getPredicate(), voidLocation);
@@ -138,7 +138,7 @@ public class ServiceDescriptionStatementGenerator {
 				statement(dataSetPropertyPartition, VOID.CLASS_PARTITION, cppr);
 				statement(cppr, VOID.CLASS, ppcp.getClazz());
 				if (ppcp.getTripleCount() > 0) {
-					statement(cppr, VOID.TRIPLES, vf.createLiteral(ppcp.getTripleCount()));
+					statement(cppr, VOID.ENTITIES, vf.createLiteral(ppcp.getTripleCount()));
 				}
 			}
 			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
