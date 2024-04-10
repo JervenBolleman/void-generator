@@ -1,4 +1,4 @@
-package swiss.sib.swissprot;
+package swiss.sib.swissprot.voidcounter;
 
 import static org.junit.Assert.assertEquals;
 
