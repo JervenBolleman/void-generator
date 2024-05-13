@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -38,9 +39,12 @@ public class FindGraphs {
 				.runTupleQuery(query, connection)) {
 			while (foundGraphs.hasNext()) {
 				final BindingSet next = foundGraphs.next();
-				final String graphIRI = next.getBinding("g").getValue().stringValue();
-				if (!VIRTUOSO_GRAPHS.contains(graphIRI))
-					res.add(graphIRI);
+				Binding binding = next.getBinding("g");
+				if (binding != null) {
+					final String graphIRI = binding.getValue().stringValue();
+					if (!VIRTUOSO_GRAPHS.contains(graphIRI))
+						res.add(graphIRI);
+				}
 			}
 		} finally {
 			finishedQueries2.incrementAndGet();
