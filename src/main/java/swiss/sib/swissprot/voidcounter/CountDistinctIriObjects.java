@@ -72,8 +72,8 @@ public final class CountDistinctIriObjects
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) as ?types) FROM <"
-			    + gd.getGraphName() + "> WHERE {?subject ?predicate ?object . FILTER (isIri(?object))}";
+			final String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) as ?types) { GRAPH <"
+			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER (isIri(?object))}}";
 			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
 			    .longValue();
 		}

@@ -59,8 +59,8 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Boolea
 		try {
 			final IRI sourceType = source.getClazz();
 			final IRI targetType = target.getClazz();
-			final String query = "ASK FROM <" + gd.getGraphName() + "> { ?subject a <" + sourceType + "> ; <"
-					+ predicate + "> ?target . ?target a <" + targetType + "> }";
+			final String query = "ASK  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
+					+ predicate + "> ?target . ?target a <" + targetType + "> }}";
 			final BooleanQuery pbq = connection.prepareBooleanQuery(QueryLanguage.SPARQL, query);
 			return pbq.evaluate();
 		} finally {

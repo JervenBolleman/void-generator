@@ -82,8 +82,8 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 					+ gd.getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0";
 			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
 		} else {
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?types) FROM <"
-					+ gd.getGraphName() + "> WHERE {?subject ?predicate ?object . FILTER(isBlank(?subject))}";
+			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?types) WHERE {"
+					+ "GRAPH <"+ gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isBlank(?subject))}}";
 			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
 					.longValue();
 		}

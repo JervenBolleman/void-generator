@@ -75,8 +75,8 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	}
 
 	private Long pureSparql(RepositoryConnection connection) {
-		String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) AS ?types) FROM <" + graphname
-				+ "> WHERE {?subject ?predicate ?object . FILTER (isLiteral(?object))}";
+		String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) AS ?types) WHERE { GRAPH <" + graphname
+				+ "> {?subject ?predicate ?object . FILTER (isLiteral(?object))}}";
 		return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection)).longValue();
 	}
 
