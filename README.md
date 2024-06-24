@@ -23,9 +23,11 @@ java -jar target/void-generator-*.jar --help
 
 ```sh
 java -jar target/void-generator-*.jar \
-    -u dba \
-    -p dba \
-    -r jdbc:virtuoso://localhost:1112/charset=UTF-8 \
+    --user dba \
+    --password dba \
+    -r jdbc:virtuoso://localhost:1111/charset=UTF-8 \ # note the localhost and "isql-t" port
     -s void-file-locally-stored.ttl \
     -i "https://YOUR_SPARQL_ENDPOINT/.well-known/void" 
 ```
+
+The IRI is supposed to be the URL of the published location of the void file/service description.
