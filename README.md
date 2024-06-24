@@ -19,3 +19,11 @@ java -jar target/void-generator-*.jar --help
 ```
 
 
+# Running against a local Virtuoso endpoint
+
+```sh
+java -jar target/void-generator-*.jar \
+    -u dba \
+    -p dba \
+    -r jdbc:virtuoso://localhost:1112/charset=UTF-8
+```
