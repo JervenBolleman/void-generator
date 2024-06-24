@@ -25,5 +25,7 @@ java -jar target/void-generator-*.jar --help
 java -jar target/void-generator-*.jar \
     -u dba \
     -p dba \
-    -r jdbc:virtuoso://localhost:1112/charset=UTF-8
+    -r jdbc:virtuoso://localhost:1112/charset=UTF-8 \
+    -s void-file-locally-stored.ttl \
+    -i "https://YOUR_SPARQL_ENDPOINT/.well-known/void" 
 ```
