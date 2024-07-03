@@ -233,7 +233,11 @@ public class ServiceDescriptionStatementGenerator {
 
 	protected IRI getResourceForPartition(final IRI namedGraph, final IRI rt, String voidLocation) {
 		String md5 = new MD5().evaluate(vf, vf.createLiteral(rt.stringValue())).stringValue();
-		return vf.createIRI(voidLocation, namedGraph.getLocalName() + '!' + md5 + '!' + rt.getLocalName());
+		if (voidLocation.endsWith("#")) {
+			return vf.createIRI(voidLocation, namedGraph.getLocalName() + '!' + md5 + '!' + rt.getLocalName());
+		} else {
+			return vf.createIRI(voidLocation + "#", namedGraph.getLocalName() + '!' + md5 + '!' + rt.getLocalName());
+		}
 	}
 
 	protected IRI getIRI(final String rawGraphName) {
