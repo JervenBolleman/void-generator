@@ -75,8 +75,8 @@ public class CountUniqueObjectsPerPredicateInGraph
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) as ?types) WHERE { GRAPH <"
-			    + gd.getGraphName() + "> WHERE {?subject <" + predicate + "> ?object}}";
+			final String countDistinctSubjectQuery = "SELECT (count(distinct ?object) as ?types) WHERE { GRAPH <"
+			    + gd.getGraphName() + "> {?subject <" + predicate + "> ?object}}";
 			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
 			    .longValue();
 		}
