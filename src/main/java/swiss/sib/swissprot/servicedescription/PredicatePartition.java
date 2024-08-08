@@ -1,13 +1,17 @@
 package swiss.sib.swissprot.servicedescription;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.ValueComparator;
+
+import swiss.sib.swissprot.voidcounter.LinkSet;
 
 
 public class PredicatePartition
@@ -18,6 +22,7 @@ public class PredicatePartition
 	private final Map<IRI, ClassPartition> classPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private final Map<IRI, DataTypePartition> dataTypePartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private final Map<Resource, SubjectPartition> subjectPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
+	private final List<LinkSet> linkSets = Collections.synchronizedList(new ArrayList<>());
 	private long tripleCount;
 	private long subjectCount;
 	private long objectCount;
@@ -172,5 +177,13 @@ public class PredicatePartition
 	public long getDistinctObjectCount()
 	{
 		return this.objectCount;
+	}
+
+	public void putLinkPartition(LinkSet subTarget) {
+		linkSets.add(subTarget);
+	}
+
+	public List<LinkSet> getLinkSets() {
+		return linkSets;
 	}
 }

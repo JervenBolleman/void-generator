@@ -17,6 +17,7 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import swiss.sib.swissprot.vocabulary.FORMATS;
 import swiss.sib.swissprot.vocabulary.PAV;
 import swiss.sib.swissprot.vocabulary.VOID_EXT;
+import swiss.sib.swissprot.voidcounter.LinkSet;
 
 public class ServiceDescriptionStatementGenerator {
 	private final RDFHandler handler;
@@ -139,6 +140,17 @@ public class ServiceDescriptionStatementGenerator {
 				statement(cppr, VOID.CLASS, ppcp.getClazz());
 				if (ppcp.getTripleCount() > 0) {
 					statement(cppr, VOID.ENTITIES, vf.createLiteral(ppcp.getTripleCount()));
+				}
+			}
+			for (LinkSet ls: predicate.getLinkSets()) {
+				//TODO generate nicer IRI
+				Resource bNode = vf.createBNode();
+				statement(bNode, RDF.TYPE, VOID.LINKSET);
+				statement(bNode, VOID.LINK_PREDICATE, predicate.getPredicate());
+				statement(bNode, VOID.TARGET, dataSetPropertyPartition);
+				for (ClassPartition cp:ls.getOtherGraph().getClasses()) {
+					if (cp.getClazz().equals(ls.getTargetType()))
+						statement(bNode, VOID.TARGET, ls.getTargetType());
 				}
 			}
 			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);

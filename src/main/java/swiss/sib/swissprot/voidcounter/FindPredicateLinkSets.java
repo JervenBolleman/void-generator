@@ -76,14 +76,24 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
 			ClassPartition source, Repository repository, Lock writeLock) {
 		final IRI predicate = predicatePartition.getPredicate();
-		futures.add(execs.submit(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition,
-				source, repository, writeLock, limiter, scheduledQueries, finishedQueries)));
+		futures.add(execs.submit(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition, source,
+				repository, writeLock, limiter, scheduledQueries, finishedQueries)));
 
 		for (ClassPartition target : targetClasses) {
 
 			Future<Exception> future = execs.submit(new IsSourceClassLinkedToTargetClass(repository, predicate, target,
 					predicatePartition, source, gd, writeLock, limiter, scheduledQueries, finishedQueries));
 			futures.add(future);
+
+		}
+
+		for (GraphDescription og : sd.getGraphs()) {
+			if (!og.getGraphName().equals(gd.getGraphName())) {
+				Future<Exception> future = execs.submit(
+						new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate, predicatePartition,
+								source, gd, writeLock, limiter, scheduledQueries, finishedQueries, og));
+				futures.add(future);
+			}
 		}
 		futures.add(execs.submit(new FindDataTypeIfNoClassOrDtKnown(predicatePartition, source, repository, gd,
 				writeLock, limiter, scheduledQueries, finishedQueries)));
@@ -129,7 +139,6 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			subpredicatePartition = new PredicatePartition(pp.getPredicate());
 			long tripleCount = countTriplesInPredicateClassPartition(repository, pp, source);
 			subpredicatePartition.setTripleCount(tripleCount);
-
 
 		} catch (RepositoryException e) {
 			log.error("Finding class and predicate link sets failed", e);
