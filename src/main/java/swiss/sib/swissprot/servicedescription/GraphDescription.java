@@ -1,5 +1,7 @@
 package swiss.sib.swissprot.servicedescription;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -23,6 +25,7 @@ public class GraphDescription
 	private long distinctIriSubjectCount;
 
 	private Resource license;
+	private List<ShapePartition> shapes = new ArrayList<>();
 
 	public long getDistinctClassesCount()
 	{
@@ -165,5 +168,9 @@ public class GraphDescription
 	public void setLicense(Resource license)
 	{
 		this.license = license;
+	}
+
+	public List<ShapePartition> getShapePartions() {
+		return shapes;
 	}
 }

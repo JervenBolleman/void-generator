@@ -17,6 +17,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.repository.Repository;
 
 import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
+import swiss.sib.swissprot.voidcounter.CountDistinctShapeDefiningSuperClasses;
 import swiss.sib.swissprot.voidcounter.FindPredicateLinkSets;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
 
@@ -59,6 +60,11 @@ final class FindPredicatesAndClasses implements Callable<Exception> {
 			return call;
 
 		call = new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver,
+				sd).call();
+		if (call != null)
+			return call;
+		
+		call = new CountDistinctShapeDefiningSuperClasses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver,
 				sd).call();
 		if (call != null)
 			return call;

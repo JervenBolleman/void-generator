@@ -9,6 +9,7 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.DCTERMS;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.SD;
 import org.eclipse.rdf4j.model.vocabulary.VOID;
 import org.eclipse.rdf4j.query.algebra.evaluation.function.hash.MD5;
@@ -103,68 +104,19 @@ public class ServiceDescriptionStatementGenerator {
 		if (distinctClasses > 0)
 			statement(graph, VOID.CLASSES, vf.createLiteral(distinctClasses));
 		for (ClassPartition cp : gd.getClasses()) {
-			final IRI iriOfType = getIRI(cp.getClazz().toString());
-			IRI dataSetClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
-			statement(graph, VOID.CLASS_PARTITION, dataSetClassPartition);
-			statement(dataSetClassPartition, RDF.TYPE, VOID.DATASET);
-			statement(dataSetClassPartition, VOID.CLASS, iriOfType);
-			if (cp.getTripleCount() > 0) {
-				statement(dataSetClassPartition, VOID.ENTITIES, vf.createLiteral(cp.getTripleCount()));
-			}
-			for (PredicatePartition pp : cp.getPredicatePartitions()) {
-				IRI ppr = getResourceForSubPartition(namedGraph, cp.getClazz(), pp.getPredicate(), voidLocation);
-				statement(dataSetClassPartition, VOID.PROPERTY_PARTITION, ppr);
-				statement(ppr, RDF.TYPE, VOID.DATASET);
-				statement(ppr, VOID.PROPERTY, pp.getPredicate());
-				generateClassPartitions(namedGraph, cp, pp, ppr, voidLocation);
-				generateDatatypePartitions(namedGraph, pp, ppr, voidLocation);
-				generateSubjectPartitions(namedGraph, pp, ppr, voidLocation);
-				if (pp.getTripleCount() > 0L)
-					statement(ppr, VOID.TRIPLES, vf.createLiteral(pp.getTripleCount()));
-				if (pp.getDistinctSubjectCount() > 0L)
-					statement(ppr, VOID.DISTINCT_SUBJECTS, vf.createLiteral(pp.getDistinctSubjectCount()));
-				if (pp.getDistinctObjectCount() > 0L)
-					statement(ppr, VOID.DISTINCT_OBJECTS, vf.createLiteral(pp.getDistinctObjectCount()));
-			}
+			generateClassPartitions(voidLocation, namedGraph, graph, cp);
 		}
 
 		for (PredicatePartition predicate : gd.getPredicates()) {
-			IRI dataSetPropertyPartition = getResourceForPartition(namedGraph, getIRI(predicate.getPredicate()),
-					voidLocation);
-			statement(graph, VOID.PROPERTY_PARTITION, dataSetPropertyPartition);
-			statement(dataSetPropertyPartition, VOID.PROPERTY, predicate.getPredicate());
-			for (ClassPartition ppcp : predicate.getClassPartitions()) {
-				Resource cppr = getResourceForSubPartition(namedGraph, predicate.getPredicate(), ppcp.getClazz(),
-						voidLocation);
-				statement(dataSetPropertyPartition, VOID.CLASS_PARTITION, cppr);
-				statement(cppr, VOID.CLASS, ppcp.getClazz());
-				if (ppcp.getTripleCount() > 0) {
-					statement(cppr, VOID.ENTITIES, vf.createLiteral(ppcp.getTripleCount()));
-				}
-			}
-			for (LinkSet ls: predicate.getLinkSets()) {
-				//TODO generate nicer IRI
-				Resource bNode = vf.createBNode();
-				statement(bNode, RDF.TYPE, VOID.LINKSET);
-				statement(bNode, VOID.LINK_PREDICATE, predicate.getPredicate());
-				statement(bNode, VOID.TARGET, dataSetPropertyPartition);
-				for (ClassPartition cp:ls.getOtherGraph().getClasses()) {
-					if (cp.getClazz().equals(ls.getTargetType()))
-						statement(bNode, VOID.TARGET, ls.getTargetType());
-				}
-			}
-			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
-			generateSubjectPartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
-			if (predicate.getTripleCount() > 0L)
-				statement(dataSetPropertyPartition, VOID.TRIPLES, vf.createLiteral(predicate.getTripleCount()));
-			if (predicate.getDistinctSubjectCount() > 0L)
-				statement(dataSetPropertyPartition, VOID.DISTINCT_SUBJECTS,
-						vf.createLiteral(predicate.getDistinctSubjectCount()));
-			if (predicate.getDistinctObjectCount() > 0L)
-				statement(dataSetPropertyPartition, VOID.DISTINCT_OBJECTS,
-						vf.createLiteral(predicate.getDistinctObjectCount()));
+			generatePredicatePartions(voidLocation, namedGraph, graph, predicate);
 		}
 
+		if (gd.getShapePartions() != null) {
+			for (ShapePartition shape : gd.getShapePartions()) {
+				generateShapePartions(voidLocation, namedGraph, graph, shape);
+			}
+		}
+		
 		long distinctObjects = gd.getDistinctObjectCount();
 		if (distinctObjects > 0)
 			statement(graph, VOID.DISTINCT_OBJECTS, vf.createLiteral(distinctObjects));
@@ -187,6 +139,79 @@ public class ServiceDescriptionStatementGenerator {
 		if (gd.getDistinctBnodeSubjectCount() > 0)
 			statement(graph, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS,
 					vf.createLiteral(gd.getDistinctBnodeSubjectCount()));
+	}
+
+	private void generateShapePartions(String voidLocation, IRI namedGraph, IRI graph, ShapePartition shape) {
+		Resource dataSetPropertyPartition = vf.createBNode();  
+		statement(graph, VOID.PROPERTY_PARTITION, dataSetPropertyPartition);
+		if (shape instanceof ShapeForSubclassOfPartition) {
+			statement(graph, RDFS.COMMENT,
+					vf.createLiteral("TODO count stuff:" + shape.getShapeMembersSelectionQuery()));	
+		}
+	}
+
+	private void generateClassPartitions(String voidLocation, IRI namedGraph, IRI graph, ClassPartition cp) {
+		final IRI iriOfType = getIRI(cp.getClazz().toString());
+		IRI dataSetClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
+		statement(graph, VOID.CLASS_PARTITION, dataSetClassPartition);
+		statement(dataSetClassPartition, RDF.TYPE, VOID.DATASET);
+		statement(dataSetClassPartition, VOID.CLASS, iriOfType);
+		if (cp.getTripleCount() > 0) {
+			statement(dataSetClassPartition, VOID.ENTITIES, vf.createLiteral(cp.getTripleCount()));
+		}
+		for (PredicatePartition pp : cp.getPredicatePartitions()) {
+			IRI ppr = getResourceForSubPartition(namedGraph, cp.getClazz(), pp.getPredicate(), voidLocation);
+			statement(dataSetClassPartition, VOID.PROPERTY_PARTITION, ppr);
+			statement(ppr, RDF.TYPE, VOID.DATASET);
+			statement(ppr, VOID.PROPERTY, pp.getPredicate());
+			generateClassPartitions(namedGraph, cp, pp, ppr, voidLocation);
+			generateDatatypePartitions(namedGraph, pp, ppr, voidLocation);
+			generateSubjectPartitions(namedGraph, pp, ppr, voidLocation);
+			if (pp.getTripleCount() > 0L)
+				statement(ppr, VOID.TRIPLES, vf.createLiteral(pp.getTripleCount()));
+			if (pp.getDistinctSubjectCount() > 0L)
+				statement(ppr, VOID.DISTINCT_SUBJECTS, vf.createLiteral(pp.getDistinctSubjectCount()));
+			if (pp.getDistinctObjectCount() > 0L)
+				statement(ppr, VOID.DISTINCT_OBJECTS, vf.createLiteral(pp.getDistinctObjectCount()));
+		}
+	}
+
+	private void generatePredicatePartions(String voidLocation, IRI namedGraph, IRI graph,
+			PredicatePartition predicate) {
+		IRI dataSetPropertyPartition = getResourceForPartition(namedGraph, getIRI(predicate.getPredicate()),
+				voidLocation);
+		statement(graph, VOID.PROPERTY_PARTITION, dataSetPropertyPartition);
+		statement(dataSetPropertyPartition, VOID.PROPERTY, predicate.getPredicate());
+		for (ClassPartition ppcp : predicate.getClassPartitions()) {
+			Resource cppr = getResourceForSubPartition(namedGraph, predicate.getPredicate(), ppcp.getClazz(),
+					voidLocation);
+			statement(dataSetPropertyPartition, VOID.CLASS_PARTITION, cppr);
+			statement(cppr, VOID.CLASS, ppcp.getClazz());
+			if (ppcp.getTripleCount() > 0) {
+				statement(cppr, VOID.ENTITIES, vf.createLiteral(ppcp.getTripleCount()));
+			}
+		}
+		for (LinkSet ls: predicate.getLinkSets()) {
+			//TODO generate nicer IRI
+			Resource bNode = vf.createBNode();
+			statement(bNode, RDF.TYPE, VOID.LINKSET);
+			statement(bNode, VOID.LINK_PREDICATE, predicate.getPredicate());
+			statement(bNode, VOID.TARGET, dataSetPropertyPartition);
+			for (ClassPartition cp:ls.getOtherGraph().getClasses()) {
+				if (cp.getClazz().equals(ls.getTargetType()))
+					statement(bNode, VOID.TARGET, ls.getTargetType());
+			}
+		}
+		generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
+		generateSubjectPartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
+		if (predicate.getTripleCount() > 0L)
+			statement(dataSetPropertyPartition, VOID.TRIPLES, vf.createLiteral(predicate.getTripleCount()));
+		if (predicate.getDistinctSubjectCount() > 0L)
+			statement(dataSetPropertyPartition, VOID.DISTINCT_SUBJECTS,
+					vf.createLiteral(predicate.getDistinctSubjectCount()));
+		if (predicate.getDistinctObjectCount() > 0L)
+			statement(dataSetPropertyPartition, VOID.DISTINCT_OBJECTS,
+					vf.createLiteral(predicate.getDistinctObjectCount()));
 	}
 
 	private void generateClassPartitions(IRI namedGraph, ClassPartition cp, PredicatePartition pp, IRI ppr,
