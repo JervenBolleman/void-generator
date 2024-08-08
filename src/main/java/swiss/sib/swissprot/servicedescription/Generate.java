@@ -86,8 +86,6 @@ public class Generate implements Callable<Integer> {
 
 	protected static final Logger log = LoggerFactory.getLogger(Generate.class);
 
-
-
 	private Set<String> graphNames;
 	private Repository repository;
 
@@ -178,8 +176,8 @@ public class Generate implements Callable<Integer> {
 		} else {
 			repository = new VirtuosoRepository(repositoryLocator, user, password);
 		}
-		this.distinctSubjectIrisFile = new File(sdFile.getParentFile(), "subject-bitsets-per-graph");
-		this.distinctObjectIrisFile = new File(sdFile.getParentFile(), "object-bitsets-per-graph");
+		this.distinctSubjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "subject-bitsets-per-graph");
+		this.distinctObjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "object-bitsets-per-graph");
 		update();
 		return 0;
 	}
@@ -466,8 +464,8 @@ public class Generate implements Callable<Integer> {
 			futures.add(executors.submit(new CountDistinctBnodeSubjects(gd, repository, writeLock, limit,
 					scheduledQueries, finishedQueries)));
 		}
-		futures.add(
-				executors.submit(new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver, sd)));
+		futures.add(executors.submit(
+				new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver, sd)));
 	}
 
 	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
