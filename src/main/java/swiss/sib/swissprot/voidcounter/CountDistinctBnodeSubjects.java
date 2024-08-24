@@ -4,7 +4,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
@@ -20,6 +19,14 @@ import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
+	private static final String SUBJECTS = "subjects";
+	private final String COUNT_DISTINCT_SUBJECT_QUERY = """
+			SELECT 
+				(count(distinct ?subject) AS ?subjects) 
+			WHERE {
+				?subject ?predicate ?object . 
+				FILTER(isBlank(?subject))
+			}""";
 	private final GraphDescription gd;
 	private final ServiceDescription sd;
 	private final String graphname;
@@ -82,10 +89,9 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 					+ gd.getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0";
 			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
 		} else {
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?types) WHERE {"
+			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?subjects) WHERE {"
 					+ "GRAPH <"+ gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isBlank(?subject))}}";
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
-					.longValue();
+			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, SUBJECTS);
 		}
 	}
 
@@ -96,9 +102,8 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 			String sql = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE is_bnode_iri_id(RDF_QUAD.S) > 0";
 			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
 		} else {
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?types) WHERE {?subject ?predicate ?object . FILTER(isBlank(?subject))}";
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
-					.longValue();
+			
+			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_SUBJECT_QUERY, connection, SUBJECTS);
 		}
 	}
 

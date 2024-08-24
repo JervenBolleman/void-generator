@@ -4,7 +4,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
@@ -72,10 +71,9 @@ public final class CountDistinctIriObjects
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) as ?types) { GRAPH <"
+			final String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) as ?objects) { GRAPH <"
 			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER (isIri(?object))}}";
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
-			    .longValue();
+			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, "objects");
 		}
 	}
 

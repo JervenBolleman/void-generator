@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
@@ -75,9 +74,9 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	}
 
 	private Long pureSparql(RepositoryConnection connection) {
-		String countDistinctSubjectQuery = "SELECT (count(distinct ?object) AS ?types) WHERE { GRAPH <" + graphname
+		String countDistinctSubjectQuery = "SELECT (count(distinct ?object) AS ?objects) WHERE { GRAPH <" + graphname
 				+ "> {?subject ?predicate ?object . FILTER (isLiteral(?object))}}";
-		return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection)).longValue();
+		return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, "objects");
 	}
 
 	private Long virtuosoOptimized(RepositoryConnection connection) {

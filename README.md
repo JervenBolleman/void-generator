@@ -1,6 +1,6 @@
 # A Detailed Statistics generator for a void file
 
-Building uses java 11 and maven 3.6+
+Building uses java 17 and maven 3.6+
 ```sh
 mvn package
 ```
@@ -13,7 +13,7 @@ mvn package
 3. If using virtuoso connecting via jdbc is much faster than connecting via http sparql protocol
 4. Check the help option for exact options.
 
-Runs on a java 11 jdk, see the help for how to use
+Runs on a java 17+ jdk, see the help for how to use
 ```sh
 java -jar target/void-generator-*.jar --help
 ```
@@ -31,3 +31,7 @@ java -jar target/void-generator-*.jar \
 ```
 
 The IRI is supposed to be the URL of the published location of the void file/service description.
+
+# WHat about all the options?
+
+The command line options are there to turn off certain queries/void features that may not run in a reasonable time on specific endpoints. The default should be not to use any options.

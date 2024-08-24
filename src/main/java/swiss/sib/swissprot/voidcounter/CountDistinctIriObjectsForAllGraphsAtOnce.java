@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
@@ -19,7 +18,15 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.jdbc4.VirtuosoConnection;
 
 public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallable<Long> {
-	private final String countDistinctObjectIriQuery = "SELECT (count(distinct(?object)) as ?types) WHERE {?subject ?predicate ?object . FILTER (isIri(?object))}";
+	private static final String OBJECTS = "objects";
+
+	private static final String COUNT_DISTINCT_OBJECT_IRI_QUERY = """
+			SELECT 
+				(count(distinct(?object)) as ?objects) 
+			WHERE {
+				?subject ?predicate ?object . 
+				FILTER (isIri(?object))
+			}""";
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsForAllGraphsAtOnce.class);
 	private final ServiceDescription sd;
@@ -60,8 +67,7 @@ public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallab
 
 		assert !(connection instanceof VirtuosoConnection);
 		try {
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctObjectIriQuery, connection))
-					.longValue();
+			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_OBJECT_IRI_QUERY, connection, OBJECTS);
 		} finally {
 			finishedQueries.incrementAndGet();
 		}

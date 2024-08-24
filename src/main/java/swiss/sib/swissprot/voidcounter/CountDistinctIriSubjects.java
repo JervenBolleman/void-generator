@@ -3,7 +3,6 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
@@ -22,6 +21,15 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 public final class CountDistinctIriSubjects
     extends QueryCallable<Long>
 {
+
+	private static final String SUBJECTS = "subjects";
+	private final String countDistinctSubjectQuery = """
+			SELECT 
+				(COUNT(DISTINCT(?subject)) AS ?subjects) 
+			WHERE {
+				?subject ?predicate ?object . 
+				FILTER(isIri(?s))
+			}""";
 	private final GraphDescription gd;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjects.class);
 	private final ServiceDescription sd;
@@ -58,10 +66,9 @@ public final class CountDistinctIriSubjects
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (COUNT(DISTINCT(?subject)) AS ?types) WHERE {GRAPH <"
+			final String countDistinctSubjectQuery = "SELECT (COUNT(DISTINCT(?subject)) AS ?subjects) WHERE {GRAPH <"
 			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isIri(?s))}}";
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, localConnection))
-			    .longValue();
+			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, localConnection, SUBJECTS);
 		}
 	}
 	
@@ -76,9 +83,7 @@ public final class CountDistinctIriSubjects
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (COUNT(DISTINCT(?subject)) AS ?types) WHERE {?subject ?predicate ?object . FILTER(isIri(?s))}";
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, localConnection))
-			    .longValue();
+			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, localConnection, SUBJECTS);
 		}
 	}
 

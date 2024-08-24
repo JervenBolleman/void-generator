@@ -1,4 +1,4 @@
-package swiss.sib.swissprot.voidcounter;
+package swiss.sib.swissprot.voidcounter.virtuoso;
 
 import java.util.Map;
 import java.util.concurrent.Semaphore;

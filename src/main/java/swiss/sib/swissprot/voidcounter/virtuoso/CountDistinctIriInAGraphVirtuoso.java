@@ -1,4 +1,4 @@
-package swiss.sib.swissprot.voidcounter;
+package swiss.sib.swissprot.voidcounter.virtuoso;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -21,6 +21,7 @@ import org.roaringbitmap.longlong.Roaring64Bitmap;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Long> {

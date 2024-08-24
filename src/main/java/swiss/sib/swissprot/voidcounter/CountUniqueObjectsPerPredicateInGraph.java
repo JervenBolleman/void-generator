@@ -6,7 +6,6 @@ import java.sql.SQLException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -26,6 +25,7 @@ public class CountUniqueObjectsPerPredicateInGraph
     extends QueryCallable<Long>
 {
 
+	private static final String OBJECTS = "objects";
 	private final PredicatePartition predicatePartition;
 	private final GraphDescription gd;
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueObjectsPerPredicateInGraph.class);
@@ -75,10 +75,9 @@ public class CountUniqueObjectsPerPredicateInGraph
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?object) as ?types) WHERE { GRAPH <"
+			final String countDistinctSubjectQuery = "SELECT (count(distinct ?object) as ?objects) WHERE { GRAPH <"
 			    + gd.getGraphName() + "> {?subject <" + predicate + "> ?object}}";
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
-			    .longValue();
+			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, OBJECTS);
 		}
 	}
 

@@ -72,13 +72,13 @@ import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
 import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForAllGraphsAtOnce;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsInAGraphVirtuoso;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForAllGraphs;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsInAGraphVirtuoso;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjects;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
 import swiss.sib.swissprot.voidcounter.TripleCount;
+import swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriObjectsInAGraphVirtuoso;
+import swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsInAGraphVirtuoso;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 
 @Command(name = "void-generate", mixinStandardHelpOptions = true, version = "0.1", description = "Generate a void file")

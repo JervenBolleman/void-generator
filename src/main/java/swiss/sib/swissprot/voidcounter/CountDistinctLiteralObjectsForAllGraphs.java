@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
@@ -22,7 +21,13 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable<Long> {
-	private static final String COUNT_OBJECTS_WITH_SPARQL = "SELECT (count(distinct(?object)) AS ?types) WHERE {?subject ?predicate ?object . FILTER (isLiteral(?object))}";
+	private static final String OBJECTS = "objects";
+	private static final String COUNT_OBJECTS_WITH_SPARQL = """
+			SELECT (count(distinct(?object)) AS ?objects) 
+			WHERE {
+				?subject ?predicate ?object .
+				FILTER (isLiteral(?object))
+			}""";
 	private static final String SELECT_OBJECTS_IN_RDF_OBJ = "SELECT COUNT(RO_ID) AS c FROM RDF_OBJ";
 	private static final String COUNT_DISTINCT_INLINE_VALUES = "SELECT COUNT(DISTINCT(RDF_QUAD.O)) AS c from RDF_QUAD WHERE is_rdf_box(RDF_QUAD.O) = 0 AND isiri_id(O) = 0 AND is_bnode_iri_id(O) = 0";
 	private final static Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjectsForAllGraphs.class);
@@ -68,8 +73,7 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 						+ getCount(vrc, SELECT_OBJECTS_IN_RDF_OBJ);
 				return countOfLiterals;
 			} else {
-				return ((Literal) Helper.getFirstNumberResultFromTupleQuery(COUNT_OBJECTS_WITH_SPARQL, connection))
-						.longValue();
+				return Helper.getSingleLongFromSparql(COUNT_OBJECTS_WITH_SPARQL, connection, OBJECTS);
 			}
 		} finally {
 			finishedQueries.incrementAndGet();

@@ -12,15 +12,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
@@ -29,9 +28,18 @@ import swiss.sib.swissprot.virtuoso.IriIdToIri;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<Long> {
-	private final String countDistinctObjectIriQuery = "SELECT " + "?graph (count(distinct(?object)) as ?types) "
-			+ "WHERE {GRAPH ?graph " + "{?subject ?predicate ?object . " + "FILTER (isBlank(?object))}"
-			+ "} GROUP BY ?graph";
+	private static final String OBJECTS = "objects";
+
+	private static final String COUNT_DISTINCT_OBJECT_IRI_QUERY = """
+		SELECT 
+		  ?graph (count(distinct(?object)) as ?objects) 
+		WHERE {
+			GRAPH ?graph 
+			{  
+			   ?subject ?predicate ?object . 
+			   FILTER (isBlank(?object))
+			}
+		} GROUP BY ?graph""";
 
 	private final String countDistinctObjectBnodeVirtSql = "SELECT iri_id_num(RDF_QUAD.O), iri_id_num(RDF_QUAD.G) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) > 0";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsForAllGraphs.class);
@@ -83,8 +91,7 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 				graphIriIds.clear();
 				return iricounts;
 			} else {
-				return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctObjectIriQuery, connection))
-						.longValue();
+				return Helper.getSingleLongFromSparql(COUNT_DISTINCT_OBJECT_IRI_QUERY, connection, OBJECTS);
 			}
 		} finally {
 			finishedQueries.incrementAndGet();

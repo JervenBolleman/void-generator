@@ -5,8 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.query.BooleanQuery;
-import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
@@ -15,8 +13,11 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
-public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Boolean> {
+public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> {
+
+	private static final String SUBJECTS = "subjects";
 
 	public static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToTargetClass.class);
 
@@ -55,26 +56,26 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Boolea
 	}
 
 	@Override
-	protected Boolean run(RepositoryConnection connection) throws Exception {
+	protected Long run(RepositoryConnection connection) throws Exception {
 		try {
 			final IRI sourceType = source.getClazz();
 			final IRI targetType = target.getClazz();
-			final String query = "ASK  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
+			final String query = "COUNT ((?subject) as ?subjects)  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
 					+ predicate + "> ?target . ?target a <" + targetType + "> }}";
-			final BooleanQuery pbq = connection.prepareBooleanQuery(QueryLanguage.SPARQL, query);
-			return pbq.evaluate();
+			return Helper.getSingleLongFromSparql(query, connection, SUBJECTS);
 		} finally {
 			finishedQueries.incrementAndGet();
 		}
 	}
 
 	@Override
-	protected void set(Boolean has) {
-		if (has) {
+	protected void set(Long has) {
+		if (has > 0) {
 			try {
 				writeLock.lock();
 				final IRI targetType = target.getClazz();
 				ClassPartition subTarget = new ClassPartition(targetType);
+				subTarget.setTripleCount(has);
 				predicatePartition.putClassPartition(subTarget);
 			} finally {
 				writeLock.unlock();

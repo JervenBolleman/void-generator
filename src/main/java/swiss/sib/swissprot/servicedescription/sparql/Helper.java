@@ -1,7 +1,6 @@
 package swiss.sib.swissprot.servicedescription.sparql;
 
-import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -17,19 +16,22 @@ public class Helper {
 		
 	}
 	
-	public static Value getFirstNumberResultFromTupleQuery(String sq, RepositoryConnection connection)
+	@Deprecated
+	public static long getSingleLongFromSparql(String sq, RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		return Helper.getFirstNumberResultFromTupleQuery(sq, connection, "types");
+		return Helper.getSingleLongFromSparql(sq, connection, "types");
 	}
 
-	public static Value getFirstNumberResultFromTupleQuery(String sq, RepositoryConnection connection, String variable)
+	public static long getSingleLongFromSparql(String sq, RepositoryConnection connection, String variable)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		try (TupleQueryResult classes = runTupleQuery(sq, connection)) {
 			if (classes.hasNext()) {
 				Binding types = classes.next().getBinding(variable);
-				return types.getValue();
+				assert types.getValue().isLiteral();
+				assert !classes.hasNext();
+				return ((Literal) types.getValue()).longValue();
 			} else {
-				return SimpleValueFactory.getInstance().createLiteral(0);
+				return 0;
 			}
 		}
 	}

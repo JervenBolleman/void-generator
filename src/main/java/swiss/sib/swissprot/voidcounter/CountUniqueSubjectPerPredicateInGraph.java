@@ -3,7 +3,6 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
@@ -19,6 +18,7 @@ public class CountUniqueSubjectPerPredicateInGraph
     extends QueryCallable<Long>
 {
 
+	private static final String SUBJECTS = "subjects";
 	private final PredicatePartition predicatePartition;
 	private final GraphDescription gd;
 	public static final Logger log = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraph.class);
@@ -63,10 +63,9 @@ public class CountUniqueSubjectPerPredicateInGraph
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?types) WHERE { GRAPH <"
+			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?subjects) WHERE { GRAPH <"
 			    + gd.getGraphName() + "> {?subject <" + predicatePartition.getPredicate() + "> ?object}}";
-			return ((Literal) Helper.getFirstNumberResultFromTupleQuery(countDistinctSubjectQuery, connection))
-			    .longValue();
+			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, SUBJECTS);
 		}
 	}
 
