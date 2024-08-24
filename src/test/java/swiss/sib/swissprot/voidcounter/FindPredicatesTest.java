@@ -20,18 +20,16 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.voidcounter.FindPredicates;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
 public class FindPredicatesTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(FindPredicatesTest.class);

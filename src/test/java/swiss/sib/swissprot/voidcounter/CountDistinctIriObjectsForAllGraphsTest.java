@@ -21,7 +21,6 @@ import org.junit.Test;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForAllGraphsAtOnce;
 
 public class CountDistinctIriObjectsForAllGraphsTest {
 
