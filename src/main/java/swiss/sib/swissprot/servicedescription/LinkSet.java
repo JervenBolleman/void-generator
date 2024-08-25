@@ -1,9 +1,6 @@
-package swiss.sib.swissprot.voidcounter;
+package swiss.sib.swissprot.servicedescription;
 
 import org.eclipse.rdf4j.model.IRI;
-
-import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public class LinkSet {
 

@@ -17,7 +17,6 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import swiss.sib.swissprot.vocabulary.FORMATS;
 import swiss.sib.swissprot.vocabulary.PAV;
 import swiss.sib.swissprot.vocabulary.VOID_EXT;
-import swiss.sib.swissprot.voidcounter.LinkSet;
 
 public class ServiceDescriptionStatementGenerator {
 	private final RDFHandler handler;

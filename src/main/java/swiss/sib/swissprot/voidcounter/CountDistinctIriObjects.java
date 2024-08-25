@@ -21,11 +21,21 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 public final class CountDistinctIriObjects
     extends QueryCallable<Long>
 {
+	private static final String COUNT_DISTINCT_SUBJECT_QUERY = """
+			SELECT 
+				(count(distinct(?object)) as ?objects) 
+			WHERE { 
+				GRAPH ?graph {
+					?subject ?predicate ?object . 
+					FILTER (isIri(?object))
+				}
+			}""";
 	private final GraphDescription gd;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjects.class);
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 	private final Lock writeLock;
+	
 	
 	public CountDistinctIriObjects(GraphDescription gd, ServiceDescription sd, Repository repository, Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter)
 	{
@@ -69,11 +79,14 @@ public final class CountDistinctIriObjects
 				sql = "SELECT (COUNT(DISTINCT(iri_id_num(RDF_QUAD.O)))) FROM RDF_QUAD AND isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0";
 			return VirtuosoFromSQL.getSingleLongFromSql(sql, (VirtuosoRepositoryConnection) connection);
 		}
-		else
+		else if (gd != null)
 		{
 			final String countDistinctSubjectQuery = "SELECT (count(distinct(?object)) as ?objects) { GRAPH <"
 			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER (isIri(?object))}}";
 			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, "objects");
+		} else {
+			
+			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_SUBJECT_QUERY, connection, "objects");
 		}
 	}
 

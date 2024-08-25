@@ -48,16 +48,11 @@ public class TripleCount extends QueryCallable<Long> {
 	}
 
 	protected Long run(RepositoryConnection connection) throws RepositoryException {
-		try (TupleQueryResult qr = Helper.runTupleQuery(
-				"SELECT (COUNT(*) AS ?count) WHERE { GRAPH <" + gd.getGraphName() + "> {?s ?p ?o}}", connection)) {
-			if (qr.hasNext()) {
-				long size = ((Literal) qr.next().getBinding("count")).longValue();
-				return size;
-			}
+		try {
+			return Helper.getSingleLongFromSparql("SELECT (COUNT(*) AS ?count) WHERE { GRAPH <" + gd.getGraphName() + "> {?s ?p ?o}}", connection, "count");			
 		} finally {
 			finishedQueries.incrementAndGet();
 		}
-		return 0L;
 	}
 
 	protected void set(Long size) {

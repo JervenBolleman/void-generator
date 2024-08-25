@@ -20,7 +20,7 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 	private static final String SUBJECTS = "subjects";
-	private final String COUNT_DISTINCT_SUBJECT_QUERY = """
+	private static final String COUNT_DISTINCT_SUBJECT_QUERY = """
 			SELECT 
 				(count(distinct ?subject) AS ?subjects) 
 			WHERE {

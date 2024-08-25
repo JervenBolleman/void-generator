@@ -23,7 +23,7 @@ public final class CountDistinctIriSubjects
 {
 
 	private static final String SUBJECTS = "subjects";
-	private final String countDistinctSubjectQuery = """
+	private static final String countDistinctSubjectQuery = """
 			SELECT 
 				(COUNT(DISTINCT(?subject)) AS ?subjects) 
 			WHERE {

@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.LinkSet;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<IRI>> {
