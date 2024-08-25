@@ -2,6 +2,7 @@ package swiss.sib.swissprot.voidcounter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -17,10 +18,10 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.LinkSet;
+import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
-public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<IRI>> {
+public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
 
 	public static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraph.class);
 
@@ -32,17 +33,24 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	private final AtomicInteger finishedQueries;
 	private final GraphDescription otherGraph;
 
+	private final ExecutorService es;
+
+	private final AtomicInteger scheduledQueries;
+
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
-			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, GraphDescription otherGraph) {
+			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, GraphDescription otherGraph, ExecutorService es) {
 		super(repository, limiter);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.gd = gd;
 		this.writeLock = writeLock;
+		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
 		this.otherGraph = otherGraph;
+		this.es = es;
+		
 		scheduledQueries.incrementAndGet();
 	}
 
@@ -57,16 +65,19 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	}
 
 	@Override
-	protected List<IRI> run(RepositoryConnection connection) throws Exception {
+	protected List<LinkSetToOtherGraph> run(RepositoryConnection connection) throws Exception {
 		try {
 			final IRI sourceType = source.getClazz();		
 			final String query = "SELECT DISTINCT ?targetType WHERE  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> . } ?subject <"
 					+ predicate + "> ?target . GRAPH <"+otherGraph.getGraphName()+"> {?target a ?targetType }}";
 			final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
-			List<IRI> res = new ArrayList<>();
+			List<LinkSetToOtherGraph> res = new ArrayList<>();
 			try (TupleQueryResult tqr=pbq.evaluate()){
 				while(tqr.hasNext()) {
-					res.add((IRI) tqr.next().getBinding("targetType").getValue());
+					IRI targetType = (IRI) tqr.next().getBinding("targetType").getValue();
+					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType, otherGraph);
+					res.add(subTarget);
+					es.submit(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, scheduledQueries, finishedQueries));
 				}
 			}
 			return res;
@@ -76,12 +87,11 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	}
 
 	@Override
-	protected void set(List<IRI> has) {
+	protected void set(List<LinkSetToOtherGraph> has) {
 		if (!has.isEmpty()) {
 			try {
 				writeLock.lock();
-				for (IRI targetType:has) {
-					LinkSet subTarget = new LinkSet(predicatePartition, targetType, otherGraph);
+				for (LinkSetToOtherGraph subTarget:has) {
 					predicatePartition.putLinkPartition(subTarget);
 				}
 			} finally {
