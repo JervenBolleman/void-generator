@@ -17,7 +17,7 @@ import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
-import org.roaringbitmap.longlong.Roaring64Bitmap;
+import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
@@ -32,12 +32,12 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 	private final Lock writeLock;
 	private final Consumer<Long> allSetter;
 	private final BiConsumer<GraphDescription, Long> graphSetter;
-	private final Map<String, Roaring64Bitmap> graphIriIds;
+	private final Map<String, Roaring64NavigableMap> graphIriIds;
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctIriInAGraphVirtuoso(Repository repository, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, String graphIri, Lock writeLock, Consumer<Long> allSetter,
-			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64Bitmap> graphIriIds2,
+			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64NavigableMap> graphIriIds2,
 			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
@@ -51,8 +51,8 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		scheduledQueries.incrementAndGet();
 	}
 
-	protected Roaring64Bitmap findUniqueIriIds(final Connection quadStoreConnection) {
-		Roaring64Bitmap roaringBitmap = new Roaring64Bitmap();
+	protected Roaring64NavigableMap findUniqueIriIds(final Connection quadStoreConnection) {
+		Roaring64NavigableMap roaringBitmap = new Roaring64NavigableMap();
 		try (final Statement createStatement = quadStoreConnection.createStatement()) {
 			createStatement.setFetchDirection(ResultSet.FETCH_FORWARD);
 			createStatement.setFetchSize(4 * 1024);
@@ -71,7 +71,7 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
 
 		// If we did not save this data before recalculate it.
-		Roaring64Bitmap rb;
+		Roaring64NavigableMap rb;
 		if (!graphIriIds.containsKey(graphIri)) {
 
 			rb = findUniqueIriIds(quadStoreConnection);
@@ -84,7 +84,7 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		return rb.getLongCardinality();
 	}
 
-	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement, Roaring64Bitmap roaringBitmap)
+	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement, Roaring64NavigableMap roaringBitmap)
 			throws SQLException {
 
 		String query = queryForGraph();
@@ -135,8 +135,8 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 
 	protected void setAll() {
 		try {
-			Roaring64Bitmap all = new Roaring64Bitmap();
-			for (Roaring64Bitmap rbm : graphIriIds.values()) {
+			Roaring64NavigableMap all = new Roaring64NavigableMap();
+			for (Roaring64NavigableMap rbm : graphIriIds.values()) {
 				all.or(rbm);
 			}
 			final long iricounts = all.getLongCardinality();

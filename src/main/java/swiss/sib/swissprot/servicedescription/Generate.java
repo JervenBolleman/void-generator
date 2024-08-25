@@ -58,7 +58,7 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser;
-import org.roaringbitmap.longlong.Roaring64Bitmap;
+import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +78,7 @@ import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
 import swiss.sib.swissprot.voidcounter.TripleCount;
 import swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriObjectsInAGraphVirtuoso;
+import swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso;
 import swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsInAGraphVirtuoso;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 
@@ -194,9 +195,9 @@ public class Generate implements Callable<Integer> {
 		Semaphore limit = new Semaphore(oneThirdOfCpus);
 		ExecutorService executors = Executors.newFixedThreadPool(oneThirdOfCpus);
 
-		ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris = readGraphsWithSerializedBitMaps(
+		ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris = readGraphsWithSerializedBitMaps(
 				this.distinctSubjectIrisFile);
-		ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris = readGraphsWithSerializedBitMaps(
+		ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris = readGraphsWithSerializedBitMaps(
 				this.distinctObjectIrisFile);
 		Consumer<ServiceDescription> saver = (sdg) -> writeServiceDescriptionAndGraphs(distinctSubjectIris,
 				distinctObjectIris, sdg, iriOfVoid);
@@ -222,26 +223,28 @@ public class Generate implements Callable<Integer> {
 		executors.shutdown();
 	}
 
-	private ConcurrentHashMap<String, Roaring64Bitmap> readGraphsWithSerializedBitMaps(File file) {
-		ConcurrentHashMap<String, Roaring64Bitmap> map = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String, Roaring64NavigableMap> readGraphsWithSerializedBitMaps(File file) {
+		ConcurrentHashMap<String, Roaring64NavigableMap> map = new ConcurrentHashMap<>();
 		if (file.exists() && !forcedRefresh) {
 			try (FileInputStream fis = new FileInputStream(file); ObjectInputStream bis = new ObjectInputStream(fis)) {
 				int numberOfGraphs = bis.readInt();
 				for (int i = 0; i < numberOfGraphs; i++) {
 					String graph = bis.readUTF();
-					Roaring64Bitmap rb = new Roaring64Bitmap();
+					Roaring64NavigableMap rb = new Roaring64NavigableMap();
 					rb.readExternal(bis);
 					map.put(graph, rb);
 				}
 			} catch (IOException e) {
+				log.error("", e);
+			} catch (ClassNotFoundException e) {
 				log.error("", e);
 			}
 		}
 		return map;
 	}
 
-	private void writeServiceDescriptionAndGraphs(ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, ServiceDescription sdg, IRI iriOfVoid) {
+	private void writeServiceDescriptionAndGraphs(ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, ServiceDescription sdg, IRI iriOfVoid) {
 		final Lock readLock = rwLock.readLock();
 		try {
 			readLock.lock();
@@ -271,7 +274,7 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private void writeGraphsWithSerializedBitMaps(File targetFile, ConcurrentHashMap<String, Roaring64Bitmap> map) {
+	private void writeGraphsWithSerializedBitMaps(File targetFile, ConcurrentHashMap<String, Roaring64NavigableMap> map) {
 		if (!targetFile.exists()) {
 			try {
 				targetFile.createNewFile();
@@ -283,9 +286,9 @@ public class Generate implements Callable<Integer> {
 				BufferedOutputStream bos = new BufferedOutputStream(fos);
 				ObjectOutputStream dos = new ObjectOutputStream(bos)) {
 			dos.writeInt(map.size());
-			for (Map.Entry<String, Roaring64Bitmap> en : map.entrySet()) {
+			for (Map.Entry<String, Roaring64NavigableMap> en : map.entrySet()) {
 				dos.writeUTF(en.getKey());
-				Roaring64Bitmap value = en.getValue();
+				Roaring64NavigableMap value = en.getValue();
 				value.runOptimize();
 				value.writeExternal(dos);
 			}
@@ -309,17 +312,19 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void countTheVoidDataItself(ExecutorService executors, List<Future<Exception>> futures, IRI voidGraph,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, boolean isVirtuoso, Semaphore limit) {
+			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, boolean isVirtuoso, Semaphore limit) {
 		String voidGraphUri = voidGraph.toString();
 		if (!graphNames.contains(voidGraphUri)) {
 			scheduleBigCountsPerGraph(executors, sd, futures, voidGraphUri, saver, limit);
 			Lock writeLock = rwLock.writeLock();
 			if (isVirtuoso) {
-				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
-						writeLock, distinctSubjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
-				futures.add(executors.submit(new CountDistinctIriObjectsInAGraphVirtuoso(sd, repository, saver,
-						writeLock, distinctObjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
+				CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, executors);
+				futures.add(executors.submit(cdso));
+//				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
+//						writeLock, distinctSubjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
+//				futures.add(executors.submit(new CountDistinctIriObjectsInAGraphVirtuoso(sd, repository, saver,
+//						writeLock, distinctObjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
 			}
 			countSpecificThingsPerGraph(executors, sd, knownPredicates, futures, voidGraphUri, limit, saver);
 		}
@@ -364,8 +369,8 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private List<Future<Exception>> scheduleCounters(ExecutorService executors, ServiceDescription sd,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
-			ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris, Semaphore limit) {
+			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, Semaphore limit) {
 		List<Future<Exception>> futures = Collections.synchronizedList(new ArrayList<>());
 		Lock writeLock = rwLock.writeLock();
 		boolean isvirtuoso = repository instanceof VirtuosoRepository;
@@ -397,7 +402,7 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void countDistinctObjects(ExecutorService executors, ServiceDescription sd,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctObjectIris,
+			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris,
 			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
 			Semaphore limit) {
 		futures.add(executors.submit(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit,
@@ -416,7 +421,7 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void countDistinctSubjects(ExecutorService executors, ServiceDescription sd,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64Bitmap> distinctSubjectIris,
+			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
 			List<Future<Exception>> futures, Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs,
 			Semaphore limit) {
 		if (!isvirtuoso) {

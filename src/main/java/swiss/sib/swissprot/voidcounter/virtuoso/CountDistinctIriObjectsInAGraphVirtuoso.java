@@ -7,7 +7,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.repository.Repository;
-import org.roaringbitmap.longlong.Roaring64Bitmap;
+import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +19,7 @@ public final class CountDistinctIriObjectsInAGraphVirtuoso extends CountDistinct
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInAGraphVirtuoso.class);
 	
 	public CountDistinctIriObjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64Bitmap> graphIriIds,
+			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64NavigableMap> graphIriIds,
 			String graphIri, Semaphore limit, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, sd, saver, graphIri, writeLock, sd::setDistinctIriObjectCount, GraphDescription::setDistinctIriObjectCount,
 		 graphIriIds,
