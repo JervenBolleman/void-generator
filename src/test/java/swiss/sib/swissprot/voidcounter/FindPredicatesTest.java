@@ -1,7 +1,8 @@
 package swiss.sib.swissprot.voidcounter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,11 +21,10 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,27 +34,27 @@ import swiss.sib.swissprot.servicedescription.ServiceDescription;
 public class FindPredicatesTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(FindPredicatesTest.class);
 
-	@Rule
-	public TemporaryFolder folder = new TemporaryFolder();
+	@TempDir
+	public File folder;
 
 	private Repository repository;
 
-	@Before
-	public void setup() throws IOException {
+	@BeforeEach
+	void setup() throws IOException {
 		LOGGER.debug("running setup");
 		repository = new SailRepository(new MemoryStore());
 		repository.init();
 	}
 
-	@After
-	public void shutdown() {
+	@AfterEach
+	void shutdown() {
 		LOGGER.debug("running shutdown");
 		repository.shutDown();
 		LOGGER.debug("ran shutdown");
 	}
 
 	@Test
-	public void testEmpty() throws IOException {
+	void empty() throws IOException {
 
 		final ServiceDescription sd = new ServiceDescription();
 		final GraphDescription gd = new GraphDescription();
@@ -76,7 +76,7 @@ public class FindPredicatesTest {
 	}
 
 	@Test
-	public void testOne() throws IOException {
+	void one() throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
@@ -105,7 +105,7 @@ public class FindPredicatesTest {
 	}
 
 	@Test
-	public void testOneLast() throws IOException {
+	void oneLast() throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();

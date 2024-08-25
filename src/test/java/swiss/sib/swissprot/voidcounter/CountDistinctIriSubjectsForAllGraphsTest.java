@@ -1,6 +1,6 @@
 package swiss.sib.swissprot.voidcounter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
@@ -15,29 +15,29 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
-public class CountDistinctIriSubjectsForAllGraphsTest {
+class CountDistinctIriSubjectsForAllGraphsTest {
 	private Repository repository;
 
-	@Before
-	public void setup() throws IOException {
+	@BeforeEach
+	void setup() throws IOException {
 
 		repository = new SailRepository(new MemoryStore());
 	}
 
-	@After
-	public void shutdown() {
+	@AfterEach
+	void shutdown() {
 		repository.shutDown();
 	}
 
 	@Test
-	public void testEmpty() throws IOException {
+	void empty() throws IOException {
 
 		final ServiceDescription sd = new ServiceDescription();
 		Lock writeLock = new ReentrantLock();
@@ -53,7 +53,7 @@ public class CountDistinctIriSubjectsForAllGraphsTest {
 	}
 
 	@Test
-	public void testOne() throws IOException {
+	void one() throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
