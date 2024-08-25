@@ -98,7 +98,6 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-text</artifactId>
-      <version>1.12.0</version>
     </dependency>
     <dependency>
       <groupId>org.roaringbitmap</groupId>
@@ -174,7 +173,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M3</version>
+        <version>3.0.0</version>
         <configuration>
           <testFailureIgnore>false</testFailureIgnore>
         </configuration>
