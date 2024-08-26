@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.rdf4j.common.exception.RDF4JException;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.TupleQueryResult;
@@ -46,9 +47,12 @@ public class FindGraphs {
 						res.add(graphIRI);
 				}
 			}
-		} finally {
-			finishedQueries2.incrementAndGet();
+		} catch(RDF4JException e){
+			//Ignore this failure!
 		}
+			finally {
+			finishedQueries2.incrementAndGet();
+		} 
 	}
 
 }
