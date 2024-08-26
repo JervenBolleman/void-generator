@@ -41,11 +41,11 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 			}
 		} GROUP BY ?graph""";
 
-	private final String countDistinctObjectBnodeVirtSql = "SELECT iri_id_num(RDF_QUAD.O), iri_id_num(RDF_QUAD.G) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) > 0";
+	private final static String COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL = "SELECT iri_id_num(RDF_QUAD.O), iri_id_num(RDF_QUAD.G) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) > 0";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsForAllGraphs.class);
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
-	private Map<Long, Roaring64Bitmap> graphIriIds = new HashMap<>();
+	private final Map<Long, Roaring64Bitmap> graphIriIds = new HashMap<>();
 
 	private final Lock writeLock;
 
@@ -140,7 +140,7 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 	}
 
 	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement) throws SQLException {
-		try (ResultSet rs = createStatement.executeQuery(countDistinctObjectBnodeVirtSql)) {
+		try (ResultSet rs = createStatement.executeQuery(COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL)) {
 			while (rs.next()) {
 				long iriId = rs.getLong(1);
 				long graphId = rs.getLong(2);
