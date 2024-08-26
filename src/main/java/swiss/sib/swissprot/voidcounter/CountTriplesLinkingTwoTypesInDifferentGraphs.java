@@ -24,8 +24,9 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 	private final LinkSetToOtherGraph ls;
 	private final GraphDescription gd;
 
-	public CountTriplesLinkingTwoTypesInDifferentGraphs(GraphDescription gd, LinkSetToOtherGraph ls, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+	public CountTriplesLinkingTwoTypesInDifferentGraphs(GraphDescription gd, LinkSetToOtherGraph ls,
+			Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.ls = ls;
@@ -56,8 +57,14 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		String otherGraphName = ls.getOtherGraph().getGraphName();
 		IRI targetType = ls.getTargetType();
 		IRI sourceType = ls.getSourceType();
-		String q="SELECT (COUNT(?target) AS lsc) WHERE  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> . } ?subject <"
-				+ predicate + "> ?target . GRAPH <"+otherGraphName+"> {?target a <"+targetType+"> }";
+		assert targetType != null;
+		assert sourceType != null;
+		assert otherGraphName != null;
+		assert predicate != null;
+		String q = "SELECT (COUNT(?target) AS ?lsc) WHERE  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <"
+				+ sourceType + "> } ?subject <" + predicate + "> ?target . GRAPH <" + otherGraphName + "> {?target a <"
+				+ targetType + "> }}";
+		System.err.println(q);
 		try {
 			return Helper.getSingleLongFromSparql(q, connection, "lsc");
 		} finally {
