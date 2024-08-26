@@ -64,7 +64,6 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		String q = "SELECT (COUNT(?target) AS ?lsc) WHERE  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <"
 				+ sourceType + "> } ?subject <" + predicate + "> ?target . GRAPH <" + otherGraphName + "> {?target a <"
 				+ targetType + "> }}";
-		System.err.println(q);
 		try {
 			return Helper.getSingleLongFromSparql(q, connection, "lsc");
 		} finally {
