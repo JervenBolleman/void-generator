@@ -60,7 +60,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 		try {
 			final IRI sourceType = source.getClazz();
 			final IRI targetType = target.getClazz();
-			final String query = "COUNT ((?subject) as ?subjects)  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
+			final String query = "SELECT (COUNT (?subject) AS ?subjects) WHERE { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
 					+ predicate + "> ?target . ?target a <" + targetType + "> }}";
 			return Helper.getSingleLongFromSparql(query, connection, SUBJECTS);
 		} finally {
