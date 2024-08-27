@@ -139,9 +139,12 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--password" }, description = "Virtuoso password", defaultValue = "dba")
 	private String password;
 
-	@Option(names = { " --add-void-graph-to-store",
+	@Option(names = { "--add-void-graph-to-store",
 			"-a" }, description = "immediatly attempt to store the void graph into the store and add it to the total count", defaultValue = "false")
 	private boolean add = false;
+	
+	@Option(names = { "--max-concurrency", }, description = "issue no more than this number of queries at the same time")
+	private int maxConcurrency = 0;
 
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
@@ -190,10 +193,11 @@ public class Generate implements Callable<Integer> {
 
 	public void update() {
 		// At least 1 but no more than one third of the cpus
-
-		int oneThirdOfCpus = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
-		Semaphore limit = new Semaphore(oneThirdOfCpus);
-		ExecutorService executors = Executors.newFixedThreadPool(oneThirdOfCpus);
+		if (maxConcurrency <= 0) {
+			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
+		}
+		Semaphore limit = new Semaphore(maxConcurrency);
+		ExecutorService executors = Executors.newFixedThreadPool(maxConcurrency);
 
 		ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris = readGraphsWithSerializedBitMaps(
 				this.distinctSubjectIrisFile);
@@ -207,13 +211,13 @@ public class Generate implements Callable<Integer> {
 
 		waitForCountToFinish(futures);
 		if (add) {
-			log.debug("Starting the count of the void data itself using " + oneThirdOfCpus);
+			log.debug("Starting the count of the void data itself using " + maxConcurrency);
 			countTheVoidDataItself(executors, futures, iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
 					repository instanceof VirtuosoRepository, limit);
 			waitForCountToFinish(futures);
 			saveResults(iriOfVoid, saver);
 
-			log.debug("Starting the count of the void data itself a second time using " + oneThirdOfCpus);
+			log.debug("Starting the count of the void data itself a second time using " + maxConcurrency);
 
 			countTheVoidDataItself(executors, futures, iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
 					repository instanceof VirtuosoRepository, limit);
