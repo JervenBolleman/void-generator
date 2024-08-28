@@ -107,8 +107,8 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 
 	private void pureSparql(Resource predicate, PredicatePartition predicatePartition, final Resource sourceType,
 			RepositoryConnection localConnection, Set<IRI> datatypes) {
-		final String dataTypeQuery = "SELECT ?dt {GRAPH <" + gd.getGraphName() + "> { ?subject a <" + sourceType
-				+ "> . ?subject <" + predicate + "> ?target . FILTER(isLiteral(?target)) . BIND(datatype(?target) as ?dt) }} LIMIT 1";
+		final String dataTypeQuery = "SELECT DISTINCT ?dt {GRAPH <" + gd.getGraphName() + "> { ?subject a <" + sourceType
+				+ "> . ?subject <" + predicate + "> ?target . FILTER(isLiteral(?target)) . BIND(datatype(?target) as ?dt) }}";
 
 		try (TupleQueryResult eval = Helper.runTupleQuery(dataTypeQuery, localConnection)) {
 			while (eval.hasNext()) {
