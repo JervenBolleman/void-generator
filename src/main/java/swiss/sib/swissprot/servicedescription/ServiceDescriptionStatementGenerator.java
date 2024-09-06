@@ -172,19 +172,28 @@ public class ServiceDescriptionStatementGenerator {
 				if (ppcp.getTripleCount() > 0) {
 					statement(cppr, VOID.ENTITIES, vf.createLiteral(ppcp.getTripleCount()));
 				}
+				Resource bNode = vf.createBNode();
+				statement(bNode, RDF.TYPE, VOID.LINKSET);
+				statement(bNode, VOID.LINK_PREDICATE, predicate.getPredicate());
+				statement(bNode, VOID.OBJECTS_TARGET, cppr);
+				statement(bNode, VOID.SUBJECTS_TARGET, dataSetPropertyPartition);
+				if (ppcp.getTripleCount() > 0) {
+					statement(bNode, VOID.ENTITIES, vf.createLiteral(ppcp.getTripleCount()));
+				}
+				
 			}
 			for (LinkSetToOtherGraph ls: predicate.getLinkSets()) {
 				//TODO generate nicer IRI
 				Resource bNode = vf.createBNode();
 				statement(bNode, RDF.TYPE, VOID.LINKSET);
 				statement(bNode, VOID.LINK_PREDICATE, predicate.getPredicate());
-				statement(bNode, VOID.TARGET, dataSetPropertyPartition);
+				statement(bNode, VOID.SUBJECTS_TARGET, dataSetPropertyPartition);
 				if (ls.getTripleCount() > 0) {
 					statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
 				}
 				for (ClassPartition cp : ls.getOtherGraph().getClasses()) {
 					if (cp.getClazz().equals(ls.getTargetType()))
-						statement(bNode, VOID.TARGET, ls.getTargetType());
+						statement(bNode, VOID.OBJECTS_TARGET, ls.getTargetType());
 				}
 			}
 			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
