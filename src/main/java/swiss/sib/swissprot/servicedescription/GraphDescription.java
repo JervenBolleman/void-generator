@@ -3,14 +3,14 @@ package swiss.sib.swissprot.servicedescription;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 
 
 public class GraphDescription
 {
 
-	private Resource graph;
+	private IRI graph;
 	private String graphName;
 	private long tripleCount;
 	private String ftpLocation;
@@ -22,7 +22,8 @@ public class GraphDescription
 	private long distinctBnodeSubjectCount;
 	private long distinctIriSubjectCount;
 
-	private Resource license;
+	private IRI license;
+	private IRI creator;
 
 	public long getDistinctClassesCount()
 	{
@@ -50,7 +51,7 @@ public class GraphDescription
 		this.graph = valueOf(graphName);
 	}
 
-	private Resource valueOf(String s)
+	private IRI valueOf(String s)
 	{
 		int position = s.lastIndexOf('/');
 		if (position == -1)
@@ -96,12 +97,12 @@ public class GraphDescription
 		return predicates;
 	}
 
-	public Resource getGraph()
+	public IRI getGraph()
 	{
 		return graph;
 	}
 
-	public void setGraph(Resource graph)
+	public void setGraph(IRI graph)
 	{
 		this.graph = graph;
 	}
@@ -157,13 +158,17 @@ public class GraphDescription
 		this.distinctIriObjectCount = distinctIriObjectCount;
 	}
 
-	public Resource getLicense()
+	public IRI getLicense()
 	{
 		return license;
 	}
 
-	public void setLicense(Resource license)
+	public void setLicense(IRI license)
 	{
 		this.license = license;
+	}
+
+	public void setCreator(IRI creator) {
+		this.creator = creator;
 	}
 }

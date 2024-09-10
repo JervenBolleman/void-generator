@@ -550,4 +550,76 @@ public class Generate implements Callable<Integer> {
 			connection.rollback();
 		}
 	}
+
+	public Repository getRepository() {
+		return repository;
+	}
+
+	public void setRepository(Repository repository) {
+		this.repository = repository;
+	}
+
+	public void setGraphNames(Set<String> graphNames) {
+		this.graphNames = graphNames;
+	}
+
+	public void setCountDistinctClasses(boolean countDistinctClasses) {
+		this.countDistinctClasses = countDistinctClasses;
+	}
+
+	public void setCountDistinctSubjects(boolean countDistinctSubjects) {
+		this.countDistinctSubjects = countDistinctSubjects;
+	}
+
+	public void setCountDistinctObjects(boolean countDistinctObjects) {
+		this.countDistinctObjects = countDistinctObjects;
+	}
+
+	public void setFindPredicates(boolean findPredicates) {
+		this.findPredicates = findPredicates;
+	}
+
+	public void setDetailedCount(boolean detailedCount) {
+		this.detailedCount = detailedCount;
+	}
+
+	public void setOntologyGraphNames(List<String> ontologyGraphNames) {
+		this.ontologyGraphNames = ontologyGraphNames;
+	}
+
+	public void setSdFile(File sdFile) {
+		this.sdFile = sdFile;
+	}
+
+	public void setDistinctSubjectIrisFile(File distinctSubjectIrisFile) {
+		this.distinctSubjectIrisFile = distinctSubjectIrisFile;
+	}
+
+	public void setDistinctObjectIrisFile(File distinctObjectIrisFile) {
+		this.distinctObjectIrisFile = distinctObjectIrisFile;
+	}
+
+	public void setForcedRefresh(boolean forcedRefresh) {
+		this.forcedRefresh = forcedRefresh;
+	}
+
+	public void setIriOfVoidAsString(String iriOfVoidAsString) {
+		this.iriOfVoidAsString = iriOfVoidAsString;
+	}
+
+	public void setIriOfVoid(IRI iriOfVoid) {
+		this.iriOfVoid = iriOfVoid;
+	}
+
+	public void setKnownPredicates(Set<IRI> knownPredicates) {
+		this.knownPredicates = knownPredicates;
+	}
+
+	public void setCommaSeperatedGraphs(String commaSeperatedGraphs) {
+		this.commaSeperatedGraphs = commaSeperatedGraphs;
+	}
+
+	public void setCommaSeperatedKnownPredicates(String commaSeperatedKnownPredicates) {
+		this.commaSeperatedKnownPredicates = commaSeperatedKnownPredicates;
+	}
 }
