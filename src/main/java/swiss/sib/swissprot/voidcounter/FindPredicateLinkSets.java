@@ -91,7 +91,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			if (!og.getGraphName().equals(gd.getGraphName())) {
 				Future<Exception> future = execs.submit(
 						new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate, predicatePartition,
-								source, gd, writeLock, limiter, scheduledQueries, finishedQueries, og, execs));
+								source, gd, writeLock, limiter, scheduledQueries, finishedQueries, og, execs, futures));
 				futures.add(future);
 			}
 		}

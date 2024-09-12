@@ -213,6 +213,7 @@
         <directory>src/test/resources</directory>
         <includes>
           <include>log4j.xml</include>
+          <include>*.trig</include>
         </includes>
       </testResource>
     </testResources>

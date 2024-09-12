@@ -3,6 +3,7 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -37,9 +38,11 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	private final AtomicInteger scheduledQueries;
 
+	private final List<Future<Exception>> futures;
+
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
-			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, GraphDescription otherGraph, ExecutorService es) {
+			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, GraphDescription otherGraph, ExecutorService es, 	List<Future<Exception>> futures) {
 		super(repository, limiter);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
@@ -50,6 +53,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		this.finishedQueries = finishedQueries;
 		this.otherGraph = otherGraph;
 		this.es = es;
+		this.futures = futures;
 		
 		scheduledQueries.incrementAndGet();
 	}
@@ -77,7 +81,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 					IRI targetType = (IRI) tqr.next().getBinding("targetType").getValue();
 					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType, otherGraph);
 					res.add(subTarget);
-					es.submit(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, scheduledQueries, finishedQueries));
+					futures.add(es.submit(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, scheduledQueries, finishedQueries)));
 				}
 			}
 			return res;
