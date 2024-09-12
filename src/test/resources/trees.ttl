@@ -1,0 +1,8 @@
+prefix ex:<https://example.org/void-generator/test/fruits>
+
+
+ex:apple_tree a ex:FruitTree .
+
+ex:pear_tree a ex:FruitTree .
+
+ex:lemon_tree a ex:FruitTree .
