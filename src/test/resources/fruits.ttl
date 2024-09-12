@@ -1,0 +1,17 @@
+prefix ex:<https://example.org/void-generator/test/fruits>
+
+
+ex:red_apple a ex:Fruit, ex:Apple ;
+    ex:color "red" ;
+    ex:grows_on ex:apple_tree .
+
+ex:green_apple a ex:Fruit, ex:Apple ;
+    ex:color "green" ;
+    ex:grows_on ex:apple_tree .
+
+ex:rotton_apple a ex:Fruit, ex:Apple ;
+    ex:color "brownish" .
+
+ex:green_pear a ex:Fruit, ex:Pear ;
+    ex:color "green" ;
+    ex:growns_on ex:pear_tree .
