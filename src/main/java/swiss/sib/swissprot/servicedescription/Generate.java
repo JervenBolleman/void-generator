@@ -154,8 +154,8 @@ public class Generate implements Callable<Integer> {
 		System.exit(exitCode);
 	}
 
-	private final AtomicInteger scheduledQueries = new AtomicInteger();
-	private final AtomicInteger finishedQueries = new AtomicInteger();
+	final AtomicInteger scheduledQueries = new AtomicInteger();
+	final AtomicInteger finishedQueries = new AtomicInteger();
 
 	private static final ValueFactory VF = SimpleValueFactory.getInstance();
 
@@ -163,7 +163,7 @@ public class Generate implements Callable<Integer> {
 
 	@Override
 	public Integer call() throws Exception {
-		this.iriOfVoid = SimpleValueFactory.getInstance().createIRI(iriOfVoidAsString);
+
 		if (commaSeperatedGraphs != null)
 			this.graphNames = comma.splitAsStream(commaSeperatedGraphs).collect(Collectors.toSet());
 		else
@@ -175,16 +175,14 @@ public class Generate implements Callable<Integer> {
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
-		if (virtuosoJdcb == null) {
+		if (virtuosoJdcb != null) {
+			repository = new VirtuosoRepository(repositoryLocator, user, password);
+		} else if (repositoryLocator.startsWith("http")) {
 			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
 			sr.enableQuadMode(true);
 			sr.setAdditionalHttpHeaders(Map.of("User-Agent", "void-generator"));
 			repository = sr;
-		} else {
-			repository = new VirtuosoRepository(repositoryLocator, user, password);
 		}
-		this.distinctSubjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "subject-bitsets-per-graph");
-		this.distinctObjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "object-bitsets-per-graph");
 		update();
 		return 0;
 	}
@@ -195,6 +193,15 @@ public class Generate implements Callable<Integer> {
 	}
 
 	public void update() {
+		log.debug("Void listener for " + graphNames.stream().collect(Collectors.joining(", ")));
+		if (commaSeperatedKnownPredicates != null) {
+			this.knownPredicates = comma.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
+					.collect(Collectors.toSet());
+		} else
+			this.knownPredicates = new HashSet<>();
+		this.iriOfVoid = SimpleValueFactory.getInstance().createIRI(iriOfVoidAsString);
+		this.distinctSubjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "subject-bitsets-per-graph");
+		this.distinctObjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "object-bitsets-per-graph");
 		// At least 1 but no more than one third of the cpus
 		if (maxConcurrency <= 0) {
 			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);

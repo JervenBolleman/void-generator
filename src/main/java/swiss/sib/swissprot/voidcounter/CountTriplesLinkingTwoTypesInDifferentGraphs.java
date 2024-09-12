@@ -24,6 +24,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 	private final LinkSetToOtherGraph ls;
 	private final GraphDescription gd;
 
+
 	public CountTriplesLinkingTwoTypesInDifferentGraphs(GraphDescription gd, LinkSetToOtherGraph ls,
 			Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
 			AtomicInteger finishedQueries) {

@@ -171,4 +171,8 @@ public class GraphDescription
 	public void setCreator(IRI creator) {
 		this.creator = creator;
 	}
+	
+	public IRI getCreator() {
+		return creator;
+	}
 }
