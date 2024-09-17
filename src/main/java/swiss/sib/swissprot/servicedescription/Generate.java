@@ -113,8 +113,11 @@ public class Generate implements Callable<Integer> {
 	private File distinctSubjectIrisFile;
 	private File distinctObjectIrisFile;
 
+	@Option(names = { "--virtuoso-jdbc"}, description = "A virtuoso jdbc connection string")
+	private String virtuosoJdcb;
+	
 	@Option(names = { "-r",
-			"--repository" }, description = "A SPARQL http/https endpoint location or a virtuoso jdbc connection string")
+			"--repository" }, description = "A SPARQL http/https endpoint location")
 	private String repositoryLocator;
 
 	@Option(names = { "-f",
@@ -172,7 +175,7 @@ public class Generate implements Callable<Integer> {
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
-		if (repositoryLocator.startsWith("http")) {
+		if (virtuosoJdcb == null) {
 			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
 			sr.enableQuadMode(true);
 			sr.setAdditionalHttpHeaders(Map.of("User-Agent", "void-generator"));
@@ -259,14 +262,14 @@ public class Generate implements Callable<Integer> {
 				rh.startRDF();
 				rh.handleNamespace(RDF.PREFIX, RDF.NAMESPACE);
 				rh.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
-				rh.handleNamespace(SD.PREFIX, SD.NAMESPACE);
+				rh.handleNamespace("", SD.NAMESPACE);
 				rh.handleNamespace(VOID_EXT.PREFIX, VOID_EXT.NAMESPACE);
 				rh.handleNamespace(FORMATS.PREFIX, FORMATS.NAMESPACE);
 				rh.handleNamespace(PAV.PREFIX, PAV.NAMESPACE);
 				rh.handleNamespace(VOID_EXT.PREFIX, VOID.NAMESPACE);
 				rh.handleNamespace(XSD.PREFIX, XSD.NAMESPACE);
 
-				new ServiceDescriptionStatementGenerator(rh).generateStatements(iriOfVoid, sdg);
+				new ServiceDescriptionStatementGenerator(rh).generateStatements(VF.createIRI(repositoryLocator), iriOfVoid, sdg);
 				rh.endRDF();
 			} catch (Exception e) {
 				log.error("can not store ServiceDescription", e);
