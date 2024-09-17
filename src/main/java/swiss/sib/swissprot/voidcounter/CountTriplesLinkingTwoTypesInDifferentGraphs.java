@@ -5,8 +5,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -15,10 +19,22 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
-import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCallable<Long> {
 	private static final Logger log = LoggerFactory.getLogger(CountTriplesLinkingTwoTypesInDifferentGraphs.class);
+	
+	private static final String COUNT_TRIPLES_LINKING = """
+			SELECT (COUNT(?target) AS ?lsc) 
+			WHERE  { 
+				GRAPH ?graphName { 
+					?subject a ?sourceType 
+				} 
+				?subject ?predicate ?target . 
+				GRAPH ?otherGraphName {
+				 	?target a ?targetType 
+				}
+			}
+			""";
 	private final Lock writeLock;
 	private final AtomicInteger finishedQueries;
 	private final LinkSetToOtherGraph ls;
@@ -61,11 +77,20 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		assert sourceType != null;
 		assert otherGraphName != null;
 		assert predicate != null;
-		String q = "SELECT (COUNT(?target) AS ?lsc) WHERE  { GRAPH <" + gd.getGraphName() + ">{ ?subject a <"
-				+ sourceType + "> } ?subject <" + predicate + "> ?target . GRAPH <" + otherGraphName + "> {?target a <"
-				+ targetType + "> }}";
+		
+		
+		TupleQuery tupleQuery = connection.prepareTupleQuery(COUNT_TRIPLES_LINKING);
+
+		SimpleValueFactory vf = SimpleValueFactory.getInstance();
+		tupleQuery.setBinding("graphName", vf.createIRI(gd.getGraphName()));
+		tupleQuery.setBinding("sourceType", sourceType);
+		tupleQuery.setBinding("predicate", predicate);
+		tupleQuery.setBinding("otherGraphName", vf.createIRI(otherGraphName));
+		tupleQuery.setBinding("targetType", targetType);
+
 		try {
-			return Helper.getSingleLongFromSparql(q, connection, "lsc");
+			BindingSet next = tupleQuery.evaluate().next();
+			return ((Literal) next.getBinding("lsc").getValue()).longValue();
 		} finally {
 			finishedQueries.incrementAndGet();
 		}
