@@ -185,18 +185,14 @@ public class Generate implements Callable<Integer> {
 		} else if (fromTestFile != null){
 			MemoryStore ms = new MemoryStore();
 			ms.init();
-						
-			SailRepository sr = new SailRepository(ms);
-			sr.init();
-			try (RepositoryConnection conn = sr.getConnection()) {
+					
+			repository = new SailRepository(ms);
+			repository.init();
+			try (RepositoryConnection conn = repository.getConnection()) {
 				conn.begin();
 				conn.add(fromTestFile);
 				conn.commit();
 			}
-			if (repositoryLocator != null) {
-				return -1;
-			}
-			repository = sr;
 		} else if (repositoryLocator.startsWith("http")) {
 			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
 			sr.enableQuadMode(true);
