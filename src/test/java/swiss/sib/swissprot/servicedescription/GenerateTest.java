@@ -39,8 +39,10 @@ public class GenerateTest {
 		sr.init();
 		try (SailRepositoryConnection connection = sr.getConnection()) {
 			connection.begin();
-			URL resource = GenerateTest.class.getResource("/tutorial.trig");
-			connection.add(resource, RDFFormat.TRIG);
+			URL resource = GenerateTest.class.getResource("tutorial.trig");
+			if (resource != null) {
+				connection.add(resource, RDFFormat.TRIG);
+			}
 			connection.commit();
 		}
 	
