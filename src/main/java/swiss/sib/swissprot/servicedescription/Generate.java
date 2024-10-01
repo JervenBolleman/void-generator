@@ -50,6 +50,7 @@ import org.eclipse.rdf4j.query.UpdateExecutionException;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
+import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandler;
@@ -58,6 +59,7 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser;
+import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,6 +150,9 @@ public class Generate implements Callable<Integer> {
 	
 	@Option(names = { "--max-concurrency", }, description = "issue no more than this number of queries at the same time")
 	private int maxConcurrency = 0;
+	
+	@Option(names = {"--from-test-file"}, description = "generate a void/service description for a test file")
+	private File fromTestFile;
 
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
@@ -177,6 +182,21 @@ public class Generate implements Callable<Integer> {
 			this.knownPredicates = new HashSet<>();
 		if (virtuosoJdcb != null) {
 			repository = new VirtuosoRepository(repositoryLocator, user, password);
+		} else if (fromTestFile != null){
+			MemoryStore ms = new MemoryStore();
+			ms.init();
+						
+			SailRepository sr = new SailRepository(ms);
+			sr.init();
+			try (RepositoryConnection conn = sr.getConnection()) {
+				conn.begin();
+				conn.add(fromTestFile);
+				conn.commit();
+			}
+			if (repositoryLocator != null) {
+				return -1;
+			}
+			repository = sr;
 		} else if (repositoryLocator.startsWith("http")) {
 			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
 			sr.enableQuadMode(true);
@@ -184,6 +204,7 @@ public class Generate implements Callable<Integer> {
 			repository = sr;
 		}
 		update();
+		repository.shutDown();
 		return 0;
 	}
 
@@ -525,8 +546,7 @@ public class Generate implements Callable<Integer> {
 
 				@Override
 				public void handleNamespace(String prefix, String uri) throws RDFHandlerException {
-					// TODO Auto-generated method stub
-
+					connection.setNamespace(prefix, uri);
 				}
 
 				@Override
