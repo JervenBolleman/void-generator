@@ -1,7 +1,9 @@
 package swiss.sib.swissprot.vocabulary;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.base.InternedIRI;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
 
 public class VOID_EXT {
 	public static final String NAMESPACE = "http://ldf.fi/void-ext#";
@@ -58,5 +60,6 @@ public class VOID_EXT {
 	public static final IRI OBJECT_CLASSES = new InternedIRI(NAMESPACE, "objectClasses");
 	public static final IRI PROPERTY_CLASSES = new InternedIRI(NAMESPACE, "propertyClasses");
 	public static final IRI SUBJECT_CLASSES = new InternedIRI(NAMESPACE, "subjectClasses");
+	public static final Namespace NS = new SimpleNamespace(PREFIX, NAMESPACE);
 
 }

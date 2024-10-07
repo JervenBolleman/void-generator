@@ -30,7 +30,7 @@ public class ServiceDescriptionStatementGenerator {
 	public void generateStatements(IRI endpoint, IRI iriOfVoid, ServiceDescription item) {
 
 		Resource defaultDatasetId = vf.createIRI(endpoint.getNamespace(), endpoint.getLocalName()+"#sparql-default-dataset");
-		Resource defaultGraphId = vf.createIRI(endpoint.getNamespace(), endpoint.getLocalName()+"#sparql-default-graph");
+		Resource defaultGraphId = vf.createIRI(iriOfVoid.getNamespace(), iriOfVoid.getLocalName()+"#sparql-default-graph");
 		statement(endpoint, RDF.TYPE, SD.SERVICE);
 		statement(endpoint, SD.DEFAULT_DATASET, defaultDatasetId);
 		statement(endpoint, SD.ENDPOINT, endpoint);
@@ -63,6 +63,8 @@ public class ServiceDescriptionStatementGenerator {
 		if (calendar != null) {
 			statement(defaultDatasetId, DCTERMS.ISSUED, vf.createLiteral(calendar));
 		}
+		if (item.getTitle() != null)
+			statement(defaultGraphId, DCTERMS.TITLE, vf.createLiteral(item.getTitle()));
 		return calendar;
 	}
 
@@ -114,17 +116,25 @@ public class ServiceDescriptionStatementGenerator {
 		IRI graph = vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName());
 		statement(namedGraph, SD.NAME, graphName);
 		statement(namedGraph, SD.GRAPH_PROPERTY, graph);
+		if (gd.getTitle() != null)
+			statement(namedGraph, DCTERMS.TITLE, vf.createLiteral(gd.getTitle()));
 
+		if (gd.getLicense() != null)
+			statement(namedGraph, SD.GRAPH_PROPERTY, gd.getLicense());
+
+		
 		statement(graph, RDF.TYPE, SD.GRAPH_CLASS);
 		statement(graph, VOID.ENTITIES, vf.createLiteral(gd.getTripleCount()));
 		long distinctClasses = gd.getDistinctClassesCount();
 		if (distinctClasses > 0)
 			statement(graph, VOID.CLASSES, vf.createLiteral(distinctClasses));
+		
 		for (ClassPartition cp : gd.getClasses()) {
 			final IRI iriOfType = getIRI(cp.getClazz().toString());
 			IRI dataSetClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
 			statement(graph, VOID.CLASS_PARTITION, dataSetClassPartition);
 		}
+
 		for (PredicatePartition predicate : gd.getPredicates()) {
 			IRI dataSetPropertyPartition = getResourceForPartition(namedGraph, getIRI(predicate.getPredicate()),
 					voidLocation);

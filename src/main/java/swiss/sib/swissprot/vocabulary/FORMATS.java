@@ -1,7 +1,9 @@
 package swiss.sib.swissprot.vocabulary;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.base.InternedIRI;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
 
 /**
  * Namespace Formats. Prefix: {@code <http://www.w3.org/ns/sparql-service-description#>}
@@ -20,5 +22,6 @@ public class FORMATS {
 	public static final IRI JSON = new InternedIRI(NAMESPACE, "SPARQL_Results_JSON");
 	public static final IRI TSV = new InternedIRI(NAMESPACE, "SPARQL_Results_TSV");
 	public static final IRI CSV = new InternedIRI(NAMESPACE, "SPARQL_Results_CSV");
+	public static final Namespace NS = new SimpleNamespace(PREFIX, NAMESPACE);
 
 }

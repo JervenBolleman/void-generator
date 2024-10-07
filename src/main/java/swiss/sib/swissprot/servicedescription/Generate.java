@@ -39,10 +39,6 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
-import org.eclipse.rdf4j.model.vocabulary.RDF;
-import org.eclipse.rdf4j.model.vocabulary.SD;
-import org.eclipse.rdf4j.model.vocabulary.VOID;
-import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.Update;
@@ -55,7 +51,6 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
-import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
@@ -65,9 +60,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import swiss.sib.swissprot.vocabulary.FORMATS;
-import swiss.sib.swissprot.vocabulary.PAV;
-import swiss.sib.swissprot.vocabulary.VOID_EXT;
+import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFWriter;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
 import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
@@ -145,7 +138,7 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--add-void-graph-to-store",
 			"-a" }, description = "immediatly attempt to store the void graph into the store and add it to the total count", defaultValue = "false")
 	private boolean add = false;
-	
+
 	@Option(names = { "--max-concurrency", }, description = "issue no more than this number of queries at the same time")
 	private int maxConcurrency = 0;
 
@@ -257,20 +250,7 @@ public class Generate implements Callable<Integer> {
 			readLock.lock();
 			Optional<RDFFormat> f = Rio.getWriterFormatForFileName(sdFile.getName());
 			try (OutputStream os = new FileOutputStream(sdFile)) {
-				RDFWriter rh = Rio.createWriter(f.orElseGet(() -> RDFFormat.TURTLE), os);
-
-				rh.startRDF();
-				rh.handleNamespace(RDF.PREFIX, RDF.NAMESPACE);
-				rh.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
-				rh.handleNamespace("", SD.NAMESPACE);
-				rh.handleNamespace(VOID_EXT.PREFIX, VOID_EXT.NAMESPACE);
-				rh.handleNamespace(FORMATS.PREFIX, FORMATS.NAMESPACE);
-				rh.handleNamespace(PAV.PREFIX, PAV.NAMESPACE);
-				rh.handleNamespace(VOID_EXT.PREFIX, VOID.NAMESPACE);
-				rh.handleNamespace(XSD.PREFIX, XSD.NAMESPACE);
-
-				new ServiceDescriptionStatementGenerator(rh).generateStatements(VF.createIRI(repositoryLocator), iriOfVoid, sdg);
-				rh.endRDF();
+				ServiceDescriptionRDFWriter.write(sdg, iriOfVoid, f.orElseGet(() -> RDFFormat.TURTLE), os, VF.createIRI(repositoryLocator));
 			} catch (Exception e) {
 				log.error("can not store ServiceDescription", e);
 			}
@@ -624,5 +604,9 @@ public class Generate implements Callable<Integer> {
 
 	public void setCommaSeperatedKnownPredicates(String commaSeperatedKnownPredicates) {
 		this.commaSeperatedKnownPredicates = commaSeperatedKnownPredicates;
+	}
+	
+	public void setAddResultsToStore(boolean add) {
+		this.add = add;
 	}
 }

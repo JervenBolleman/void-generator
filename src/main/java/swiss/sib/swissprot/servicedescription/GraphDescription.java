@@ -24,6 +24,7 @@ public class GraphDescription
 
 	private IRI license;
 	private IRI creator;
+	private String title;
 
 	public long getDistinctClassesCount()
 	{
@@ -105,6 +106,7 @@ public class GraphDescription
 	public void setGraph(IRI graph)
 	{
 		this.graph = graph;
+		this.graphName = graph.stringValue();
 	}
 
 	public long getDistinctLiteralObjectCount()
@@ -170,5 +172,17 @@ public class GraphDescription
 
 	public void setCreator(IRI creator) {
 		this.creator = creator;
+	}
+
+	public IRI getCreator() {
+		return creator;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	
+	public String getTitle() {
+		return title;
 	}
 }

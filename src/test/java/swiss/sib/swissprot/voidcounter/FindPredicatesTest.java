@@ -59,7 +59,7 @@ public class FindPredicatesTest {
 		final ServiceDescription sd = new ServiceDescription();
 		final GraphDescription gd = new GraphDescription();
 		gd.setGraphName("https://sparql.uniprot.org/uniprot");
-		sd.getGraphs().add(gd);
+		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		List<Future<Exception>> futures = new ArrayList<>();
 
@@ -88,7 +88,7 @@ public class FindPredicatesTest {
 		final ServiceDescription sd = new ServiceDescription();
 		final GraphDescription gd = new GraphDescription();
 		gd.setGraphName(RDF.BAG.stringValue());
-		sd.getGraphs().add(gd);
+		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		List<Future<Exception>> futures = new ArrayList<>();
 		AtomicInteger scheduledQueries = new AtomicInteger(0);
@@ -117,7 +117,7 @@ public class FindPredicatesTest {
 		final ServiceDescription sd = new ServiceDescription();
 		final GraphDescription gd = new GraphDescription();
 		gd.setGraphName(RDF.BAG.stringValue());
-		sd.getGraphs().add(gd);
+		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		List<Future<Exception>> futures = new ArrayList<>();
 		AtomicInteger scheduledQueries = new AtomicInteger(0);

@@ -47,7 +47,7 @@ public class ServiceDescription
 
 	public Collection<GraphDescription> getGraphs()
 	{
-		return sortByGraphSize(gds.values());
+		return Collections.unmodifiableCollection(sortByGraphSize(gds.values()));
 	}
 
 	/**
