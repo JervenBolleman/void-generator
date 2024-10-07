@@ -47,7 +47,7 @@ public class TripleCount extends QueryCallable<Long> {
 
 	protected Long run(RepositoryConnection connection) throws RepositoryException {
 		try {
-			return Helper.getSingleLongFromSparql("SELECT (COUNT(*) AS ?count) WHERE { GRAPH <" + gd.getGraphName() + "> {?s ?p ?o}}", connection, "count");			
+			return Helper.getSingleLongFromSparql("SELECT (COUNT(?p) AS ?count) WHERE { GRAPH <" + gd.getGraphName() + "> {?s ?p ?o}}", connection, "count");			
 		} finally {
 			finishedQueries.incrementAndGet();
 		}
