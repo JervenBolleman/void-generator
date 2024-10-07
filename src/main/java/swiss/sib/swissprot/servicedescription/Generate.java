@@ -278,8 +278,10 @@ public class Generate implements Callable<Integer> {
 			} catch (Exception e) {
 				log.error("can not store ServiceDescription", e);
 			}
-			writeGraphsWithSerializedBitMaps(Generate.this.distinctSubjectIrisFile, distinctSubjectIris);
-			writeGraphsWithSerializedBitMaps(Generate.this.distinctObjectIrisFile, distinctObjectIris);
+			if (virtuosoJdcb != null) {
+				writeGraphsWithSerializedBitMaps(Generate.this.distinctSubjectIrisFile, distinctSubjectIris);
+				writeGraphsWithSerializedBitMaps(Generate.this.distinctObjectIrisFile, distinctObjectIris);
+			}
 		} finally {
 			readLock.unlock();
 		}
