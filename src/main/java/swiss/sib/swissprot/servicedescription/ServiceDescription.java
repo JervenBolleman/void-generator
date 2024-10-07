@@ -13,7 +13,7 @@ public class ServiceDescription
 {
 	private final Map<String, GraphDescription> gds = Collections.synchronizedMap(new TreeMap<>());
 	private long totalTripleCount;
-	private String release;
+	private String version;
 	private LocalDate releaseDate;
 	
 	private String title;
@@ -88,21 +88,41 @@ public class ServiceDescription
 		this.totalTripleCount = totalTripleCount;
 	}
 
-	public String getRelease()
+	/**
+	 * The version of the dataset hosted in the endpoint.
+	 * @return version as a string
+	 */
+	public String getVersion()
 	{
-		return release;
+		return version;
 	}
 
-	public void setRelease(String release)
+	/**
+	 * Set the version of the dataset hosted in the endpoint
+	 * 
+	 * Not found by the void-generator, add in rdf afterwards manually.
+	 * @param version
+	 */
+	public void setVersion(String version)
 	{
-		this.release = release;
+		this.version = version;
 	}
 
+	/**
+	 * The date the dataset was released.
+	 * @return
+	 */
 	public LocalDate getReleaseDate()
 	{
 		return releaseDate;
 	}
 
+	/**
+	 * Set the date the dataset was released.
+	 * 
+	 * Not found by the void-generator, add in rdf afterwards manually.
+	 * @param releaseDate
+	 */
 	public void setReleaseDate(LocalDate releaseDate)
 	{
 		this.releaseDate = releaseDate;
