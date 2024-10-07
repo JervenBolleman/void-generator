@@ -85,14 +85,22 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 		if (connection instanceof VirtuosoRepositoryConnection) {
 			// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 			// Plus trick from sqlbif.c
-			String sql = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-					+ gd.getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0";
-			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
+			return virtuosoCountDistinctBnodeSubjectsInGraph(connection);
 		} else {
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?subjects) WHERE {"
-					+ "GRAPH <"+ gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isBlank(?subject))}}";
-			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, SUBJECTS);
+			return pureSparqlCountDistinctBnodeSubjectsInGraph(connection);
 		}
+	}
+
+	protected Long pureSparqlCountDistinctBnodeSubjectsInGraph(RepositoryConnection connection) {
+		final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?subjects) WHERE {"
+				+ "GRAPH <"+ gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isBlank(?subject))}}";
+		return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, SUBJECTS);
+	}
+
+	protected Long virtuosoCountDistinctBnodeSubjectsInGraph(RepositoryConnection connection) {
+		String sql = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+				+ gd.getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0";
+		return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
 	}
 
 	private Long countDistinctBnodeSubjects(RepositoryConnection connection) {
