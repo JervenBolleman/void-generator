@@ -17,6 +17,7 @@ import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -27,9 +28,7 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
-
 
 /**
  * This code is run if we can not find a class earlier or if it was not give.
@@ -38,16 +37,27 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
  *
  */
 public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
-
+	private static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
+	private static final String DATA_TYPE_QUERY = """
+			SELECT DISTINCT ?dt
+			WHERE {
+				GRAPH ?graphName {
+					?subject a ?sourceType .
+					?subject ?predicate ?target .
+					FILTER(isLiteral(?target)) .
+					BIND(datatype(?target) as ?dt)
+				}
+			}
+			""";
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 	private final GraphDescription gd;
 	private final Lock writeLock;
-	public static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
 	private final AtomicInteger finishedQueries;
 
 	public FindDataTypeIfNoClassOrDtKnown(PredicatePartition predicatePartition, ClassPartition source,
-			Repository repository, GraphDescription gd, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			Repository repository, GraphDescription gd, Lock writeLock, Semaphore limiter,
+			AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.predicatePartition = predicatePartition;
 		this.source = source;
@@ -107,15 +117,17 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 
 	private void pureSparql(Resource predicate, PredicatePartition predicatePartition, final Resource sourceType,
 			RepositoryConnection localConnection, Set<IRI> datatypes) {
-		final String dataTypeQuery = "SELECT DISTINCT ?dt {GRAPH <" + gd.getGraphName() + "> { ?subject a <" + sourceType
-				+ "> . ?subject <" + predicate + "> ?target . FILTER(isLiteral(?target)) . BIND(datatype(?target) as ?dt) }}";
 
-		try (TupleQueryResult eval = Helper.runTupleQuery(dataTypeQuery, localConnection)) {
+		TupleQuery tq = localConnection.prepareTupleQuery(DATA_TYPE_QUERY);
+		tq.setBinding("graphName", gd.getGraph());
+		tq.setBinding("sourceType", sourceType);
+		tq.setBinding("predicate", predicate);
+		try (TupleQueryResult eval = tq.evaluate()) {
 			while (eval.hasNext()) {
 				final BindingSet next = eval.next();
 				if (next.hasBinding("dt")) {
 					final Binding binding = next.getBinding("dt");
-					if (binding.getValue() != null ) {
+					if (binding.getValue() != null) {
 						datatypes.add((IRI) binding.getValue());
 					}
 				}
