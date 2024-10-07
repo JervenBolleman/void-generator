@@ -108,11 +108,10 @@ public class Generate implements Callable<Integer> {
 	private File distinctSubjectIrisFile;
 	private File distinctObjectIrisFile;
 
-	@Option(names = { "--virtuoso-jdbc"}, description = "A virtuoso jdbc connection string")
+	@Option(names = { "--virtuoso-jdbc" }, description = "A virtuoso jdbc connection string")
 	private String virtuosoJdcb;
-	
-	@Option(names = { "-r",
-			"--repository" }, description = "A SPARQL http/https endpoint location")
+
+	@Option(names = { "-r", "--repository" }, description = "A SPARQL http/https endpoint location")
 	private String repositoryLocator;
 
 	@Option(names = { "-f",
@@ -141,10 +140,11 @@ public class Generate implements Callable<Integer> {
 			"-a" }, description = "immediatly attempt to store the void graph into the store and add it to the total count", defaultValue = "false")
 	private boolean add = false;
 
-	@Option(names = { "--max-concurrency", }, description = "issue no more than this number of queries at the same time")
+	@Option(names = {
+			"--max-concurrency", }, description = "issue no more than this number of queries at the same time")
 	private int maxConcurrency = 0;
-	
-	@Option(names = {"--from-test-file"}, description = "generate a void/service description for a test file")
+
+	@Option(names = { "--from-test-file" }, description = "generate a void/service description for a test file")
 	private File fromTestFile;
 
 	public static void main(String[] args) {
@@ -175,10 +175,10 @@ public class Generate implements Callable<Integer> {
 			this.knownPredicates = new HashSet<>();
 		if (virtuosoJdcb != null) {
 			repository = new VirtuosoRepository(virtuosoJdcb, user, password);
-		} else if (fromTestFile != null){
+		} else if (fromTestFile != null) {
 			MemoryStore ms = new MemoryStore();
 			ms.init();
-					
+
 			repository = new SailRepository(ms);
 			repository.init();
 			try (RepositoryConnection conn = repository.getConnection()) {
@@ -268,13 +268,15 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void writeServiceDescriptionAndGraphs(ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
-			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, ServiceDescription sdg, IRI iriOfVoid) {
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, ServiceDescription sdg,
+			IRI iriOfVoid) {
 		final Lock readLock = rwLock.readLock();
 		try {
 			readLock.lock();
 			Optional<RDFFormat> f = Rio.getWriterFormatForFileName(sdFile.getName());
 			try (OutputStream os = new FileOutputStream(sdFile)) {
-				ServiceDescriptionRDFWriter.write(sdg, iriOfVoid, f.orElseGet(() -> RDFFormat.TURTLE), os, VF.createIRI(repositoryLocator));
+				ServiceDescriptionRDFWriter.write(sdg, iriOfVoid, f.orElseGet(() -> RDFFormat.TURTLE), os,
+						VF.createIRI(repositoryLocator));
 			} catch (Exception e) {
 				log.error("can not store ServiceDescription", e);
 			}
@@ -287,7 +289,8 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private void writeGraphsWithSerializedBitMaps(File targetFile, ConcurrentHashMap<String, Roaring64NavigableMap> map) {
+	private void writeGraphsWithSerializedBitMaps(File targetFile,
+			ConcurrentHashMap<String, Roaring64NavigableMap> map) {
 		if (!targetFile.exists()) {
 			try {
 				targetFile.createNewFile();
@@ -332,7 +335,9 @@ public class Generate implements Callable<Integer> {
 			scheduleBigCountsPerGraph(executors, sd, futures, voidGraphUri, saver, limit);
 			Lock writeLock = rwLock.writeLock();
 			if (isVirtuoso) {
-				CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, executors);
+				CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
+						sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit,
+						executors);
 				futures.add(executors.submit(cdso));
 //				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
 //						writeLock, distinctSubjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
@@ -392,16 +397,22 @@ public class Generate implements Callable<Integer> {
 				graphNames = FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
-		if (countDistinctObjects) {
-			countDistinctObjects(executors, sd, saver, distinctObjectIris, futures, writeLock, isvirtuoso, graphNames,
-					limit);
+		if (countDistinctObjects && countDistinctSubjects && isvirtuoso) {
+			for (String graphName : graphNames) {
+	            futures.add(executors.submit(new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(sd, repository, saver,
+	                    writeLock, distinctSubjectIris, distinctObjectIris, graphName, limit, executors)));
+			}
+		} else {		
+			if (countDistinctObjects) {
+				countDistinctObjects(executors, sd, saver, distinctObjectIris, futures, writeLock, isvirtuoso, graphNames,
+						limit);
+			}
+	
+			if (countDistinctSubjects) {
+				countDistinctSubjects(executors, sd, saver, distinctSubjectIris, futures, writeLock, isvirtuoso, graphNames,
+						limit);
+			}
 		}
-
-		if (countDistinctSubjects) {
-			countDistinctSubjects(executors, sd, saver, distinctSubjectIris, futures, writeLock, isvirtuoso, graphNames,
-					limit);
-		}
-
 		for (String graphName : graphNames) {
 			scheduleBigCountsPerGraph(executors, sd, futures, graphName, saver, limit);
 		}
@@ -423,7 +434,7 @@ public class Generate implements Callable<Integer> {
 		if (!isvirtuoso) {
 			futures.add(executors.submit(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock,
 					limit, scheduledQueries, finishedQueries)));
-		} else {
+		} else if (!countDistinctSubjects) {
 			for (String graphName : allGraphs) {
 				futures.add(executors.submit(new CountDistinctIriObjectsInAGraphVirtuoso(sd, repository, saver,
 						writeLock, distinctObjectIris, graphName, limit, scheduledQueries, finishedQueries)));
@@ -440,7 +451,7 @@ public class Generate implements Callable<Integer> {
 		if (!isvirtuoso) {
 			futures.add(executors.submit(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock,
 					limit, scheduledQueries, finishedQueries)));
-		} else {
+		} else if (!countDistinctObjects) {
 			for (String graphName : allGraphs) {
 				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
 						writeLock, distinctSubjectIris, graphName, limit, scheduledQueries, finishedQueries)));
@@ -630,7 +641,7 @@ public class Generate implements Callable<Integer> {
 	public void setCommaSeperatedKnownPredicates(String commaSeperatedKnownPredicates) {
 		this.commaSeperatedKnownPredicates = commaSeperatedKnownPredicates;
 	}
-	
+
 	public void setAddResultsToStore(boolean add) {
 		this.add = add;
 	}

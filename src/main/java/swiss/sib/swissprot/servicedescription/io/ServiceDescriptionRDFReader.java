@@ -50,7 +50,7 @@ public class ServiceDescriptionRDFReader {
 					defaultDatasetIssue.getDay()));
 		});
 		getAndSetOne(source, defaultDataset, PAV.VERSION, null, Statement::getObject,
-				(o) -> sd.setRelease(o.stringValue()));
+				(o) -> sd.setVersion(o.stringValue()));
 		getAndSetOne(source, defaultGraph, DCTERMS.TITLE, null, Statement::getObject,
 				(o) -> sd.setTitle(o.stringValue()));
 

@@ -58,8 +58,8 @@ public class ServiceDescriptionStatementGenerator {
 		statement(defaultDatasetId, RDF.TYPE, SD.DATASET);
 		statement(defaultDatasetId, SD.DEFAULT_GRAPH, defaultGraphId);
 		LocalDate calendar = item.getReleaseDate();
-		if (item.getRelease() != null)
-			statement(defaultDatasetId, PAV.VERSION, vf.createLiteral(item.getRelease()));
+		if (item.getVersion() != null)
+			statement(defaultDatasetId, PAV.VERSION, vf.createLiteral(item.getVersion()));
 		if (calendar != null) {
 			statement(defaultDatasetId, DCTERMS.ISSUED, vf.createLiteral(calendar));
 		}

@@ -30,7 +30,7 @@ public class ServiceDescriptionRDFWriterTest {
 	public void simple() {
 		ServiceDescription sd = new ServiceDescription();
 		sd.setTitle("test title");
-		sd.setRelease("2022");
+		sd.setVersion("2022");
 		sd.setReleaseDate(LocalDate.of(2024, 6, 6));
 		String sdVoid = write(sd);
 		assertFalse(sdVoid.isBlank());
@@ -56,7 +56,7 @@ public class ServiceDescriptionRDFWriterTest {
 	public void slightlyMoreComplex() {
 		ServiceDescription sd = new ServiceDescription();
 		sd.setTitle("test title");
-		sd.setRelease("2022");
+		sd.setVersion("2022");
 		sd.setReleaseDate(LocalDate.of(2024, 6, 6));
 		GraphDescription gd = new GraphDescription();
 		gd.setCreator(VF.createIRI(EX, "creator"));

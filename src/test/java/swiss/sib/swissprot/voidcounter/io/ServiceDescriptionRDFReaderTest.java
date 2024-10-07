@@ -62,7 +62,7 @@ public class ServiceDescriptionRDFReaderTest {
 		ServiceDescription sd = ServiceDescriptionRDFReader.read(simple);
 		assertEquals("test title", sd.getTitle());
 		assertEquals(LocalDate.of(2024, 06, 06), sd.getReleaseDate());
-		assertEquals("2022", sd.getRelease());
+		assertEquals("2022", sd.getVersion());
 
 		assertTrue(sd.getGraphs().isEmpty());
 	}
@@ -116,7 +116,7 @@ public class ServiceDescriptionRDFReaderTest {
 		ServiceDescription sd = ServiceDescriptionRDFReader.read(slightlyMoreComplex);
 		assertEquals("test title", sd.getTitle());
 		assertEquals(LocalDate.of(2024, 06, 06), sd.getReleaseDate());
-		assertEquals("2022", sd.getRelease());
+		assertEquals("2022", sd.getVersion());
 
 	}
 }

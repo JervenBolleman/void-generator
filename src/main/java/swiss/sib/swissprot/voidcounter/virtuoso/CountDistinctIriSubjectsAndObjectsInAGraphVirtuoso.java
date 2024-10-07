@@ -34,7 +34,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 
 	private static final int MAX_IN_PROCESS = 32;
 	private final Semaphore inProcess = new Semaphore(MAX_IN_PROCESS);
-	private final ExecutorService es = Executors.newCachedThreadPool();
+	private static final ExecutorService ES = Executors.newCachedThreadPool();
 	private static final int RUN_OPTIMIZE_EVERY = 128;
 	private static final int COMMIT_TO_RB_AT = 16 * 4096;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.class);
@@ -166,10 +166,10 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		} finally {
 			objLock.unlock();
 		}
-		es.shutdown();
-		while (!es.isTerminated()) {
+		ES.shutdown();
+		while (!ES.isTerminated()) {
 			try {
-				es.awaitTermination(100, TimeUnit.MILLISECONDS);
+				ES.awaitTermination(100, TimeUnit.MILLISECONDS);
 			} catch (InterruptedException e) {
 				Thread.interrupted();
 			}
@@ -270,10 +270,10 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 			shared.submit(apply::act);
 		} else if (inProcess.tryAcquire()){
 			GuardedAction apply = actionMaker.apply(inProcess);
-			es.submit(apply::act);
+			ES.submit(apply::act);
 		} else {
 			GuardedAction apply = actionMaker.apply(null);
-			es.submit(apply::act);
+			ES.submit(apply::act);
 		}
 		
 	}
