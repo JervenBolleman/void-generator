@@ -174,7 +174,7 @@ public class Generate implements Callable<Integer> {
 		} else
 			this.knownPredicates = new HashSet<>();
 		if (virtuosoJdcb != null) {
-			repository = new VirtuosoRepository(repositoryLocator, user, password);
+			repository = new VirtuosoRepository(virtuosoJdcb, user, password);
 		} else if (fromTestFile != null){
 			MemoryStore ms = new MemoryStore();
 			ms.init();
