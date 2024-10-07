@@ -89,7 +89,8 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 
 		String query = queryForGraph();
 		int i = 0, j = 0;
-		long[] temp = new long[1024];
+
+		long[] temp = new long[1024 * 16];
 		long previous = 0;
 		try (ResultSet rs = createStatement.executeQuery(query)) {
 			if (rs.next()) {
@@ -104,8 +105,7 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 					previous = iriId;
 					if (i == temp.length) {
 						i = 0;
-						Arrays.sort(temp);
-						roaringBitmap.add(temp);
+						addTemp(roaringBitmap, temp);
 						if (j++ == 10_000) {
 							roaringBitmap.runOptimize();
 						}
@@ -113,7 +113,15 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 				}
 			}
 		}
-		roaringBitmap.add(Arrays.copyOf(temp, i));
+		addTemp(roaringBitmap, Arrays.copyOf(temp, i));
+		roaringBitmap.runOptimize();
+	}
+
+	protected void addTemp(Roaring64NavigableMap roaringBitmap, long[] temp) {
+		Roaring64NavigableMap rbm = new Roaring64NavigableMap();
+		rbm.add(temp);
+		rbm.runOptimize();
+		roaringBitmap.and(rbm);
 	}
 
 	protected abstract String queryForGraph();
