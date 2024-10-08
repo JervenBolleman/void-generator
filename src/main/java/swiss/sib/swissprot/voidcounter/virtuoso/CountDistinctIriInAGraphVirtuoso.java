@@ -117,7 +117,7 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		Roaring64NavigableMap rbm = new Roaring64NavigableMap();
 		rbm.add(temp);
 		rbm.runOptimize();
-		roaringBitmap.and(rbm);
+		roaringBitmap.or(rbm);
 	}
 
 	protected abstract String queryForGraph();
