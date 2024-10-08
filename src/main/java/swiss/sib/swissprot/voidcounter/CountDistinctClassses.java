@@ -67,8 +67,9 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 	protected List<ClassPartition> run(RepositoryConnection connection)
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
 		List<ClassPartition> classesList = new ArrayList<>();
+		query = "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz }}";
 		try (TupleQueryResult classes = Helper.runTupleQuery(
-				"SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz }}", connection)) {
+				query, connection)) {
 			while (classes.hasNext()) {
 				Binding classesCount = classes.next().getBinding("clazz");
 				Value value = classesCount.getValue();

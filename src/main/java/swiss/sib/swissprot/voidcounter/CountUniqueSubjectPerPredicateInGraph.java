@@ -57,9 +57,9 @@ public class CountUniqueSubjectPerPredicateInGraph
 		    && predicatePartition.getTripleCount() > SWITCH_TO_OPTIMIZED_COUNT_AT)
 		{
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-			String sql = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+			query = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
 			    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicatePartition.getPredicate() + "')";
-			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, sql);
+			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, query);
 		}
 		else
 		{

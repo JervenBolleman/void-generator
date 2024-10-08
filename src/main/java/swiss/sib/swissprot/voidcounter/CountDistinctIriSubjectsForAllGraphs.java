@@ -43,6 +43,7 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
 		scheduledQueries.incrementAndGet();
+		query = COUNT_DISTINCT_SUBJECT_IRI_QUERY;
 	}
 
 	@Override

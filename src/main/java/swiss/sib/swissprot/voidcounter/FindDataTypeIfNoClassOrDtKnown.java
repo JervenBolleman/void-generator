@@ -96,7 +96,7 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 			RepositoryConnection connection) {
 		// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 		final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
-		String datatypeQuery = "SELECT DISTINCT t.dt FROM (SELECT TOP 100000 RDF_DATATYPE_OF_OBJ(PO.O) dt "
+		query = "SELECT DISTINCT t.dt FROM (SELECT TOP 100000 RDF_DATATYPE_OF_OBJ(PO.O) dt "
 				+ "FROM RDF_QUAD PO, RDF_QUAD ST WHERE  ST.S=PO.S AND "
 				+ " ST.P=iri_to_id('http://www.w3.org/1999/02/22-rdf-syntax-ns#type') AND ST.O=iri_to_id('" + sourceType
 				+ "') AND " + " PO.P=iri_to_id('" + predicate + "') AND " + " isiri_id(PO.O) = 0 AND "
@@ -104,24 +104,26 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 				+ "'))t";
 		try (final Statement createStatement = quadStoreConnection.createStatement()) {
 
-			try (ResultSet rs = createStatement.executeQuery(datatypeQuery)) {
+			try (ResultSet rs = createStatement.executeQuery(query)) {
 				while (rs.next()) {
 					IRI datatype = SimpleValueFactory.getInstance().createIRI(rs.getString(1));
 					datatypes.add(datatype);
 				}
 			}
 		} catch (SQLException e) {
-			throw new RuntimeException(datatypeQuery, e);
+			throw new RuntimeException(query, e);
 		}
 	}
 
 	private void pureSparql(Resource predicate, PredicatePartition predicatePartition, final Resource sourceType,
 			RepositoryConnection localConnection, Set<IRI> datatypes) {
 
+
 		TupleQuery tq = localConnection.prepareTupleQuery(DATA_TYPE_QUERY);
 		tq.setBinding("graphName", gd.getGraph());
 		tq.setBinding("sourceType", sourceType);
 		tq.setBinding("predicate", predicate);
+		setQuery(DATA_TYPE_QUERY, tq.getBindings());
 		try (TupleQueryResult eval = tq.evaluate()) {
 			while (eval.hasNext()) {
 				final BindingSet next = eval.next();

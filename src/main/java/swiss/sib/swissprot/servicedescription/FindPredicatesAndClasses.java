@@ -1,11 +1,7 @@
 package swiss.sib.swissprot.servicedescription;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -15,35 +11,34 @@ import java.util.function.Consumer;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.repository.Repository;
+import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
 import swiss.sib.swissprot.voidcounter.FindPredicateLinkSets;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
+import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class FindPredicatesAndClasses implements Callable<Exception> {
+final class FindPredicatesAndClasses extends QueryCallable<Exception> {
+	private static final Logger log = LoggerFactory.getLogger(FindPredicatesAndClasses.class);
 	private final GraphDescription gd;
-	private final Repository repository;
-	private final ExecutorService execs;
-	private final List<Future<Exception>> futures;
+	private final Consumer<QueryCallable<?>> schedule;
 	private final Set<IRI> knownPredicates;
 	private final ReadWriteLock rwLock;
-	private final Semaphore limit;
 	private final AtomicInteger scheduledQueries;
 	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
 
-	FindPredicatesAndClasses(GraphDescription gd, Repository repository, ExecutorService execs,
-			List<Future<Exception>> futures, Set<IRI> knownPredicates, ReadWriteLock rwLock, Semaphore limit,
+	FindPredicatesAndClasses(GraphDescription gd, Repository repository, Consumer<QueryCallable<?>> schedule, Set<IRI> knownPredicates, ReadWriteLock rwLock, Semaphore limit,
 			AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
 			ServiceDescription sd) {
+		super(repository, limit);
 		this.gd = gd;
-		this.repository = repository;
-		this.execs = execs;
-		this.futures = futures;
+		this.schedule = schedule;
 		this.knownPredicates = knownPredicates;
 		this.rwLock = rwLock;
-		this.limit = limit;
 		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
 		this.saver = saver;
@@ -51,14 +46,26 @@ final class FindPredicatesAndClasses implements Callable<Exception> {
 	}
 
 	@Override
-	public Exception call() {
+	protected void logStart() {
+		log.info("Scheduling finding predicates and classes for " + gd.getGraphName());
+		
+	}
+
+	@Override
+	protected void logEnd() {
+		log.info("Scheduling finding predicates and classes for " + gd.getGraphName());
+		
+	}
+
+	@Override
+	protected Exception run(RepositoryConnection connection) throws Exception {
 		final Lock writeLock = rwLock.writeLock();
-		Exception call = new FindPredicates(gd, repository, knownPredicates, futures, execs, writeLock, limit,
+		Exception call = new FindPredicates(gd, repository, knownPredicates, schedule, writeLock, limiter,
 				scheduledQueries, finishedQueries, saver, sd).call();
 		if (call != null)
 			return call;
 
-		call = new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver,
+		call = new CountDistinctClassses(gd, repository, writeLock, limiter, scheduledQueries, finishedQueries, saver,
 				sd).call();
 		if (call != null)
 			return call;
@@ -78,11 +85,17 @@ final class FindPredicatesAndClasses implements Callable<Exception> {
 		for (PredicatePartition predicate : predicates) {
 			for (ClassPartition source : classes) {
 				if (!RDF.TYPE.equals(predicate.getPredicate()))
-					futures.add(execs.submit(new FindPredicateLinkSets(repository, classes, predicate, source,
-							writeLock, futures, limit, execs, gd, scheduledQueries, finishedQueries, saver, sd)));
+					schedule.accept(new FindPredicateLinkSets(repository, classes, predicate, source,
+							writeLock, schedule, limiter, gd, scheduledQueries, finishedQueries, saver, sd));
 			}
 		}
 		return null;
+	}
+
+	@Override
+	protected void set(Exception t) {
+		//do nothing
+		
 	}
 
 }

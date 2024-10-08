@@ -67,6 +67,7 @@ public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallab
 
 		assert !(connection instanceof VirtuosoConnection);
 		try {
+			query = COUNT_DISTINCT_OBJECT_IRI_QUERY;
 			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_OBJECT_IRI_QUERY, connection, OBJECTS);
 		} finally {
 			finishedQueries.incrementAndGet();

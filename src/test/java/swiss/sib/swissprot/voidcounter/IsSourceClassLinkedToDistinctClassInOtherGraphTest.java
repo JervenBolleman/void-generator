@@ -3,8 +3,6 @@ package swiss.sib.swissprot.voidcounter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.util.ArrayList;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -70,7 +68,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 				scheduledQueries,
 				finishedQueries,
 				ogd,
-				Executors.newCachedThreadPool(), new ArrayList<>());
+				(s)->{});
 	}
 
 	@Test

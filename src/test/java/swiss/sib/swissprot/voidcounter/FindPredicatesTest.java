@@ -4,11 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -61,12 +57,10 @@ public class FindPredicatesTest {
 		gd.setGraphName("https://sparql.uniprot.org/uniprot");
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
-		List<Future<Exception>> futures = new ArrayList<>();
-
 		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				futures, Executors.newSingleThreadExecutor(), writeLock, new Semaphore(1), scheduledQueries,
+				(s)->{}, writeLock, new Semaphore(1), scheduledQueries,
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();
@@ -90,12 +84,11 @@ public class FindPredicatesTest {
 		gd.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
-		List<Future<Exception>> futures = new ArrayList<>();
 		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				futures, Executors.newSingleThreadExecutor(), writeLock, new Semaphore(1), scheduledQueries,
+				(s)->{}, writeLock, new Semaphore(1), scheduledQueries,
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();
@@ -119,11 +112,10 @@ public class FindPredicatesTest {
 		gd.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
-		List<Future<Exception>> futures = new ArrayList<>();
 		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				futures, Executors.newSingleThreadExecutor(), writeLock, new Semaphore(1), scheduledQueries,
+				(s)->{}, writeLock, new Semaphore(1), scheduledQueries,
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();

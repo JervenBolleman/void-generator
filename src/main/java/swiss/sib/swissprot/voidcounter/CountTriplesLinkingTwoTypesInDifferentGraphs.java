@@ -7,6 +7,7 @@ import java.util.concurrent.locks.Lock;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -88,7 +89,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		tupleQuery.setBinding("predicate", predicate);
 		tupleQuery.setBinding("otherGraphName", vf.createIRI(otherGraphName));
 		tupleQuery.setBinding("targetType", targetType);
-
+		setQuery(COUNT_TRIPLES_LINKING, tupleQuery.getBindings());
 		try {
 			BindingSet next = tupleQuery.evaluate().next();
 			return ((Literal) next.getBinding("lsc").getValue()).longValue();

@@ -3,8 +3,6 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -31,21 +29,20 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 public final class FindPredicates extends QueryCallable<List<PredicatePartition>> {
 	private final GraphDescription gd;
 	private final Set<IRI> knownPredicates;
-	private final List<Future<Exception>> futures;
-	private final ExecutorService execs;
 	private static final Logger log = LoggerFactory.getLogger(FindPredicates.class);
 	private final Lock writeLock;
-	private AtomicInteger finishedQueries;
+	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
+	private final Consumer<QueryCallable<?>> schedule;
 
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
-			List<Future<Exception>> futures, ExecutorService execs, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
+			Consumer<QueryCallable<?>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.knownPredicates = knownPredicates;
-		this.futures = futures;
-		this.execs = execs;
+		this.schedule = schedule;
+
 		this.writeLock = writeLock;
 		this.saver = saver;
 		this.sd = sd;
@@ -55,9 +52,10 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 
 	private List<PredicatePartition> findPredicates(GraphDescription gd, RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+		query = "SELECT ?predicate (COUNT(?object) AS ?count) WHERE { GRAPH <" + gd.getGraphName()
+						+ "> { ?subject ?predicate ?object }} GROUP BY ?predicate";
 		try (TupleQueryResult predicateQuery = Helper
-				.runTupleQuery("SELECT ?predicate (COUNT(?object) AS ?count) WHERE { GRAPH <" + gd.getGraphName()
-						+ "> { ?subject ?predicate ?object }} GROUP BY ?predicate", connection)) {
+				.runTupleQuery(query, connection)) {
 			List<PredicatePartition> res = new ArrayList<>();
 			while (predicateQuery.hasNext()) {
 
@@ -115,10 +113,8 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			writeLock.unlock();
 		}
 		for (PredicatePartition predicatePartition : predicates) {
-			futures.add(execs
-					.submit(new CountUniqueSubjectPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter)));
-			futures.add(execs
-					.submit(new CountUniqueObjectsPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter)));
+			schedule.accept(new CountUniqueSubjectPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
+			schedule.accept(new CountUniqueObjectsPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
 		}
 	}
 }

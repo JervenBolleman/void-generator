@@ -63,7 +63,7 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 
 	@Override
 	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
-		final String query = "SELECT DISTINCT ?target  WHERE { GRAPH <" + gd.getGraphName() + "> { ?subject a <"
+		query = "SELECT DISTINCT ?target  WHERE { GRAPH <" + gd.getGraphName() + "> { ?subject a <"
 				+ cp.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target . ?target a <" + OWL.NAMEDINDIVIDUAL + ">}}";
 		try (final TupleQueryResult tr = Helper.runTupleQuery(query, connection)) {
 			Set<IRI> namedObjects = new HashSet<>();

@@ -32,7 +32,7 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		QueryCallable<swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.SubObj> {
 
-	private static final int MAX_IN_PROCESS = 32;
+	private static final int MAX_IN_PROCESS = 8;
 	private final Semaphore inProcess = new Semaphore(MAX_IN_PROCESS);
 	private static final ExecutorService ES = Executors.newCachedThreadPool();
 	private static final int RUN_OPTIMIZE_EVERY = 128;
@@ -143,7 +143,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement, Roaring64NavigableMap subjects,
 			Roaring64NavigableMap objects) throws SQLException {
 
-		String query = queryForGraph();
+		query = queryForGraph();
 		final ReentrantLock subLock = new ReentrantLock();
 		final ReentrantLock objLock = new ReentrantLock();
 		AddedStatus subjectIdx = new AddedStatus(0, 0, new Roaring64NavigableMap(), subLock);

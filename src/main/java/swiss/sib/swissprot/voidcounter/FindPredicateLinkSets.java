@@ -1,9 +1,6 @@
 package swiss.sib.swissprot.voidcounter;
 
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -33,8 +30,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private final PredicatePartition pp;
 	private final ClassPartition source;
 	private final Lock writeLock;
-	private final List<Future<Exception>> futures;
-	private final ExecutorService execs;
+	private final Consumer<QueryCallable<?>> schedule;
 	private final GraphDescription gd;
 
 	private PredicatePartition subpredicatePartition;
@@ -48,16 +44,15 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private final ServiceDescription sd;
 
 	public FindPredicateLinkSets(Repository repository, Set<ClassPartition> classes, PredicatePartition predicate,
-			ClassPartition source, Lock writeLock, List<Future<Exception>> futures, Semaphore limit,
-			ExecutorService execs, GraphDescription gd, AtomicInteger scheduledQueries, AtomicInteger finishedQueries,
+			ClassPartition source, Lock writeLock, Consumer<QueryCallable<?>> schedule, Semaphore limit,
+			GraphDescription gd, AtomicInteger scheduledQueries, AtomicInteger finishedQueries,
 			Consumer<ServiceDescription> saver, ServiceDescription sd) {
 		super(repository, limit);
 		this.classes = classes;
 		this.pp = predicate;
 		this.source = source;
 		this.writeLock = writeLock;
-		this.futures = futures;
-		this.execs = execs;
+		this.schedule = schedule;
 		this.gd = gd;
 		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
@@ -76,34 +71,31 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
 			ClassPartition source, Repository repository, Lock writeLock) {
 		final IRI predicate = predicatePartition.getPredicate();
-		futures.add(execs.submit(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition, source,
-				repository, writeLock, limiter, scheduledQueries, finishedQueries)));
+		schedule.accept(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition, source,
+				repository, writeLock, limiter, scheduledQueries, finishedQueries));
 
 		for (ClassPartition target : targetClasses) {
 
-			Future<Exception> future = execs.submit(new IsSourceClassLinkedToTargetClass(repository, predicate, target,
+			schedule.accept(new IsSourceClassLinkedToTargetClass(repository, predicate, target,
 					predicatePartition, source, gd, writeLock, limiter, scheduledQueries, finishedQueries));
-			futures.add(future);
-
 		}
 
 		for (GraphDescription og : sd.getGraphs()) {
 			if (!og.getGraphName().equals(gd.getGraphName())) {
-				Future<Exception> future = execs.submit(
+				schedule.accept(
 						new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate, predicatePartition,
-								source, gd, writeLock, limiter, scheduledQueries, finishedQueries, og, execs, futures));
-				futures.add(future);
+								source, gd, writeLock, limiter, scheduledQueries, finishedQueries, og, schedule));
 			}
 		}
-		futures.add(execs.submit(new FindDataTypeIfNoClassOrDtKnown(predicatePartition, source, repository, gd,
-				writeLock, limiter, scheduledQueries, finishedQueries)));
+		schedule.accept(new FindDataTypeIfNoClassOrDtKnown(predicatePartition, source, repository, gd,
+				writeLock, limiter, scheduledQueries, finishedQueries));
 	}
 
 	private long countTriplesInPredicateClassPartition(final Repository repository,
 			PredicatePartition predicatePartition, ClassPartition source) {
 
 		try (RepositoryConnection localConnection = repository.getConnection()) {
-			final String query = "SELECT (COUNT(?subject) AS ?count) WHERE {GRAPH <" + gd.getGraphName()
+			query = "SELECT (COUNT(?subject) AS ?count) WHERE {GRAPH <" + gd.getGraphName()
 					+ "> {?subject a <" + source.getClazz() + "> ; <" + predicatePartition.getPredicate()
 					+ "> ?target .}}";
 			try (TupleQueryResult triples = Helper.runTupleQuery(query, localConnection)) {

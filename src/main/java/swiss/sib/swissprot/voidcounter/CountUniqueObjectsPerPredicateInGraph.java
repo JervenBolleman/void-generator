@@ -75,23 +75,23 @@ public class CountUniqueObjectsPerPredicateInGraph
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?object) as ?objects) WHERE { GRAPH <"
+			query = "SELECT (count(distinct ?object) as ?objects) WHERE { GRAPH <"
 			    + gd.getGraphName() + "> {?subject <" + predicate + "> ?object}}";
-			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, OBJECTS);
+			return Helper.getSingleLongFromSparql(query, connection, OBJECTS);
 		}
 	}
 
 	private long countDistinctLiteralObjects(RepositoryConnection connection, Resource predicate, long countOfLiterals)
 	    throws MalformedQueryException, RepositoryException
 	{
-		String countOfLiteralsQuery = "SELECT (COUNT(DISTINCT(RDF_QUAD.O))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+		query = "SELECT (COUNT(DISTINCT(RDF_QUAD.O))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
 		    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
 		    + "') AND isiri_id(RDF_QUAD.O) = 0";
 		VirtuosoRepositoryConnection virtuosoRepositoryConnection = (VirtuosoRepositoryConnection) connection;
 		Connection vrc = virtuosoRepositoryConnection.getQuadStoreConnection();
 		try (java.sql.Statement stat = vrc.createStatement())
 		{
-			try (ResultSet res = stat.executeQuery(countOfLiteralsQuery))
+			try (ResultSet res = stat.executeQuery(query))
 			{
 				log.debug(
 				    "Counting literal objects for " + gd.getGraphName() + " and predicate " + predicate);

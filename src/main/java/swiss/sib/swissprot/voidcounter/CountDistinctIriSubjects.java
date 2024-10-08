@@ -23,7 +23,7 @@ public final class CountDistinctIriSubjects
 {
 
 	private static final String SUBJECTS = "subjects";
-	private static final String countDistinctSubjectQuery = """
+	private static final String COUNT_DistinctSubjectQuery = """
 			SELECT 
 				(COUNT(DISTINCT(?subject)) AS ?subjects) 
 			WHERE {
@@ -60,15 +60,15 @@ public final class CountDistinctIriSubjects
 		if (localConnection instanceof VirtuosoRepositoryConnection)
 		{
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-			String sql = "SELECT COUNT(DISTINCT(iri_id_num(RDF_QUAD.S))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+			query = "SELECT COUNT(DISTINCT(iri_id_num(RDF_QUAD.S))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
 			    + gd.getGraphName() + "') AND isiri_id(RDF_QUAD.S) > 0 AND is_bnode_iri_id(RDF_QUAD.S) = 0";
-			return VirtuosoFromSQL.getSingleLongFromSql(sql, (VirtuosoRepositoryConnection) localConnection);
+			return VirtuosoFromSQL.getSingleLongFromSql(query, (VirtuosoRepositoryConnection) localConnection);
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (COUNT(DISTINCT(?subject)) AS ?subjects) WHERE {GRAPH <"
+			final String query = "SELECT (COUNT(DISTINCT(?subject)) AS ?subjects) WHERE {GRAPH <"
 			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isIri(?s))}}";
-			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, localConnection, SUBJECTS);
+			return Helper.getSingleLongFromSparql(query, localConnection, SUBJECTS);
 		}
 	}
 	
@@ -78,12 +78,13 @@ public final class CountDistinctIriSubjects
 		if (localConnection instanceof VirtuosoRepositoryConnection)
 		{
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-			String sql = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.S) > 0 AND is_bnode_iri_id(RDF_QUAD.S) = 0";
-			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso((VirtuosoRepositoryConnection) localConnection, sql);
+			query = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.S) > 0 AND is_bnode_iri_id(RDF_QUAD.S) = 0";
+			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso((VirtuosoRepositoryConnection) localConnection, query);
 		}
 		else
 		{
-			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, localConnection, SUBJECTS);
+			query = COUNT_DistinctSubjectQuery;
+			return Helper.getSingleLongFromSparql(COUNT_DistinctSubjectQuery, localConnection, SUBJECTS);
 		}
 	}
 
