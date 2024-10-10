@@ -385,14 +385,14 @@ public class Generate implements Callable<Integer> {
 					} catch (TimeoutException e) {
 						// This is ok we just try again in the loop.
 					}
+					if (loop == 60) {
+						tasks.forEach(t -> {
+							log.info("Running: " + t.getClass() + " -> " + t.getQuery());
+						});
+						loop = 0;
+					}
+					loop++;
 				}
-				if (loop == 60) {
-					tasks.forEach(t -> {
-						log.info("Running: " + t.getClass() + " -> " + t.getQuery());
-					});
-					loop = 0;
-				}
-				loop++;
 			}
 		} catch (InterruptedException e) {
 			// Clear interrupted flag
