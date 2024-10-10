@@ -43,10 +43,12 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	private final ServiceDescription sd;
 
+	private final String classExclusion;
+
 	public FindPredicateLinkSets(Repository repository, Set<ClassPartition> classes, PredicatePartition predicate,
 			ClassPartition source, Lock writeLock, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Semaphore limit,
 			GraphDescription gd, AtomicInteger finishedQueries,
-			Consumer<ServiceDescription> saver, ServiceDescription sd) {
+			Consumer<ServiceDescription> saver, ServiceDescription sd, String classExclusion) {
 		super(repository, limit);
 		this.classes = classes;
 		this.pp = predicate;
@@ -57,6 +59,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		this.finishedQueries = finishedQueries;
 		this.saver = saver;
 		this.sd = sd;
+		this.classExclusion = classExclusion;
 	}
 
 	private void findDatatypeOrSubclassPartitions(final Repository repository, Set<ClassPartition> targetClasses,
@@ -82,7 +85,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			if (!og.getGraphName().equals(gd.getGraphName())) {
 				schedule.apply(
 						new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate, predicatePartition,
-								source, gd, writeLock, limiter, finishedQueries, og, schedule));
+								source, gd, writeLock, limiter, finishedQueries, og, schedule, classExclusion));
 			}
 		}
 		schedule.apply(new FindDataTypeIfNoClassOrDtKnown(predicatePartition, source, repository, gd,

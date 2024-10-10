@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Value;
@@ -27,18 +28,20 @@ import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
-public final class CountDistinctClassses extends QueryCallable<List<ClassPartition>> {
+public final class FindDistinctClassses extends QueryCallable<List<ClassPartition>> {
 	private final GraphDescription gd;
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctClassses.class);
+	private static final Logger log = LoggerFactory.getLogger(FindDistinctClassses.class);
 	private final Lock writeLock;
 	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
+	private final String classExclusion;
+	private final Supplier<QueryCallable<?>> onSuccess;
 
-	public CountDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
+	public FindDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler,
-			ServiceDescription sd) {
+			ServiceDescription sd, String classExclusion, Supplier<QueryCallable<?>> onSuccess) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.writeLock = writeLock;
@@ -46,11 +49,13 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 		this.saver = saver;
 		this.scheduler = scheduler;
 		this.sd = sd;
+		this.classExclusion = classExclusion;
+		this.onSuccess = onSuccess;
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct classes for " + gd.getGraphName());
+		log.debug("Find distinct classes for " + gd.getGraphName());
 	}
 
 	@Override
@@ -60,14 +65,14 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct classes:" + gd.getDistinctClassesCount() + " for " + gd.getGraphName());
+		log.debug("Found distinct classes:" + gd.getDistinctClassesCount() + " for " + gd.getGraphName());
 	}
 
 	@Override
 	protected List<ClassPartition> run(RepositoryConnection connection)
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
 		List<ClassPartition> classesList = new ArrayList<>();
-		query = "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz }}";
+		query = makeQuery();
 		try (TupleQueryResult classes = Helper.runTupleQuery(query, connection)) {
 			while (classes.hasNext()) {
 				Binding classesCount = classes.next().getBinding("clazz");
@@ -83,8 +88,20 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 		for (ClassPartition cp : classesList) {
 			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp));
 		}
+		if (onSuccess != null) {
+			scheduler.apply(onSuccess.get());
+		}
 		saver.accept(sd);
 		return classesList;
+	}
+
+	private String makeQuery() {
+		if (classExclusion == null) {
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz }}";
+		} else {
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName()
+					+ "> {?thing a ?clazz . FILTER (! REGEX(STR(?clazz), '" + classExclusion + "'))}}";
+		}
 	}
 
 	@Override

@@ -6,7 +6,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -46,10 +45,12 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 
+	private final String classExclusion;
+
 
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
-			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule) {
+			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
 		super(repository, limiter);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
@@ -59,6 +60,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		this.finishedQueries = finishedQueries;
 		this.otherGraph = otherGraph;
 		this.schedule = schedule;
+		this.classExclusion = classExclusion;
 	}
 
 	@Override
@@ -78,7 +80,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		try {
 			final IRI sourceType = source.getClazz();
 
-			final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
+			final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, makeQuery());
 			pbq.setBinding("sourceGraphName", gd.getGraph());
 			pbq.setBinding("predicate", predicate);
 			pbq.setBinding("targetGraphName", otherGraph.getGraph());
@@ -97,6 +99,14 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 			return res;
 		} finally {
 			finishedQueries.incrementAndGet();
+		}
+	}
+
+	private String makeQuery() {
+		if (classExclusion == null) {
+			return query;
+		} else {
+			return "";
 		}
 	}
 

@@ -61,7 +61,7 @@ public class FindPredicatesTest {
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
 				(s)->null, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
-				}, sd);
+				}, sd, null);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(0, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());
@@ -87,7 +87,7 @@ public class FindPredicatesTest {
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
 				(s)->null, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
-				}, sd);
+				}, sd, null);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());
@@ -112,7 +112,7 @@ public class FindPredicatesTest {
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
 				(s)->null, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
-				}, sd);
+				}, sd, null);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());

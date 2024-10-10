@@ -67,7 +67,7 @@ import picocli.CommandLine.Option;
 import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFWriter;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
-import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
+import swiss.sib.swissprot.voidcounter.FindDistinctClassses;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForAllGraphsAtOnce;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjects;
@@ -149,6 +149,9 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--from-test-file" }, description = "generate a void/service description for a test file")
 	private File fromTestFile;
 
+	@Option(names = { "--regex-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such.s")
+	private String classExclusion;
+	
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -159,19 +162,19 @@ public class Generate implements Callable<Integer> {
 
 	private static final ValueFactory VF = SimpleValueFactory.getInstance();
 
-	Pattern comma = Pattern.compile(",", Pattern.LITERAL);
+	private static final Pattern COMMA = Pattern.compile(",", Pattern.LITERAL);
 
 	@Override
 	public Integer call() throws Exception {
 
 		if (commaSeperatedGraphs != null)
-			this.graphNames = comma.splitAsStream(commaSeperatedGraphs).collect(Collectors.toSet());
+			this.graphNames = COMMA.splitAsStream(commaSeperatedGraphs).collect(Collectors.toSet());
 		else
 			this.graphNames = new HashSet<>();
 
 		log.debug("Void listener for " + graphNames.stream().collect(Collectors.joining(", ")));
 		if (commaSeperatedKnownPredicates != null) {
-			this.knownPredicates = comma.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
+			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
@@ -241,7 +244,7 @@ public class Generate implements Callable<Integer> {
 	public void update() {
 		log.debug("Void listener for " + graphNames.stream().collect(Collectors.joining(", ")));
 		if (commaSeperatedKnownPredicates != null) {
-			this.knownPredicates = comma.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
+			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
@@ -496,16 +499,16 @@ public class Generate implements Callable<Integer> {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (countDistinctClasses && findPredicates && detailedCount) {
 			schedule(new FindPredicatesAndClasses(gd, repository, this::schedule, knownPredicates, rwLock, limit,
-					finishedQueries, saver, sd));
+					finishedQueries, saver, sd, classExclusion));
 		} else {
 			Lock writeLock = rwLock.writeLock();
 			if (findPredicates) {
 				schedule(new FindPredicates(gd, repository, knownPredicates, this::schedule, writeLock, limit,
-						finishedQueries, saver, sd));
+						finishedQueries, saver, sd, null));
 			}
 			if (countDistinctClasses) {
-				schedule(new CountDistinctClassses(gd, repository, writeLock, limit, finishedQueries,
-						saver, this::schedule, sd));
+				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries,
+						saver, this::schedule, sd, classExclusion, null));
 			}
 		}
 	}

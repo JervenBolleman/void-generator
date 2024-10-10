@@ -1,7 +1,6 @@
 package swiss.sib.swissprot.servicedescription.io;
 
 import java.io.OutputStream;
-import java.util.Optional;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.vocabulary.DCTERMS;

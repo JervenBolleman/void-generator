@@ -9,6 +9,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
@@ -17,7 +18,7 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.voidcounter.CountDistinctClassses;
+import swiss.sib.swissprot.voidcounter.FindDistinctClassses;
 import swiss.sib.swissprot.voidcounter.FindPredicateLinkSets;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
@@ -31,11 +32,12 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
+	private final String classExclusion;
 
 	FindPredicatesAndClasses(GraphDescription gd, Repository repository,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
 			ReadWriteLock rwLock, Semaphore limit, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
-			ServiceDescription sd) {
+			ServiceDescription sd, String classExclusion) {
 		super(repository, limit);
 		this.gd = gd;
 		this.schedule = schedule;
@@ -44,6 +46,7 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		this.finishedQueries = finishedQueries;
 		this.saver = saver;
 		this.sd = sd;
+		this.classExclusion = classExclusion;
 	}
 
 	@Override
@@ -61,49 +64,67 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	@Override
 	protected Exception run(RepositoryConnection connection) throws Exception {
 		final Lock writeLock = rwLock.writeLock();
+		Supplier<QueryCallable<?>> onFoundClasses = ()->new FindClassPredicatePairs(repository, limiter, finishedQueries);
+		Supplier<QueryCallable<?>> onFoundPredicates = ()->{
+			return new FindDistinctClassses(gd, repository, writeLock, limiter, finishedQueries, saver, schedule,
+					sd, classExclusion, onFoundClasses);
+		};
 		schedule.apply(new FindPredicates(gd, repository, knownPredicates, schedule, writeLock, limiter,
-				finishedQueries, saver, sd)).thenApply((e) -> {
-					if (e != null) {
-						return thenScheduleFindClasses(writeLock);
-					} else
-						return null;
-				}).thenApply((e) -> {
-					if (e != null) {
-						return e;
-					} else {
-						return scheduleMore(writeLock);
-					}
-				});
+				finishedQueries, saver, sd, onFoundPredicates));
 
 		return null;
 	}
+	
+	private class FindClassPredicatePairs extends QueryCallable<Void> {
 
-	private Exception scheduleMore(final Lock writeLock) {
-		Set<ClassPartition> classes;
-		Set<PredicatePartition> predicates;
-
-		final Lock readLock = rwLock.readLock();
-		try {
-			readLock.lock();
-			classes = new HashSet<>(gd.getClasses());
-			predicates = new HashSet<>(gd.getPredicates());
-		} finally {
-			readLock.unlock();
+		public FindClassPredicatePairs(Repository repository, Semaphore limiter, AtomicInteger finishedQueries) {
+			super(repository, limiter);
 		}
 
-		for (PredicatePartition predicate : predicates) {
-			for (ClassPartition source : classes) {
-				if (!RDF.TYPE.equals(predicate.getPredicate()))
-					schedule.apply(new FindPredicateLinkSets(repository, classes, predicate, source, writeLock,
-							schedule, limiter, gd, finishedQueries, saver, sd));
+		@Override
+		protected void logStart() {
+			log.debug("Scheduling finding class predicate pairs");
+			
+		}
+
+		@Override
+		protected void logEnd() {
+			log.debug("Scheduled finding class predicate pairs");
+		}
+
+		@Override
+		protected Void run(RepositoryConnection connection) throws Exception {
+			Set<ClassPartition> classes;
+			Set<PredicatePartition> predicates;
+
+			final Lock readLock = rwLock.readLock();
+			try {
+				readLock.lock();
+				classes = new HashSet<>(gd.getClasses());
+				predicates = new HashSet<>(gd.getPredicates());
+			} finally {
+				readLock.unlock();
 			}
+			try {
+				final Lock writeLock = rwLock.writeLock();
+				for (PredicatePartition predicate : predicates) {
+					for (ClassPartition source : classes) {
+						if (!RDF.TYPE.equals(predicate.getPredicate()))
+							schedule.apply(new FindPredicateLinkSets(repository, classes, predicate, source, writeLock,
+									schedule, limiter, gd, finishedQueries, saver, sd, classExclusion));
+					}
+				}
+			} finally {
+				finishedQueries.incrementAndGet();
+			}
+			return null;
 		}
-		return null;
-	}
 
-	private CompletableFuture<Exception> thenScheduleFindClasses(final Lock writeLock) {
-		return schedule.apply(new CountDistinctClassses(gd, repository, writeLock, limiter, finishedQueries, saver, schedule,
-				sd));
+		@Override
+		protected void set(Void t) {
+			// TODO Auto-generated method stub
+			
+		}
 		
 	}
 

@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -37,9 +38,10 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
+	private final Supplier<QueryCallable<?>> onSuccess;
 
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd, Supplier<QueryCallable<?>> onSuccess) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.knownPredicates = knownPredicates;
@@ -49,6 +51,7 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 		this.saver = saver;
 		this.sd = sd;
 		this.finishedQueries = finishedQueries;
+		this.onSuccess = onSuccess;
 	}
 
 	private List<PredicatePartition> findPredicates(GraphDescription gd, RepositoryConnection connection)
@@ -77,6 +80,9 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 		} finally {
 			finishedQueries.incrementAndGet();
 			saver.accept(sd);
+			if (onSuccess != null) {
+				schedule.apply(onSuccess.get());
+			}
 		}
 	}
 

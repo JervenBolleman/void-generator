@@ -56,16 +56,8 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		finishedQueries = new AtomicInteger(0);
 		limiter = new Semaphore(1);
 
-		isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
-				predicate,
-				predicatePartition, 
-				sourceClass, 
-				gd,
-				writeLock, 
-				limiter, 
-				finishedQueries,
-				ogd,
-				(s)->null);
+		isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
+				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, null);
 	}
 
 	@Test
