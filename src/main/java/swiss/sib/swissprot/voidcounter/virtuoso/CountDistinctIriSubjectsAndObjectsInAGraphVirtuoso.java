@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -34,7 +34,14 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 
 	private static final int MAX_IN_PROCESS = 8;
 	private final Semaphore inProcess = new Semaphore(MAX_IN_PROCESS);
-	private static final ExecutorService ES = Executors.newCachedThreadPool();
+	private static final ExecutorService ES = Executors.newCachedThreadPool(new ThreadFactory() {
+		private volatile int count;
+		@Override
+		public Thread newThread(Runnable r) {
+			return new Thread(r, "CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso" + count++);
+		}
+		
+	});
 	private static final int RUN_OPTIMIZE_EVERY = 128;
 	private static final int COMMIT_TO_RB_AT = 16 * 4096;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.class);
@@ -48,15 +55,13 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	private final BiConsumer<GraphDescription, Long> graphSubjectSetter;
 	private final Map<String, Roaring64NavigableMap> objectGraphIriIds;
 	private final Map<String, Roaring64NavigableMap> subjectGraphIriIds;
-	private final ExecutorService shared;
 
 	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64NavigableMap> graphSubjectIriIds,
-			Map<String, Roaring64NavigableMap> graphObjectIriIds, String graphIri, Semaphore limit, ExecutorService shared) {
+			Map<String, Roaring64NavigableMap> graphObjectIriIds, String graphIri, Semaphore limit) {
 		super(repository, limit);
 		this.subjectGraphIriIds = graphSubjectIriIds;
 		this.objectGraphIriIds = graphObjectIriIds;
-		this.shared = shared;
 		this.objectAllSetter = sd::setDistinctIriObjectCount;
 		this.subjectAllSetter = sd::setDistinctIriSubjectCount;
 		this.graphObjectSetter = GraphDescription::setDistinctIriObjectCount;
@@ -166,14 +171,6 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		} finally {
 			objLock.unlock();
 		}
-		ES.shutdown();
-		while (!ES.isTerminated()) {
-			try {
-				ES.awaitTermination(100, TimeUnit.MILLISECONDS);
-			} catch (InterruptedException e) {
-				Thread.interrupted();
-			}
-		}
 		inProcess.acquireUninterruptibly(MAX_IN_PROCESS);
 	}
 
@@ -265,17 +262,13 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	 * @param actionMaker
 	 */
 	private void enQueue(final Function<Semaphore, GuardedAction> actionMaker) {
-		if (limiter.tryAcquire()) {
-			GuardedAction apply = actionMaker.apply(limiter);
-			shared.submit(apply::act);
-		} else if (inProcess.tryAcquire()){
+		if (inProcess.tryAcquire()){
 			GuardedAction apply = actionMaker.apply(inProcess);
 			ES.submit(apply::act);
 		} else {
 			GuardedAction apply = actionMaker.apply(null);
 			ES.submit(apply::act);
 		}
-		
 	}
 
 	@Override
