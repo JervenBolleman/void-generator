@@ -81,7 +81,7 @@ public final class CountDistinctIriObjects
 		}
 		else if (gd != null)
 		{
-			final String query = "SELECT (count(distinct(?object)) as ?objects) { GRAPH <"
+			query = "SELECT (count(distinct(?object)) as ?objects) { GRAPH <"
 			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER (isIri(?object))}}";
 			return Helper.getSingleLongFromSparql(query, connection, "objects");
 		} else {
