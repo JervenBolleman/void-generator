@@ -31,7 +31,7 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctLiteralObjects(GraphDescription gd, ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
@@ -40,7 +40,6 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
 		this.graphname = gd.getGraphName();
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override

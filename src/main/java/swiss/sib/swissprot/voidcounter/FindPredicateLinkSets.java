@@ -35,8 +35,6 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	private PredicatePartition subpredicatePartition;
 
-	private final AtomicInteger scheduledQueries;
-
 	private final AtomicInteger finishedQueries;
 
 	private final Consumer<ServiceDescription> saver;
@@ -45,7 +43,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	public FindPredicateLinkSets(Repository repository, Set<ClassPartition> classes, PredicatePartition predicate,
 			ClassPartition source, Lock writeLock, Consumer<QueryCallable<?>> schedule, Semaphore limit,
-			GraphDescription gd, AtomicInteger scheduledQueries, AtomicInteger finishedQueries,
+			GraphDescription gd, AtomicInteger finishedQueries,
 			Consumer<ServiceDescription> saver, ServiceDescription sd) {
 		super(repository, limit);
 		this.classes = classes;
@@ -54,11 +52,9 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		this.writeLock = writeLock;
 		this.schedule = schedule;
 		this.gd = gd;
-		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
 		this.saver = saver;
 		this.sd = sd;
-		scheduledQueries.incrementAndGet();
 	}
 
 	private void findDatatypeOrSubclassPartitions(final Repository repository, Set<ClassPartition> targetClasses,
@@ -72,23 +68,23 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			ClassPartition source, Repository repository, Lock writeLock) {
 		final IRI predicate = predicatePartition.getPredicate();
 		schedule.accept(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition, source,
-				repository, writeLock, limiter, scheduledQueries, finishedQueries));
+				repository, writeLock, limiter, finishedQueries));
 
 		for (ClassPartition target : targetClasses) {
 
 			schedule.accept(new IsSourceClassLinkedToTargetClass(repository, predicate, target,
-					predicatePartition, source, gd, writeLock, limiter, scheduledQueries, finishedQueries));
+					predicatePartition, source, gd, writeLock, limiter, finishedQueries));
 		}
 
 		for (GraphDescription og : sd.getGraphs()) {
 			if (!og.getGraphName().equals(gd.getGraphName())) {
 				schedule.accept(
 						new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate, predicatePartition,
-								source, gd, writeLock, limiter, scheduledQueries, finishedQueries, og, schedule));
+								source, gd, writeLock, limiter, finishedQueries, og, schedule));
 			}
 		}
 		schedule.accept(new FindDataTypeIfNoClassOrDtKnown(predicatePartition, source, repository, gd,
-				writeLock, limiter, scheduledQueries, finishedQueries));
+				writeLock, limiter, finishedQueries));
 	}
 
 	private long countTriplesInPredicateClassPartition(final Repository repository,

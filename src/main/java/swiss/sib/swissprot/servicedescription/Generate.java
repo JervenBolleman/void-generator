@@ -219,8 +219,13 @@ public class Generate implements Callable<Integer> {
 	private final Semaphore limit;
 	
 	public final void schedule(QueryCallable<?> task) {
+		scheduledQueries.incrementAndGet();
 		tasks.add(task);
 		futures.add(executors.submit(task));
+	}
+	
+	public final void announceDone(QueryCallable<?> task) {
+		finishedQueries.incrementAndGet();
 	}
 
 	public void update() {
@@ -448,16 +453,16 @@ public class Generate implements Callable<Integer> {
 	private void countDistinctObjects(ServiceDescription sd,
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris,
 			Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs, Semaphore limit) {
-		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit, scheduledQueries,
+		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit,
 				finishedQueries));
 		if (!isvirtuoso) {
 			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock,
-					limit, scheduledQueries, finishedQueries));
+					limit, finishedQueries));
 		} else if (!countDistinctSubjects) {
 			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock, limit,
-					scheduledQueries, finishedQueries));
+					 finishedQueries));
 		}
-		schedule(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit, scheduledQueries,
+		schedule(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit, 
 				finishedQueries));
 	}
 
@@ -465,15 +470,15 @@ public class Generate implements Callable<Integer> {
 			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
 			Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs, Semaphore limit) {
 		if (!isvirtuoso) {
-			schedule(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit, scheduledQueries,
+			schedule(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit,
 					finishedQueries));
 		} else if (!countDistinctObjects) {
 			for (String graphName : allGraphs) {
 				schedule(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver, writeLock,
-						distinctSubjectIris, graphName, limit, scheduledQueries, finishedQueries));
+						distinctSubjectIris, graphName, limit, finishedQueries));
 			}
 		}
-		schedule(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, scheduledQueries, finishedQueries));
+		schedule(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, finishedQueries));
 	}
 
 	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates,
@@ -481,16 +486,16 @@ public class Generate implements Callable<Integer> {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (countDistinctClasses && findPredicates && detailedCount) {
 			schedule(new FindPredicatesAndClasses(gd, repository, this::schedule, knownPredicates, rwLock, limit,
-					scheduledQueries, finishedQueries, saver, sd));
+					finishedQueries, saver, sd));
 		} else {
 			Lock writeLock = rwLock.writeLock();
 			if (findPredicates) {
 				schedule(new FindPredicates(gd, repository, knownPredicates, this::schedule, writeLock, limit,
-						scheduledQueries, finishedQueries, saver, sd));
+						finishedQueries, saver, sd));
 			}
 			if (countDistinctClasses) {
-				schedule(new CountDistinctClassses(gd, repository, writeLock, limit, scheduledQueries, finishedQueries,
-						saver, sd));
+				schedule(new CountDistinctClassses(gd, repository, writeLock, limit, finishedQueries,
+						saver, this::schedule, sd));
 			}
 		}
 	}
@@ -501,14 +506,14 @@ public class Generate implements Callable<Integer> {
 		Lock writeLock = rwLock.writeLock();
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			schedule(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit, scheduledQueries,
+			schedule(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit,
 					finishedQueries));
 		}
 		if (countDistinctSubjects) {
-			schedule(new CountDistinctBnodeSubjects(gd, repository, writeLock, limit, scheduledQueries,
+			schedule(new CountDistinctBnodeSubjects(gd, repository, writeLock, limit,
 					finishedQueries));
 		}
-		schedule(new TripleCount(gd, repository, writeLock, limit, scheduledQueries, finishedQueries, saver, sd));
+		schedule(new TripleCount(gd, repository, writeLock, limit, finishedQueries, saver, sd));
 	}
 
 	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
@@ -658,5 +663,12 @@ public class Generate implements Callable<Integer> {
 
 	public void setAddResultsToStore(boolean add) {
 		this.add = add;
+	}
+	/**
+	 * The IRI of the endpoint
+	 * @param rl
+	 */
+	void setRepositoryLocator(String rl) {
+		this.repositoryLocator = rl;
 	}
 }

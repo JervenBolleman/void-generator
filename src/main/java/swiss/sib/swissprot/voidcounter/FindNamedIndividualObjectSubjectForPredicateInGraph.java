@@ -34,14 +34,13 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 
 	public FindNamedIndividualObjectSubjectForPredicateInGraph(GraphDescription gd,
 			PredicatePartition predicatePartition, ClassPartition cp, Repository repository, Lock writeLock,
-			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			Semaphore limiter, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.predicatePartition = predicatePartition;
 		this.cp = cp;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override

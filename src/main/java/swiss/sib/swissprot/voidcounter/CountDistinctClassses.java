@@ -9,7 +9,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -31,21 +30,20 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctClassses.class);
 	private final Lock writeLock;
 	private final AtomicInteger finishedQueries;
-	private final AtomicInteger scheduledQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
+	private final Consumer<QueryCallable<?>> scheduler;
 
 	public CountDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
+			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, Consumer<QueryCallable<?>> scheduler,
 			ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.writeLock = writeLock;
-		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
 		this.saver = saver;
+		this.scheduler = scheduler;
 		this.sd = sd;
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -68,8 +66,7 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
 		List<ClassPartition> classesList = new ArrayList<>();
 		query = "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz }}";
-		try (TupleQueryResult classes = Helper.runTupleQuery(
-				query, connection)) {
+		try (TupleQueryResult classes = Helper.runTupleQuery(query, connection)) {
 			while (classes.hasNext()) {
 				Binding classesCount = classes.next().getBinding("clazz");
 				Value value = classesCount.getValue();
@@ -81,24 +78,8 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 		} finally {
 			finishedQueries.incrementAndGet();
 		}
-		scheduledQueries.addAndGet(classesList.size());
 		for (ClassPartition cp : classesList) {
-			String countTriples = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH <" + gd.getGraphName()
-					+ "> {?thing a <" + cp.getClazz().stringValue() + "> }}";
-
-			try (TupleQueryResult classes = Helper.runTupleQuery(countTriples, connection)) {
-				while (classes.hasNext()) {
-
-					Binding classesCount = classes.next().getBinding("count");
-					Value value = classesCount.getValue();
-					if (value.isLiteral()) {
-						Literal lv = (Literal) value;
-						cp.setTripleCount(lv.longValue());
-					}
-				}
-			} finally {
-				finishedQueries.incrementAndGet();
-			}
+			scheduler.accept(new CountMembersOfClassPartition(repository, limiter, cp));
 		}
 		saver.accept(sd);
 		return classesList;
@@ -113,6 +94,43 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 			classes.addAll(count);
 		} finally {
 			writeLock.unlock();
+		}
+
+	}
+
+	private final class CountMembersOfClassPartition extends QueryCallable<Long> {
+		public CountMembersOfClassPartition(Repository repository, Semaphore limiter, ClassPartition cp) {
+			super(repository, limiter);
+			this.cp = cp;
+		}
+
+		private final ClassPartition cp;
+
+		@Override
+		protected void logStart() {
+			log.debug("Counting distinct triples for clas "+cp.getClazz()+" for " + gd.getGraphName());
+
+		}
+
+		@Override
+		protected void logEnd() {
+			log.debug("Counted distinct triples for clas "+cp.getClazz()+" for " + gd.getGraphName());
+		}
+
+		@Override
+		protected Long run(RepositoryConnection connection) throws Exception {
+			query = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH <" + gd.getGraphName() + "> {?thing a <"
+					+ cp.getClazz().stringValue() + "> }}";
+			try {
+				return Helper.getSingleLongFromSparql(query, connection, "count");
+			} finally {
+				finishedQueries.incrementAndGet();
+			}
+		}
+
+		@Override
+		protected void set(Long t) {
+			cp.setTripleCount(t);
 		}
 
 	}

@@ -31,7 +31,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 
 	public IsSourceClassLinkedToTargetClass(Repository repository, IRI predicate, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
-			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			Semaphore limiter, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.predicate = predicate;
 		this.target = target;
@@ -40,7 +40,6 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 		this.gd = gd;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override

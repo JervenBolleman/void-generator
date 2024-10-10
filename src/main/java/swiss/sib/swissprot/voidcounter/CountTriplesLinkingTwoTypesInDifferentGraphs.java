@@ -7,7 +7,6 @@ import java.util.concurrent.locks.Lock;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
-import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -43,14 +42,13 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 
 
 	public CountTriplesLinkingTwoTypesInDifferentGraphs(GraphDescription gd, LinkSetToOtherGraph ls,
-			Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			Repository repository, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.ls = ls;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override

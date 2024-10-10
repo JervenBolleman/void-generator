@@ -37,14 +37,13 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctLiteralObjectsForAllGraphs(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -73,6 +72,7 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 						+ getCount(vrc, SELECT_OBJECTS_IN_RDF_OBJ);
 				return countOfLiterals;
 			} else {
+				query = COUNT_OBJECTS_WITH_SPARQL;
 				return Helper.getSingleLongFromSparql(COUNT_OBJECTS_WITH_SPARQL, connection, OBJECTS);
 			}
 		} finally {

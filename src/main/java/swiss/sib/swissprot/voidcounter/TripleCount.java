@@ -24,7 +24,7 @@ public class TripleCount extends QueryCallable<Long> {
 	private final ServiceDescription sd;
 
 	public TripleCount(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
+			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
 			ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
@@ -32,7 +32,6 @@ public class TripleCount extends QueryCallable<Long> {
 		this.finishedQueries = finishedQueries;
 		this.saver = saver;
 		this.sd = sd;
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override

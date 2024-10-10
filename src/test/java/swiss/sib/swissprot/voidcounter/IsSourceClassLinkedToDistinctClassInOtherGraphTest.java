@@ -40,7 +40,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	private Lock writeLock;
 	private AtomicInteger finishedQueries;
 	private Semaphore limiter;
-	private AtomicInteger scheduledQueries;
 	private GraphDescription ogd;
 
 	@BeforeEach
@@ -56,7 +55,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		writeLock = new ReentrantLock();
 		finishedQueries = new AtomicInteger(0);
 		limiter = new Semaphore(1);
-		scheduledQueries = new AtomicInteger(0);
 
 		isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
 				predicate,
@@ -65,7 +63,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 				gd,
 				writeLock, 
 				limiter, 
-				scheduledQueries,
 				finishedQueries,
 				ogd,
 				(s)->{});

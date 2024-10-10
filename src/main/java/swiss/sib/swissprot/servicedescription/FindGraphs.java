@@ -21,21 +21,21 @@ public class FindGraphs {
 	private static final Set<String> VIRTUOSO_GRAPHS = Set.of("http://www.openlinksw.com/schemas/virtrdf#",
 			"http://www.w3.org/ns/ldp#", "urn:activitystreams-owl:map", "urn:core:services:sparql");
 
-	public static Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries2,
-			AtomicInteger finishedQueries2)  {
+	public static Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection,
+			AtomicInteger scheduledQueries, AtomicInteger finishedQueries)  {
 		Set<String> res = new HashSet<>();
-
-		findGraphs(connection, scheduledQueries2, finishedQueries2, res, PREFFERED_QUERY);
+		findGraphs(connection, res, PREFFERED_QUERY, scheduledQueries, finishedQueries);
 		if (res.isEmpty()) {
-			findGraphs(connection, scheduledQueries2, finishedQueries2, res, FALLBACK_QUERY);	
+			findGraphs(connection, res, FALLBACK_QUERY, scheduledQueries, finishedQueries);
 		}
+		
 		return res;
 
 	}
 
-	private static void findGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries2,
-			AtomicInteger finishedQueries2, Set<String> res, String query) {
-		scheduledQueries2.incrementAndGet();
+	private static void findGraphs(RepositoryConnection connection,
+			Set<String> res, String query, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+		scheduledQueries.incrementAndGet();
 		try (final TupleQueryResult foundGraphs = Helper
 				.runTupleQuery(query, connection)) {
 			while (foundGraphs.hasNext()) {
@@ -49,10 +49,9 @@ public class FindGraphs {
 			}
 		} catch(RDF4JException e){
 			//Ignore this failure!
+		} finally {
+			finishedQueries.incrementAndGet();
 		}
-			finally {
-			finishedQueries2.incrementAndGet();
-		} 
 	}
 
 }

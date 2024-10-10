@@ -35,14 +35,13 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctIriSubjectsForAllGraphs(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
-		scheduledQueries.incrementAndGet();
 		query = COUNT_DISTINCT_SUBJECT_IRI_QUERY;
 	}
 
@@ -64,8 +63,8 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		assert !(connection instanceof VirtuosoRepositoryConnection);
 		try {
+			assert !(connection instanceof VirtuosoRepositoryConnection);
 			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_SUBJECT_IRI_QUERY, connection, SUBJECTS);
 		} finally {
 			finishedQueries.incrementAndGet();

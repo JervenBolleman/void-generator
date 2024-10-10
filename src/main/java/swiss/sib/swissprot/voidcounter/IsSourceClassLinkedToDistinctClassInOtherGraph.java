@@ -42,25 +42,21 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	private final GraphDescription otherGraph;
 
 
-	private final AtomicInteger scheduledQueries;
 	private final Consumer<QueryCallable<?>> schedule;
 
 
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
-			Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, GraphDescription otherGraph, Consumer<QueryCallable<?>> schedule) {
+			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph, Consumer<QueryCallable<?>> schedule) {
 		super(repository, limiter);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.gd = gd;
 		this.writeLock = writeLock;
-		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
 		this.otherGraph = otherGraph;
 		this.schedule = schedule;
-				
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override
@@ -93,7 +89,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
 							otherGraph);
 					res.add(subTarget);
-					schedule.accept(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, scheduledQueries, finishedQueries));
+					schedule.accept(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, finishedQueries));
 				}
 			}
 			return res;

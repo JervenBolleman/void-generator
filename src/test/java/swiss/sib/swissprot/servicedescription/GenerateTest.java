@@ -61,6 +61,7 @@ public class GenerateTest {
 		g.setSdFile(new File(tempDir, "void.ttl"));
 		g.setIriOfVoidAsString("https://example.org/.well-known/void");
 		g.setRepository(sr);
+		g.setRepositoryLocator("https://example.org/sparql");
 		g.update();
 		assertEquals(g.finishedQueries.get(), g.scheduledQueries.get());
 	}

@@ -35,25 +35,23 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctBnodeSubjects(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
 		this.sd = null;
 		this.graphname = gd.getGraphName();
-		scheduledQueries.incrementAndGet();
 	}
 
 	public CountDistinctBnodeSubjects(ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
 		this.gd = null;
 		this.sd = sd;
 		this.graphname = "all";
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override

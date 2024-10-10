@@ -41,14 +41,12 @@ class CountDistinctIriObjectsForAllGraphsTest {
 
 		Lock writeLock = new ReentrantLock();
 		final ServiceDescription sd = new ServiceDescription();
-		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final CountDistinctIriObjectsForAllGraphsAtOnce countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsForAllGraphsAtOnce(
 				sd, repository, (s) -> {
-				}, writeLock, new Semaphore(1), scheduledQueries, finishedQueries);
+				}, writeLock, new Semaphore(1), finishedQueries);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(0, sd.getDistinctIriObjectCount());
-		assertEquals(1, scheduledQueries.get());
 		assertEquals(1, finishedQueries.get());
 	}
 
@@ -67,14 +65,12 @@ class CountDistinctIriObjectsForAllGraphsTest {
 		bag.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(bag);
 		Lock writeLock = new ReentrantLock();
-		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final CountDistinctIriObjectsForAllGraphsAtOnce countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsForAllGraphsAtOnce(
 				sd, repository, (s) -> {
-				}, writeLock, new Semaphore(1), scheduledQueries, finishedQueries);
+				}, writeLock, new Semaphore(1), finishedQueries);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriObjectCount());
-		assertEquals(1, scheduledQueries.get());
 		assertEquals(1, finishedQueries.get());
 	}
 }

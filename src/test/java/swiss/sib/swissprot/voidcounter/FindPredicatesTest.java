@@ -57,15 +57,13 @@ public class FindPredicatesTest {
 		gd.setGraphName("https://sparql.uniprot.org/uniprot");
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
-		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->{}, writeLock, new Semaphore(1), scheduledQueries,
+				(s)->{}, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(0, gd.getPredicates().size());
-		assertEquals(1, scheduledQueries.get());
 		assertEquals(1, finishedQueries.get());
 	}
 
@@ -84,16 +82,14 @@ public class FindPredicatesTest {
 		gd.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
-		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->{}, writeLock, new Semaphore(1), scheduledQueries,
+				(s)->{}, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
-		assertEquals(1, scheduledQueries.get());
 		assertEquals(1, finishedQueries.get());
 	}
 
@@ -112,15 +108,13 @@ public class FindPredicatesTest {
 		gd.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
-		AtomicInteger scheduledQueries = new AtomicInteger(0);
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->{}, writeLock, new Semaphore(1), scheduledQueries,
+				(s)->{}, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
-		assertEquals(1, scheduledQueries.get());
 		assertEquals(1, finishedQueries.get());
 	}
 }

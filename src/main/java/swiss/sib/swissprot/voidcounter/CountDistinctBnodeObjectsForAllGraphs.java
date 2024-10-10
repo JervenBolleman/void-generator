@@ -52,14 +52,13 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctBnodeObjectsForAllGraphs(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries,
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
-		scheduledQueries.incrementAndGet();
 	}
 
 	@Override

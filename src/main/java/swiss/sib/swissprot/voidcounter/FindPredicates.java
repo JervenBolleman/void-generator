@@ -37,7 +37,7 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 	private final Consumer<QueryCallable<?>> schedule;
 
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
-			Consumer<QueryCallable<?>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
+			Consumer<QueryCallable<?>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.knownPredicates = knownPredicates;
@@ -46,7 +46,6 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 		this.writeLock = writeLock;
 		this.saver = saver;
 		this.sd = sd;
-		scheduledQueries.incrementAndGet();
 		this.finishedQueries = finishedQueries;
 	}
 

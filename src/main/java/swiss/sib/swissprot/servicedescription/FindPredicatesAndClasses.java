@@ -26,20 +26,18 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	private final Consumer<QueryCallable<?>> schedule;
 	private final Set<IRI> knownPredicates;
 	private final ReadWriteLock rwLock;
-	private final AtomicInteger scheduledQueries;
 	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
 
 	FindPredicatesAndClasses(GraphDescription gd, Repository repository, Consumer<QueryCallable<?>> schedule, Set<IRI> knownPredicates, ReadWriteLock rwLock, Semaphore limit,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
+			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
 			ServiceDescription sd) {
 		super(repository, limit);
 		this.gd = gd;
 		this.schedule = schedule;
 		this.knownPredicates = knownPredicates;
 		this.rwLock = rwLock;
-		this.scheduledQueries = scheduledQueries;
 		this.finishedQueries = finishedQueries;
 		this.saver = saver;
 		this.sd = sd;
@@ -61,12 +59,12 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	protected Exception run(RepositoryConnection connection) throws Exception {
 		final Lock writeLock = rwLock.writeLock();
 		Exception call = new FindPredicates(gd, repository, knownPredicates, schedule, writeLock, limiter,
-				scheduledQueries, finishedQueries, saver, sd).call();
+				finishedQueries, saver, sd).call();
 		if (call != null)
 			return call;
 
-		call = new CountDistinctClassses(gd, repository, writeLock, limiter, scheduledQueries, finishedQueries, saver,
-				sd).call();
+		call = new CountDistinctClassses(gd, repository, writeLock, limiter, finishedQueries, saver,
+				schedule, sd).call();
 		if (call != null)
 			return call;
 
@@ -86,7 +84,7 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 			for (ClassPartition source : classes) {
 				if (!RDF.TYPE.equals(predicate.getPredicate()))
 					schedule.accept(new FindPredicateLinkSets(repository, classes, predicate, source,
-							writeLock, schedule, limiter, gd, scheduledQueries, finishedQueries, saver, sd));
+							writeLock, schedule, limiter, gd, finishedQueries, saver, sd));
 			}
 		}
 		return null;

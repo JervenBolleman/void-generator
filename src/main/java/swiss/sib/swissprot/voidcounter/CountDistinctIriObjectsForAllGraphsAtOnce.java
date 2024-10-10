@@ -37,12 +37,11 @@ public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallab
 	private final AtomicInteger finishedQueries;
 
 	public CountDistinctIriObjectsForAllGraphsAtOnce(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) {
 		super(repository, limiter);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
-		scheduledQueries.incrementAndGet();
 		this.finishedQueries = finishedQueries;
 	}
 

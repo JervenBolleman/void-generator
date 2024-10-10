@@ -23,10 +23,10 @@ public final class CountDistinctIriSubjectsInAGraphVirtuoso extends CountDistinc
 
 	public CountDistinctIriSubjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64NavigableMap> graphIriIds,
-			String graphIri, Semaphore limit, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+			String graphIri, Semaphore limit, AtomicInteger finishedQueries) {
 		super(repository, sd, saver, graphIri, writeLock, sd::setDistinctIriSubjectCount, GraphDescription::setDistinctIriSubjectCount,
 				 graphIriIds,
-				  limit, scheduledQueries, finishedQueries);
+				  limit, finishedQueries);
 	}
 
 	@Override
