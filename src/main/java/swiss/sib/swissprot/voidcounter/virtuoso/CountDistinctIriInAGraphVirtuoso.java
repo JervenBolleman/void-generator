@@ -33,13 +33,12 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 	private final Consumer<Long> allSetter;
 	private final BiConsumer<GraphDescription, Long> graphSetter;
 	private final Map<String, Roaring64NavigableMap> graphIriIds;
-	private final AtomicInteger finishedQueries;
 
 	public CountDistinctIriInAGraphVirtuoso(Repository repository, ServiceDescription sd,
 			Consumer<ServiceDescription> saver, String graphIri, Lock writeLock, Consumer<Long> allSetter,
 			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64NavigableMap> graphIriIds2,
 			Semaphore limiter, AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.sd = sd;
 		this.saver = saver;
 		this.graphIri = graphIri;
@@ -47,7 +46,6 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		this.allSetter = allSetter;
 		this.graphSetter = graphSetter;
 		this.graphIriIds = graphIriIds2;
-		this.finishedQueries = finishedQueries;
 	}
 
 	protected Roaring64NavigableMap findUniqueIriIds(final Connection quadStoreConnection) {
@@ -78,7 +76,6 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 		} else {
 			rb = graphIriIds.get(graphIri);
 		}
-		finishedQueries.incrementAndGet();
 		setAll();
 		return rb.getLongCardinality();
 	}

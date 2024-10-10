@@ -27,19 +27,17 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 	private final ClassPartition source;
 	private final GraphDescription gd;
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
-
+	
 	public IsSourceClassLinkedToTargetClass(Repository repository, IRI predicate, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
 			Semaphore limiter, AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.predicate = predicate;
 		this.target = target;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.gd = gd;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -56,15 +54,11 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 
 	@Override
 	protected Long run(RepositoryConnection connection) throws Exception {
-		try {
-			final IRI sourceType = source.getClazz();
-			final IRI targetType = target.getClazz();
-			query = "SELECT (COUNT (?subject) AS ?subjects) WHERE { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
-					+ predicate + "> ?target . ?target a <" + targetType + "> }}";
-			return Helper.getSingleLongFromSparql(query, connection, SUBJECTS);
-		} finally {
-			finishedQueries.incrementAndGet();
-		}
+		final IRI sourceType = source.getClazz();
+		final IRI targetType = target.getClazz();
+		query = "SELECT (COUNT (?subject) AS ?subjects) WHERE { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
+				+ predicate + "> ?target . ?target a <" + targetType + "> }}";
+		return Helper.getSingleLongFromSparql(query, connection, SUBJECTS);
 	}
 
 	@Override

@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.Resource;
@@ -32,9 +33,9 @@ public class CountUniqueObjectsPerPredicateInGraph
 	private final Lock writeLock;
 	
 	public CountUniqueObjectsPerPredicateInGraph(GraphDescription gd, PredicatePartition predicatePartition,
-	    Repository repository, Lock writeLock, Semaphore limiter)
+	    Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries)
 	{
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.predicatePartition = predicatePartition;
 		this.writeLock = writeLock;

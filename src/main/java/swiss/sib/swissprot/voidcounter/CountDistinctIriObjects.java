@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -37,9 +38,9 @@ public final class CountDistinctIriObjects
 	private final Lock writeLock;
 	
 	
-	public CountDistinctIriObjects(GraphDescription gd, ServiceDescription sd, Repository repository, Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter)
+	public CountDistinctIriObjects(GraphDescription gd, ServiceDescription sd, Repository repository, Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries)
 	{
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.sd = sd;
 		this.saver = saver;

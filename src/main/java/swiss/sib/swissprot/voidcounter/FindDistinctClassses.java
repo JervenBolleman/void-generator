@@ -42,7 +42,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	public FindDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler,
 			ServiceDescription sd, String classExclusion, Supplier<QueryCallable<?>> onSuccess) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.writeLock = writeLock;
 		this.finishedQueries = finishedQueries;
@@ -82,11 +82,9 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 					classesList.add(new ClassPartition(clazz));
 				}
 			}
-		} finally {
-			finishedQueries.incrementAndGet();
 		}
 		for (ClassPartition cp : classesList) {
-			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp));
+			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries));
 		}
 		if (onSuccess != null) {
 			scheduler.apply(onSuccess.get());
@@ -118,8 +116,8 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	}
 
 	private final class CountMembersOfClassPartition extends QueryCallable<Long> {
-		public CountMembersOfClassPartition(Repository repository, Semaphore limiter, ClassPartition cp) {
-			super(repository, limiter);
+		public CountMembersOfClassPartition(Repository repository, Semaphore limiter, ClassPartition cp, AtomicInteger finishedQueries) {
+			super(repository, limiter, finishedQueries);
 			this.cp = cp;
 		}
 
@@ -140,11 +138,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		protected Long run(RepositoryConnection connection) throws Exception {
 			query = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH <" + gd.getGraphName() + "> {?thing a <"
 					+ cp.getClazz().stringValue() + "> }}";
-			try {
-				return Helper.getSingleLongFromSparql(query, connection, "count");
-			} finally {
-				finishedQueries.incrementAndGet();
-			}
+			return Helper.getSingleLongFromSparql(query, connection, "count");
 		}
 
 		@Override

@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -58,8 +59,8 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 
 	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64NavigableMap> graphSubjectIriIds,
-			Map<String, Roaring64NavigableMap> graphObjectIriIds, String graphIri, Semaphore limit) {
-		super(repository, limit);
+			Map<String, Roaring64NavigableMap> graphObjectIriIds, String graphIri, Semaphore limit, AtomicInteger finishedQueries) {
+		super(repository, limit, finishedQueries);
 		this.subjectGraphIriIds = graphSubjectIriIds;
 		this.objectGraphIriIds = graphObjectIriIds;
 		this.objectAllSetter = sd::setDistinctIriObjectCount;

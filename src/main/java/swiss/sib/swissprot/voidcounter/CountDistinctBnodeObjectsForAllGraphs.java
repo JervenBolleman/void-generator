@@ -49,16 +49,14 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 
 	private final Lock writeLock;
 
-	private final AtomicInteger finishedQueries;
 
 	public CountDistinctBnodeObjectsForAllGraphs(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -79,22 +77,18 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		try {
-			if (connection instanceof VirtuosoRepositoryConnection) {
-				// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-				final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection)
-						.getQuadStoreConnection();
-				findUniqueBnodeIds(quadStoreConnection);
-				setGraphUniqueIriCounts(quadStoreConnection);
-				final long iricounts = setAll();
-				graphIriIds.clear();
-				return iricounts;
-			} else {
-				return Helper.getSingleLongFromSparql(COUNT_DISTINCT_OBJECT_IRI_QUERY, connection, OBJECTS);
-			}
-		} finally {
-			finishedQueries.incrementAndGet();
-		}
+		if (connection instanceof VirtuosoRepositoryConnection) {
+			// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
+			final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection)
+					.getQuadStoreConnection();
+			findUniqueBnodeIds(quadStoreConnection);
+			setGraphUniqueIriCounts(quadStoreConnection);
+			final long iricounts = setAll();
+			graphIriIds.clear();
+			return iricounts;
+		} else {
+			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_OBJECT_IRI_QUERY, connection, OBJECTS);
+		}	
 	}
 
 	protected void setGraphUniqueIriCounts(final Connection quadStoreConnection) {

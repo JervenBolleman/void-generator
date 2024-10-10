@@ -34,16 +34,14 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 
 	public CountDistinctLiteralObjectsForAllGraphs(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -65,18 +63,15 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		try {
-			if (connection instanceof VirtuosoRepositoryConnection) {
-				Connection vrc = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
-				long countOfLiterals = getCount(vrc, COUNT_DISTINCT_INLINE_VALUES)
-						+ getCount(vrc, SELECT_OBJECTS_IN_RDF_OBJ);
-				return countOfLiterals;
-			} else {
-				query = COUNT_OBJECTS_WITH_SPARQL;
-				return Helper.getSingleLongFromSparql(COUNT_OBJECTS_WITH_SPARQL, connection, OBJECTS);
-			}
-		} finally {
-			finishedQueries.incrementAndGet();
+	
+		if (connection instanceof VirtuosoRepositoryConnection) {
+			Connection vrc = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
+			long countOfLiterals = getCount(vrc, COUNT_DISTINCT_INLINE_VALUES)
+					+ getCount(vrc, SELECT_OBJECTS_IN_RDF_OBJ);
+			return countOfLiterals;
+		} else {
+			query = COUNT_OBJECTS_WITH_SPARQL;
+			return Helper.getSingleLongFromSparql(COUNT_OBJECTS_WITH_SPARQL, connection, OBJECTS);
 		}
 	}
 

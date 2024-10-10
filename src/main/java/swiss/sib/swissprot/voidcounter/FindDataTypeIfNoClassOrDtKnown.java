@@ -53,26 +53,20 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 	private final ClassPartition source;
 	private final GraphDescription gd;
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 
 	public FindDataTypeIfNoClassOrDtKnown(PredicatePartition predicatePartition, ClassPartition source,
 			Repository repository, GraphDescription gd, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.gd = gd;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
 	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
-		try {
-			return findDatatypeIfNoClassOrDtKnown(source, predicatePartition);
-		} finally {
-			finishedQueries.incrementAndGet();
-		}
+		return findDatatypeIfNoClassOrDtKnown(source, predicatePartition);
 	}
 
 	private Set<IRI> findDatatypeIfNoClassOrDtKnown(ClassPartition source, PredicatePartition predicatePartition)

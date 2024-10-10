@@ -34,7 +34,6 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 	private final Set<IRI> knownPredicates;
 	private static final Logger log = LoggerFactory.getLogger(FindPredicates.class);
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
@@ -42,7 +41,7 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd, Supplier<QueryCallable<?>> onSuccess) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.knownPredicates = knownPredicates;
 		this.schedule = schedule;
@@ -50,7 +49,6 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 		this.writeLock = writeLock;
 		this.saver = saver;
 		this.sd = sd;
-		this.finishedQueries = finishedQueries;
 		this.onSuccess = onSuccess;
 	}
 
@@ -78,7 +76,6 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			}
 			return res;
 		} finally {
-			finishedQueries.incrementAndGet();
 			saver.accept(sd);
 			if (onSuccess != null) {
 				schedule.apply(onSuccess.get());
@@ -120,8 +117,8 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			writeLock.unlock();
 		}
 		for (PredicatePartition predicatePartition : predicates) {
-			schedule.apply(new CountUniqueSubjectPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
-			schedule.apply(new CountUniqueObjectsPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
+			schedule.apply(new CountUniqueSubjectPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter, finishedQueries));
+			schedule.apply(new CountUniqueObjectsPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter, finishedQueries));
 		}
 	}
 }

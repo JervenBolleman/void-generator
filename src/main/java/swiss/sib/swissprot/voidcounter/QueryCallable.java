@@ -2,6 +2,7 @@ package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
@@ -14,11 +15,13 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 	protected final Semaphore limiter;
 	protected volatile boolean running = false;
 	protected volatile String query;
+	protected final AtomicInteger finishedQueries;
 
-	public QueryCallable(Repository repository, Semaphore limiter) {
+	public QueryCallable(Repository repository, Semaphore limiter, AtomicInteger finishedQueries) {
 		super();
 		this.repository = repository;
 		this.limiter = limiter;
+		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -31,6 +34,7 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 				T t = run(localConnection);
 				set(t);
 				logEnd();
+				finishedQueries.incrementAndGet();
 			} catch (Exception e) {
 				logFailed(e);
 				return e;

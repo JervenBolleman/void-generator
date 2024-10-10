@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.repository.Repository;
@@ -25,9 +26,9 @@ public class CountUniqueSubjectPerPredicateInGraph
 	private final Lock writeLock;
 	
 	public CountUniqueSubjectPerPredicateInGraph(GraphDescription gd, PredicatePartition predicatePartition,
-	    Repository repository, Lock writeLock, Semaphore limiter)
+	    Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries)
 	{
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.predicatePartition = predicatePartition;
 		this.writeLock = writeLock;

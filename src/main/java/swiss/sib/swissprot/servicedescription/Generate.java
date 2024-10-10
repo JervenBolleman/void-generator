@@ -369,7 +369,7 @@ public class Generate implements Callable<Integer> {
 			Lock writeLock = rwLock.writeLock();
 			if (isVirtuoso) {
 				CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
-						sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit);
+						sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, finishedQueries);
 				schedule(cdso);
 //				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
 //						writeLock, distinctSubjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
@@ -439,7 +439,7 @@ public class Generate implements Callable<Integer> {
 		if (countDistinctObjects && countDistinctSubjects && isvirtuoso) {
 			for (String graphName : graphNames) {
 				schedule(new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(sd, repository, saver, writeLock,
-						distinctSubjectIris, distinctObjectIris, graphName, limit));
+						distinctSubjectIris, distinctObjectIris, graphName, limit, finishedQueries));
 			}
 		} else {
 			if (countDistinctObjects) {

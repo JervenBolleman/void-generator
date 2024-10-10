@@ -36,7 +36,6 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 			}
 			""";
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 	private final LinkSetToOtherGraph ls;
 	private final GraphDescription gd;
 
@@ -44,11 +43,10 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 	public CountTriplesLinkingTwoTypesInDifferentGraphs(GraphDescription gd, LinkSetToOtherGraph ls,
 			Repository repository, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.ls = ls;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -88,12 +86,9 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		tupleQuery.setBinding("otherGraphName", vf.createIRI(otherGraphName));
 		tupleQuery.setBinding("targetType", targetType);
 		setQuery(COUNT_TRIPLES_LINKING, tupleQuery.getBindings());
-		try {
-			BindingSet next = tupleQuery.evaluate().next();
-			return ((Literal) next.getBinding("lsc").getValue()).longValue();
-		} finally {
-			finishedQueries.incrementAndGet();
-		}
+		
+		BindingSet next = tupleQuery.evaluate().next();
+		return ((Literal) next.getBinding("lsc").getValue()).longValue();
 	}
 
 	@Override

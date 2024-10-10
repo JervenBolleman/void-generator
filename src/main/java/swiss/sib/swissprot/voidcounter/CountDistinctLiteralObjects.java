@@ -28,17 +28,15 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private final Consumer<ServiceDescription> saver;
 	private final String graphname;
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 
 	public CountDistinctLiteralObjects(GraphDescription gd, ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 		this.graphname = gd.getGraphName();
 	}
 
@@ -60,15 +58,11 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 
 	@Override
 	protected Long run(RepositoryConnection connection)
-			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		try {
-			if (connection instanceof VirtuosoRepositoryConnection) {
-				return virtuosoOptimized(connection);
-			} else {
-				return pureSparql(connection);
-			}
-		} finally {
-			finishedQueries.incrementAndGet();
+			throws RepositoryException, MalformedQueryException, QueryEvaluationException {	
+		if (connection instanceof VirtuosoRepositoryConnection) {
+			return virtuosoOptimized(connection);
+		} else {
+			return pureSparql(connection);
 		}
 	}
 

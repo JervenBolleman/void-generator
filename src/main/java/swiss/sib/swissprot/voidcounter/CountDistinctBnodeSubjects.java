@@ -32,23 +32,20 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 	private final String graphname;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjects.class);
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 
 	public CountDistinctBnodeSubjects(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 		this.sd = null;
 		this.graphname = gd.getGraphName();
 	}
 
 	public CountDistinctBnodeSubjects(ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 		this.gd = null;
 		this.sd = sd;
 		this.graphname = "all";
@@ -69,14 +66,10 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 			throws QueryEvaluationException, RepositoryException, MalformedQueryException
 
 	{
-		try {
-			if (gd != null)
-				return countDistinctBnodeSubjectsInGraph(connection);
-			else
-				return countDistinctBnodeSubjects(connection);
-		} finally {
-			finishedQueries.incrementAndGet();
-		}
+		if (gd != null)
+			return countDistinctBnodeSubjectsInGraph(connection);
+		else
+			return countDistinctBnodeSubjects(connection);	
 	}
 
 	private Long countDistinctBnodeSubjectsInGraph(RepositoryConnection connection) {

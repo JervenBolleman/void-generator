@@ -39,7 +39,6 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	private final ClassPartition source;
 	private final GraphDescription gd;
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 	private final GraphDescription otherGraph;
 
 
@@ -51,13 +50,12 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
 			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.gd = gd;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 		this.otherGraph = otherGraph;
 		this.schedule = schedule;
 		this.classExclusion = classExclusion;
@@ -77,29 +75,25 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	@Override
 	protected List<LinkSetToOtherGraph> run(RepositoryConnection connection) throws Exception {
-		try {
-			final IRI sourceType = source.getClazz();
+		final IRI sourceType = source.getClazz();
 
-			final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, makeQuery());
-			pbq.setBinding("sourceGraphName", gd.getGraph());
-			pbq.setBinding("predicate", predicate);
-			pbq.setBinding("targetGraphName", otherGraph.getGraph());
-			pbq.setBinding("sourceType", sourceType);
-			setQuery(query, pbq.getBindings());
-			List<LinkSetToOtherGraph> res = new ArrayList<>();
-			try (TupleQueryResult tqr = pbq.evaluate()) {
-				while (tqr.hasNext()) {
-					IRI targetType = (IRI) tqr.next().getBinding("targetType").getValue();
-					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
-							otherGraph);
-					res.add(subTarget);
-					schedule.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, finishedQueries));
-				}
+		final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, makeQuery());
+		pbq.setBinding("sourceGraphName", gd.getGraph());
+		pbq.setBinding("predicate", predicate);
+		pbq.setBinding("targetGraphName", otherGraph.getGraph());
+		pbq.setBinding("sourceType", sourceType);
+		setQuery(query, pbq.getBindings());
+		List<LinkSetToOtherGraph> res = new ArrayList<>();
+		try (TupleQueryResult tqr = pbq.evaluate()) {
+			while (tqr.hasNext()) {
+				IRI targetType = (IRI) tqr.next().getBinding("targetType").getValue();
+				LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
+						otherGraph);
+				res.add(subTarget);
+				schedule.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, finishedQueries));
 			}
-			return res;
-		} finally {
-			finishedQueries.incrementAndGet();
 		}
+		return res;
 	}
 
 	private String makeQuery() {

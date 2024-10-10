@@ -37,8 +37,6 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	private PredicatePartition subpredicatePartition;
 
-	private final AtomicInteger finishedQueries;
-
 	private final Consumer<ServiceDescription> saver;
 
 	private final ServiceDescription sd;
@@ -49,14 +47,13 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			ClassPartition source, Lock writeLock, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Semaphore limit,
 			GraphDescription gd, AtomicInteger finishedQueries,
 			Consumer<ServiceDescription> saver, ServiceDescription sd, String classExclusion) {
-		super(repository, limit);
+		super(repository, limit, finishedQueries);
 		this.classes = classes;
 		this.pp = predicate;
 		this.source = source;
 		this.writeLock = writeLock;
 		this.schedule = schedule;
 		this.gd = gd;
-		this.finishedQueries = finishedQueries;
 		this.saver = saver;
 		this.sd = sd;
 		this.classExclusion = classExclusion;
@@ -106,10 +103,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			}
 		} catch (MalformedQueryException | QueryEvaluationException e) {
 			log.error("query failed", e);
-		} finally {
-			finishedQueries.incrementAndGet();
 		}
-
 		return 0;
 	}
 

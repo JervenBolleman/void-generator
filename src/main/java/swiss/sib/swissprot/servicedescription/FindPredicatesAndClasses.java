@@ -38,7 +38,7 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
 			ReadWriteLock rwLock, Semaphore limit, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
 			ServiceDescription sd, String classExclusion) {
-		super(repository, limit);
+		super(repository, limit, finishedQueries);
 		this.gd = gd;
 		this.schedule = schedule;
 		this.knownPredicates = knownPredicates;
@@ -82,15 +82,13 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		private final GraphDescription gd;
 		private final Consumer<ServiceDescription> saver;
 		private final String classExclusion;
-		private final AtomicInteger finishedQueries;
 		private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 		private final ServiceDescription sd;
 
 		public FindClassPredicatePairs(Repository repository, Semaphore limiter, AtomicInteger finishedQueries,
 				ReadWriteLock rwLock, Consumer<ServiceDescription> saver, GraphDescription gd, String classExclusion,
 				Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, ServiceDescription sd) {
-			super(repository, limiter);
-			this.finishedQueries = finishedQueries;
+			super(repository, limiter, finishedQueries);
 			this.rwLock = rwLock;
 			this.saver = saver;
 			this.gd = gd;
@@ -123,17 +121,14 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 			} finally {
 				readLock.unlock();
 			}
-			try {
-				final Lock writeLock = rwLock.writeLock();
-				for (PredicatePartition predicate : predicates) {
-					for (ClassPartition source : classes) {
-						if (!RDF.TYPE.equals(predicate.getPredicate()))
-							schedule.apply(new FindPredicateLinkSets(repository, classes, predicate, source, writeLock,
-									schedule, limiter, gd, finishedQueries, saver, sd, classExclusion));
-					}
+		
+			final Lock writeLock = rwLock.writeLock();
+			for (PredicatePartition predicate : predicates) {
+				for (ClassPartition source : classes) {
+					if (!RDF.TYPE.equals(predicate.getPredicate()))
+						schedule.apply(new FindPredicateLinkSets(repository, classes, predicate, source, writeLock,
+								schedule, limiter, gd, finishedQueries, saver, sd, classExclusion));
 				}
-			} finally {
-				finishedQueries.incrementAndGet();
 			}
 			return null;
 		}

@@ -30,17 +30,15 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 	private final GraphDescription gd;
 	private final ClassPartition cp;
 	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
 
 	public FindNamedIndividualObjectSubjectForPredicateInGraph(GraphDescription gd,
 			PredicatePartition predicatePartition, ClassPartition cp, Repository repository, Lock writeLock,
 			Semaphore limiter, AtomicInteger finishedQueries) {
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.predicatePartition = predicatePartition;
 		this.cp = cp;
 		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
 	}
 
 	@Override
@@ -76,8 +74,6 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 				}
 			}
 			return namedObjects;
-		} finally {
-			finishedQueries.incrementAndGet();
 		}
 	}
 

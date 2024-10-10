@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -36,18 +37,18 @@ public final class CountDistinctIriSubjects
 	private final String graphname;
 	private final Lock writeLock;
 
-	public CountDistinctIriSubjects(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter)
+	public CountDistinctIriSubjects(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries)
 	{
-		super(repository, limiter);
+		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.writeLock = writeLock;
 		this.sd = null;
 		this.graphname = gd.getGraphName();
 	}
 
-	public CountDistinctIriSubjects(ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter)
-	{
-		super(repository, limiter);
+	public CountDistinctIriSubjects(ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter,
+			AtomicInteger finishedQueries) {
+		super(repository, limiter, finishedQueries);
 		this.sd = sd;
 		this.writeLock = writeLock;
 		this.gd = null;
