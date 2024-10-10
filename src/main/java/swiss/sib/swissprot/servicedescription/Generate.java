@@ -35,6 +35,8 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.http.client.HttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.ValueFactory;
@@ -190,6 +192,11 @@ public class Generate implements Callable<Integer> {
 			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
 			sr.enableQuadMode(true);
 			sr.setAdditionalHttpHeaders(Map.of("User-Agent", "void-generator"));
+			HttpClientBuilder hcb = HttpClientBuilder.create();
+			hcb.setMaxConnPerRoute(maxConcurrency)
+							.setMaxConnTotal(maxConcurrency)
+							.setUserAgent("void-generator");
+			sr.setHttpClient(hcb.build());
 			repository = sr;
 		}
 		update();
