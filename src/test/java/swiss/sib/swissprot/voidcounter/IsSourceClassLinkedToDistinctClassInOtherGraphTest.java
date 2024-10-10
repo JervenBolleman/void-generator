@@ -65,7 +65,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 				limiter, 
 				finishedQueries,
 				ogd,
-				(s)->{});
+				(s)->null);
 	}
 
 	@Test

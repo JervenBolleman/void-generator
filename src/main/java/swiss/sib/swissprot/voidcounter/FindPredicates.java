@@ -3,10 +3,12 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -34,10 +36,10 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
-	private final Consumer<QueryCallable<?>> schedule;
+	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
-			Consumer<QueryCallable<?>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
 		this.knownPredicates = knownPredicates;
@@ -112,8 +114,8 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			writeLock.unlock();
 		}
 		for (PredicatePartition predicatePartition : predicates) {
-			schedule.accept(new CountUniqueSubjectPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
-			schedule.accept(new CountUniqueObjectsPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
+			schedule.apply(new CountUniqueSubjectPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
+			schedule.apply(new CountUniqueObjectsPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter));
 		}
 	}
 }

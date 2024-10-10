@@ -2,10 +2,12 @@ package swiss.sib.swissprot.voidcounter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.query.QueryLanguage;
@@ -42,12 +44,12 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	private final GraphDescription otherGraph;
 
 
-	private final Consumer<QueryCallable<?>> schedule;
+	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 
 
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
-			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph, Consumer<QueryCallable<?>> schedule) {
+			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule) {
 		super(repository, limiter);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
@@ -89,7 +91,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
 							otherGraph);
 					res.add(subTarget);
-					schedule.accept(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, finishedQueries));
+					schedule.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, finishedQueries));
 				}
 			}
 			return res;

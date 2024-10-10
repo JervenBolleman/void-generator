@@ -59,7 +59,7 @@ public class FindPredicatesTest {
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->{}, writeLock, new Semaphore(1),
+				(s)->null, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();
@@ -85,7 +85,7 @@ public class FindPredicatesTest {
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->{}, writeLock, new Semaphore(1),
+				(s)->null, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();
@@ -110,7 +110,7 @@ public class FindPredicatesTest {
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->{}, writeLock, new Semaphore(1),
+				(s)->null, writeLock, new Semaphore(1),
 				finishedQueries, (isd) -> {
 				}, sd);
 		countDistinctIriSubjectsForAllGraphs.call();

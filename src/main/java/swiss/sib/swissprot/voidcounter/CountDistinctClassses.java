@@ -3,10 +3,12 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Value;
@@ -32,10 +34,10 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
-	private final Consumer<QueryCallable<?>> scheduler;
+	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
 
 	public CountDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, Consumer<QueryCallable<?>> scheduler,
+			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler,
 			ServiceDescription sd) {
 		super(repository, limiter);
 		this.gd = gd;
@@ -79,7 +81,7 @@ public final class CountDistinctClassses extends QueryCallable<List<ClassPartiti
 			finishedQueries.incrementAndGet();
 		}
 		for (ClassPartition cp : classesList) {
-			scheduler.accept(new CountMembersOfClassPartition(repository, limiter, cp));
+			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp));
 		}
 		saver.accept(sd);
 		return classesList;

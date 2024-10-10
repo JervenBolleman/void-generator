@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -35,7 +36,6 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
@@ -225,10 +225,13 @@ public class Generate implements Callable<Integer> {
 
 	private final Semaphore limit;
 	
-	public final void schedule(QueryCallable<?> task) {
+	public final CompletableFuture<Exception> schedule(QueryCallable<?> task) {
 		scheduledQueries.incrementAndGet();
 		tasks.add(task);
-		futures.add(executors.submit(task));
+		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(()->{return task.call();}, executors);
+		
+		futures.add(cf);
+		return cf;
 	}
 	
 	public final void announceDone(QueryCallable<?> task) {
