@@ -391,7 +391,7 @@ public class Generate implements Callable<Integer> {
 						// This is ok we just try again in the loop.
 					}
 					if (loop == 60) {
-						tasks.forEach(t -> {
+						tasks.stream().filter(QueryCallable::isRunning).forEach(t -> {
 							log.info("Running: " + t.getClass() + " -> " + t.getQuery());
 						});
 						loop = 0;
