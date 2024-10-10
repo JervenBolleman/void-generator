@@ -250,6 +250,17 @@ public class ServiceDescriptionStatementGenerator {
 					statement(ppr, VOID.DISTINCT_SUBJECTS, vf.createLiteral(pp.getDistinctSubjectCount()));
 				if (pp.getDistinctObjectCount() > 0L)
 					statement(ppr, VOID.DISTINCT_OBJECTS, vf.createLiteral(pp.getDistinctObjectCount()));
+				for (LinkSetToOtherGraph ls: pp.getLinkSets()) {
+					//TODO generate nicer IRI
+					Resource bNode = vf.createBNode();
+					statement(bNode, RDF.TYPE, VOID.LINKSET);
+					statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
+					statement(bNode, VOID.SUBJECTS_TARGET, dataSetClassPartition);
+					if (ls.getTripleCount() > 0) {
+						statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
+					}
+					statement(bNode, VOID.OBJECTS_TARGET, getResourceForPartition(ls.getOtherGraph().getGraph(), ls.getTargetType(), voidLocation));
+				}
 			}
 		}
 	}
