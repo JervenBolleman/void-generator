@@ -51,40 +51,58 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 
 	@Override
 	protected void logStart() {
-		log.info("Scheduling finding predicates and classes for " + gd.getGraphName());
+		log.debug("Scheduling finding predicates and classes for " + gd.getGraphName());
 
 	}
 
 	@Override
 	protected void logEnd() {
-		log.info("Scheduling finding predicates and classes for " + gd.getGraphName());
+		log.debug("Scheduled finding predicates and classes for " + gd.getGraphName());
 
 	}
 
 	@Override
 	protected Exception run(RepositoryConnection connection) throws Exception {
 		final Lock writeLock = rwLock.writeLock();
-		Supplier<QueryCallable<?>> onFoundClasses = ()->new FindClassPredicatePairs(repository, limiter, finishedQueries);
-		Supplier<QueryCallable<?>> onFoundPredicates = ()->{
-			return new FindDistinctClassses(gd, repository, writeLock, limiter, finishedQueries, saver, schedule,
-					sd, classExclusion, onFoundClasses);
+		Supplier<QueryCallable<?>> onFoundClasses = () -> new FindClassPredicatePairs(repository, limiter,
+				finishedQueries, rwLock, saver, gd, classExclusion, schedule, sd);
+		Supplier<QueryCallable<?>> onFoundPredicates = () -> {
+			return new FindDistinctClassses(gd, repository, writeLock, limiter, finishedQueries, saver, schedule, sd,
+					classExclusion, onFoundClasses);
 		};
 		schedule.apply(new FindPredicates(gd, repository, knownPredicates, schedule, writeLock, limiter,
 				finishedQueries, saver, sd, onFoundPredicates));
 
 		return null;
 	}
-	
-	private class FindClassPredicatePairs extends QueryCallable<Void> {
 
-		public FindClassPredicatePairs(Repository repository, Semaphore limiter, AtomicInteger finishedQueries) {
+	private static class FindClassPredicatePairs extends QueryCallable<Void> {
+		private static final Logger log = LoggerFactory.getLogger(FindClassPredicatePairs.class);
+		private final ReadWriteLock rwLock;
+		private final GraphDescription gd;
+		private final Consumer<ServiceDescription> saver;
+		private final String classExclusion;
+		private final AtomicInteger finishedQueries;
+		private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
+		private final ServiceDescription sd;
+
+		public FindClassPredicatePairs(Repository repository, Semaphore limiter, AtomicInteger finishedQueries,
+				ReadWriteLock rwLock, Consumer<ServiceDescription> saver, GraphDescription gd, String classExclusion,
+				Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, ServiceDescription sd) {
 			super(repository, limiter);
+			this.finishedQueries = finishedQueries;
+			this.rwLock = rwLock;
+			this.saver = saver;
+			this.gd = gd;
+			this.classExclusion = classExclusion;
+			this.schedule = schedule;
+			this.sd = sd;
 		}
 
 		@Override
 		protected void logStart() {
 			log.debug("Scheduling finding class predicate pairs");
-			
+
 		}
 
 		@Override
@@ -123,9 +141,9 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		@Override
 		protected void set(Void t) {
 			// TODO Auto-generated method stub
-			
+
 		}
-		
+
 	}
 
 	@Override
