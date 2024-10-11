@@ -90,8 +90,8 @@ public class Generate implements Callable<Integer> {
 	private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 	private final ServiceDescription sd;
 
-	@Option(names = "--count-distinct-classes", defaultValue = "true")
-	private boolean countDistinctClasses = true;
+	@Option(names = "--find-distinct-classes", defaultValue = "true", description = "Setting this to false will disable the search for distinct classes. And also Linksets and limits most use cases")
+	private boolean findDistinctClasses = true;
 	@Option(names = "--count-distinct-subjects", defaultValue = "true")
 	private boolean countDistinctSubjects = true;
 	@Option(names = "--count-distinct-objects", defaultValue = "true")
@@ -421,8 +421,10 @@ public class Generate implements Callable<Integer> {
 		}
 		if (finishedQueries.get() == scheduledQueries.get()) {
 			log.info("Ran " + finishedQueries.get() + " queries");
-		} else {
+		} else if (finishedQueries.get() > scheduledQueries.get()) {
 			log.error("Scheduled more queries than finished: " + finishedQueries.get() + "/" + scheduledQueries.get());
+		} else {
+			log.error("Finished more queries than scheduled: " + finishedQueries.get() + "/" + scheduledQueries.get());
 		}
 	}
 
@@ -498,7 +500,7 @@ public class Generate implements Callable<Integer> {
 	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates,
 			String graphName, Semaphore limit, Consumer<ServiceDescription> saver) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
-		if (countDistinctClasses && findPredicates && detailedCount) {
+		if (findDistinctClasses && findPredicates && detailedCount) {
 			schedule(new FindPredicatesAndClasses(gd, repository, this::schedule, knownPredicates, rwLock, limit,
 					finishedQueries, saver, sd, classExclusion));
 		} else {
@@ -507,7 +509,7 @@ public class Generate implements Callable<Integer> {
 				schedule(new FindPredicates(gd, repository, knownPredicates, this::schedule, writeLock, limit,
 						finishedQueries, saver, sd, null));
 			}
-			if (countDistinctClasses) {
+			if (findDistinctClasses) {
 				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries,
 						saver, this::schedule, sd, classExclusion, null));
 			}
@@ -616,7 +618,7 @@ public class Generate implements Callable<Integer> {
 	}
 
 	public void setCountDistinctClasses(boolean countDistinctClasses) {
-		this.countDistinctClasses = countDistinctClasses;
+		this.findDistinctClasses = countDistinctClasses;
 	}
 
 	public void setCountDistinctSubjects(boolean countDistinctSubjects) {
