@@ -167,6 +167,7 @@ public class Generate implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
+		System.setProperty("org.eclipse.rdf4j.repository.debug","true");
 		if (commaSeperatedGraphs != null)
 			this.graphNames = COMMA.splitAsStream(commaSeperatedGraphs).collect(Collectors.toSet());
 		else
@@ -314,8 +315,8 @@ public class Generate implements Callable<Integer> {
 				log.error("can not store ServiceDescription", e);
 			}
 			if (virtuosoJdcb != null) {
-				writeGraphsWithSerializedBitMaps(Generate.this.distinctSubjectIrisFile, distinctSubjectIris);
-				writeGraphsWithSerializedBitMaps(Generate.this.distinctObjectIrisFile, distinctObjectIris);
+				writeGraphsWithSerializedBitMaps(distinctSubjectIrisFile, distinctSubjectIris);
+				writeGraphsWithSerializedBitMaps(distinctObjectIrisFile, distinctObjectIris);
 			}
 		} finally {
 			readLock.unlock();
@@ -386,12 +387,14 @@ public class Generate implements Callable<Integer> {
 		try {
 			int loop = 0;
 			while (!futures.isEmpty()) {
-				log.info("Queries " + finishedQueries.get() + "/" + scheduledQueries.get());
 				final int last = futures.size() - 1;
 				final Future<Exception> next = futures.get(last);
-				if (next.isDone() || next.isCancelled())
+				if (next.isCancelled())
+					log.error("" + next + " was cancelled");
+				else if (next.isDone())
 					futures.remove(last);
 				else {
+					log.info("Queries " + finishedQueries.get() + "/" + scheduledQueries.get());
 					try {
 						Exception exception = next.get(1, TimeUnit.MINUTES);
 						futures.remove(last);

@@ -8,6 +8,7 @@ import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.slf4j.LoggerFactory;
 
 public abstract class QueryCallable<T> implements Callable<Exception> {
 	protected static final long SWITCH_TO_OPTIMIZED_COUNT_AT = 100_000_000L;
@@ -47,7 +48,7 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 	}
 
 	protected void logFailed(Exception e) {
-
+		LoggerFactory.getLogger(getClass()).debug("Failed", e);
 	}
 
 	protected abstract void logStart();
