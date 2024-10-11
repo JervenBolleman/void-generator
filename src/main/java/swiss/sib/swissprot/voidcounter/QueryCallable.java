@@ -48,7 +48,7 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 	}
 
 	protected void logFailed(Exception e) {
-		LoggerFactory.getLogger(getClass()).debug("Failed", e);
+		LoggerFactory.getLogger(getClass()).error("Failed", e);
 	}
 
 	protected abstract void logStart();
