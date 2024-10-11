@@ -149,7 +149,7 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--from-test-file" }, description = "generate a void/service description for a test file")
 	private File fromTestFile;
 
-	@Option(names = { "--regex-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such.s")
+	@Option(names = { "--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be ?class")
 	private String classExclusion;
 	
 	public static void main(String[] args) {
@@ -166,8 +166,6 @@ public class Generate implements Callable<Integer> {
 
 	@Override
 	public Integer call() throws Exception {
-
-		System.setProperty("org.eclipse.rdf4j.repository.debug","true");
 		if (commaSeperatedGraphs != null)
 			this.graphNames = COMMA.splitAsStream(commaSeperatedGraphs).collect(Collectors.toSet());
 		else
@@ -199,7 +197,7 @@ public class Generate implements Callable<Integer> {
 			HttpClientBuilder hcb = HttpClientBuilder.create();
 			hcb.setMaxConnPerRoute(maxConcurrency)
 							.setMaxConnTotal(maxConcurrency)
-							.setUserAgent("void-generator");
+							.setUserAgent("void-generator-robot");
 			sr.setHttpClient(hcb.build());
 			repository = sr;
 		}
