@@ -120,7 +120,7 @@ public class ServiceDescriptionStatementGenerator {
 		IRI namedGraph = graphName;
 		statement(defaultDatasetId, SD.NAMED_GRAPH_PROPERTY, namedGraph);
 		statement(namedGraph, RDF.TYPE, SD.NAMED_GRAPH_CLASS);
-		IRI graph = vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName());
+		IRI graph = vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName() +"!"+ new MD5().evaluate(vf, vf.createLiteral(namedGraph.stringValue())).stringValue());
 		statement(namedGraph, SD.NAME, graphName);
 		statement(namedGraph, SD.GRAPH_PROPERTY, graph);
 		if (gd.getTitle() != null)
