@@ -24,11 +24,11 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
 	private static final String query = """
-			SELECT DISTINCT ?targetType
+			SELECT DISTINCT ?clazz
 			WHERE {
 				GRAPH ?sourceGraphName { ?subject a ?sourceType . }
 				?subject ?predicate ?target .
-				GRAPH ?targetGraphName {?target a ?targetType }
+				GRAPH ?targetGraphName {?target a ?clazz }
 			}
 			""";
 
@@ -41,15 +41,14 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	private final Lock writeLock;
 	private final GraphDescription otherGraph;
 
-
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 
 	private final String classExclusion;
 
-
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
-			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
+			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
 		super(repository, limiter, finishedQueries);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
@@ -86,11 +85,12 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		List<LinkSetToOtherGraph> res = new ArrayList<>();
 		try (TupleQueryResult tqr = pbq.evaluate()) {
 			while (tqr.hasNext()) {
-				IRI targetType = (IRI) tqr.next().getBinding("targetType").getValue();
+				IRI targetType = (IRI) tqr.next().getBinding("clazz").getValue();
 				LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
 						otherGraph);
 				res.add(subTarget);
-				schedule.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock, limiter, finishedQueries));
+				schedule.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock,
+						limiter, finishedQueries));
 			}
 		}
 		return res;
@@ -100,7 +100,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		if (classExclusion == null) {
 			return query;
 		} else {
-			return "";
+			return new StringBuilder(query).insert(query.length() - 2, "FILTER(" + classExclusion + ")").toString();
 		}
 	}
 

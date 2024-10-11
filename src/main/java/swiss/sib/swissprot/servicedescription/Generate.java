@@ -149,7 +149,7 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--from-test-file" }, description = "generate a void/service description for a test file")
 	private File fromTestFile;
 
-	@Option(names = { "--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be ?class")
+	@Option(names = { "--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be '?clazz'")
 	private String classExclusion;
 	
 	public static void main(String[] args) {

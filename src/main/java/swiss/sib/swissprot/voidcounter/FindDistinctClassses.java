@@ -97,8 +97,8 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		if (classExclusion == null) {
 			return "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz }}";
 		} else {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName()
-					+ "> {?thing a ?clazz . FILTER (! REGEX(STR(?clazz), '" + classExclusion + "'))}}";
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz . FILTER ("
+					+ classExclusion + ")}}";
 		}
 	}
 

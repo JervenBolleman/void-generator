@@ -25,7 +25,6 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 
-	private IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass;
 	private Repository repository;
 	private IRI predicate;
 	private final IRI source = SimpleValueFactory.getInstance().createIRI("http://example.com/source");
@@ -56,12 +55,30 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		finishedQueries = new AtomicInteger(0);
 		limiter = new Semaphore(1);
 
-		isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
-				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, null);
+		
 	}
 
 	@Test
 	public void testRun() throws Exception {
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
+				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, null);
+		try (RepositoryConnection connection = repository.getConnection()) {
+			SimpleValueFactory vf = SimpleValueFactory.getInstance();
+			connection.begin();
+			connection.add(vf.createStatement(source, RDF.TYPE, sourceClass.getClazz(), gd.getGraph()));
+			connection.add(vf.createStatement(source, predicate, source, gd.getGraph()));
+			connection.add(vf.createStatement(target, RDF.TYPE, targetClass.getClazz(), RDFS.COMMENT));
+			connection.commit();
+		}
+		Exception call = isSourceClassLinkedToTargetClass.call();
+		assertNull(call);
+		assertEquals(1, predicatePartition.getLinkSets().size());
+	}
+	
+	@Test
+	public void testRunExclude() throws Exception {
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
+				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");
 		try (RepositoryConnection connection = repository.getConnection()) {
 			SimpleValueFactory vf = SimpleValueFactory.getInstance();
 			connection.begin();
