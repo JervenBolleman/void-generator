@@ -235,10 +235,6 @@ public class Generate implements Callable<Integer> {
 		futures.add(cf);
 		return cf;
 	}
-	
-	public final void announceDone(QueryCallable<?> task) {
-		finishedQueries.incrementAndGet();
-	}
 
 	public void update() {
 		log.debug("Void listener for " + graphNames.stream().collect(Collectors.joining(", ")));
