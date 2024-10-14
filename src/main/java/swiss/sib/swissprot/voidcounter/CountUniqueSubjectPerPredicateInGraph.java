@@ -64,9 +64,9 @@ public class CountUniqueSubjectPerPredicateInGraph
 		}
 		else
 		{
-			final String countDistinctSubjectQuery = "SELECT (count(distinct ?subject) AS ?subjects) WHERE { GRAPH <"
+			query = "SELECT (count(distinct ?subject) AS ?subjects) WHERE { GRAPH <"
 			    + gd.getGraphName() + "> {?subject <" + predicatePartition.getPredicate() + "> ?object}}";
-			return Helper.getSingleLongFromSparql(countDistinctSubjectQuery, connection, SUBJECTS);
+			return Helper.getSingleLongFromSparql(query, connection, SUBJECTS);
 		}
 	}
 
