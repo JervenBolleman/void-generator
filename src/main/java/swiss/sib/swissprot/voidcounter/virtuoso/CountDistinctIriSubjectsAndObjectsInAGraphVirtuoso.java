@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -33,13 +33,13 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		QueryCallable<swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.SubObj> {
 
-	private static final int MAX_IN_PROCESS = 8;
-	private final Semaphore inProcess = new Semaphore(MAX_IN_PROCESS);
+	private static final int MAX_IN_PROCESS = 16;
+	private static final Semaphore IN_PROCESS = new Semaphore(MAX_IN_PROCESS);
 	private static final ExecutorService ES = Executors.newCachedThreadPool(new ThreadFactory() {
 		private volatile int count;
 		@Override
 		public Thread newThread(Runnable r) {
-			return new Thread(r, "CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso" + count++);
+			return new Thread(r, "CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso-" + count++);
 		}
 		
 	});
@@ -56,6 +56,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	private final BiConsumer<GraphDescription, Long> graphSubjectSetter;
 	private final Map<String, Roaring64NavigableMap> objectGraphIriIds;
 	private final Map<String, Roaring64NavigableMap> subjectGraphIriIds;
+	private final AtomicInteger running = new AtomicInteger(0);
 
 	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64NavigableMap> graphSubjectIriIds,
@@ -172,7 +173,14 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		} finally {
 			objLock.unlock();
 		}
-		inProcess.acquireUninterruptibly(MAX_IN_PROCESS);
+		
+		while (running.get() > 0) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+                // ignore as we will just wait a bit more
+            }
+		}
 	}
 
 	/**
@@ -195,9 +203,9 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	}
 
 	private AddedStatus mergeAndOptimizeIfNeeded(Roaring64NavigableMap rb, AddedStatus as) {
-		enQueue((s) -> new MergeAction(as, rb, s));
+		enQueue((s, running) -> new MergeAction(as, rb, s, running));
 		if (as.runOptimizeCounter == RUN_OPTIMIZE_EVERY) {
-			enQueue((s) -> new RunOptimizeAction(as, rb, s));
+			enQueue((s, running) -> new RunOptimizeAction(as, rb, s, running));
 			return new AddedStatus(0, 0, new Roaring64NavigableMap(), as.guard);
 		} else {
 			return new AddedStatus(0, as.runOptimizeCounter + 1, new Roaring64NavigableMap(), as.guard);
@@ -235,24 +243,28 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	}
 	
 	private class MergeAction extends GuardedAction {
-		public MergeAction(AddedStatus as, Roaring64NavigableMap rb, Semaphore limiter) {
+		public MergeAction(AddedStatus as, Roaring64NavigableMap rb, Semaphore limiter, AtomicInteger running) {
 			super(as, rb, limiter);
 		}
 
 		protected void doAction() {
+			running.incrementAndGet();
 			as.temp.runOptimize();
 			rb.or(as.temp);
+			running.decrementAndGet();
 		}
 	}
 	
 	private class RunOptimizeAction extends GuardedAction {
-		public RunOptimizeAction(AddedStatus as, Roaring64NavigableMap rb, Semaphore limiter) {
+		public RunOptimizeAction(AddedStatus as, Roaring64NavigableMap rb, Semaphore limiter, AtomicInteger running) {
 			super(as, rb, limiter);
 		}
 
 		protected void doAction() {
+			running.incrementAndGet();
 			rb.runOptimize();
 			rb.or(as.temp);
+			running.decrementAndGet();
 		}
 	}
 
@@ -262,12 +274,12 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	 * that is running the current code.
 	 * @param actionMaker
 	 */
-	private void enQueue(final Function<Semaphore, GuardedAction> actionMaker) {
-		if (inProcess.tryAcquire()){
-			GuardedAction apply = actionMaker.apply(inProcess);
+	private void enQueue(final BiFunction<Semaphore, AtomicInteger, GuardedAction> actionMaker) {
+		if (IN_PROCESS.tryAcquire()){
+			GuardedAction apply = actionMaker.apply(IN_PROCESS, running);
 			ES.submit(apply::act);
 		} else {
-			GuardedAction apply = actionMaker.apply(null);
+			GuardedAction apply = actionMaker.apply(null, null);
 			ES.submit(apply::act);
 		}
 	}
