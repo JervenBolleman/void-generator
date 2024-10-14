@@ -11,7 +11,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
-import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
@@ -50,26 +49,17 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		gd = new GraphDescription();
 		gd.setGraphName("http://example.com/graph");
 		ogd = new GraphDescription();
-		ogd.setGraphName("http://example.com/graph");
+		ogd.setGraphName("http://example.com/otherGraph");
 		writeLock = new ReentrantLock();
 		finishedQueries = new AtomicInteger(0);
 		limiter = new Semaphore(1);
-
-		
+		addTestData();
 	}
 
 	@Test
 	public void testRun() throws Exception {
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
 				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, null);
-		try (RepositoryConnection connection = repository.getConnection()) {
-			SimpleValueFactory vf = SimpleValueFactory.getInstance();
-			connection.begin();
-			connection.add(vf.createStatement(source, RDF.TYPE, sourceClass.getClazz(), gd.getGraph()));
-			connection.add(vf.createStatement(source, predicate, source, gd.getGraph()));
-			connection.add(vf.createStatement(target, RDF.TYPE, targetClass.getClazz(), RDFS.COMMENT));
-			connection.commit();
-		}
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
 		assertEquals(1, predicatePartition.getLinkSets().size());
@@ -79,16 +69,29 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	public void testRunExclude() throws Exception {
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
 				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");
+		Exception call = isSourceClassLinkedToTargetClass.call();
+		assertNull(call);
+		assertEquals(1, predicatePartition.getLinkSets().size());
+	}
+	
+	@Test
+	public void testWithOtherKnown() throws Exception {
+		ogd.getClasses().add(new ClassPartition(targetClass.getClazz()));
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
+				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");		
+		Exception call = isSourceClassLinkedToTargetClass.call();
+		assertNull(call);
+		assertEquals(1, predicatePartition.getLinkSets().size());
+	}
+
+	protected void addTestData() {
 		try (RepositoryConnection connection = repository.getConnection()) {
 			SimpleValueFactory vf = SimpleValueFactory.getInstance();
 			connection.begin();
 			connection.add(vf.createStatement(source, RDF.TYPE, sourceClass.getClazz(), gd.getGraph()));
-			connection.add(vf.createStatement(source, predicate, source, gd.getGraph()));
-			connection.add(vf.createStatement(target, RDF.TYPE, targetClass.getClazz(), RDFS.COMMENT));
+			connection.add(vf.createStatement(source, predicate, target, gd.getGraph()));
+			connection.add(vf.createStatement(target, RDF.TYPE, targetClass.getClazz(), ogd.getGraph()));
 			connection.commit();
 		}
-		Exception call = isSourceClassLinkedToTargetClass.call();
-		assertNull(call);
-		assertEquals(1, predicatePartition.getLinkSets().size());
 	}
 }

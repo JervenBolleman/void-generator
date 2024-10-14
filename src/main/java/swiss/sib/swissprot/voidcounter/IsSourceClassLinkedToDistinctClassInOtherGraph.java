@@ -2,11 +2,13 @@ package swiss.sib.swissprot.voidcounter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.query.QueryLanguage;
@@ -23,7 +25,7 @@ import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
-	private static final String query = """
+	private static final String QUERY = """
 			SELECT DISTINCT ?clazz
 			WHERE {
 				GRAPH ?sourceGraphName { ?subject a ?sourceType . }
@@ -76,12 +78,13 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	protected List<LinkSetToOtherGraph> run(RepositoryConnection connection) throws Exception {
 		final IRI sourceType = source.getClazz();
 
-		final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, makeQuery());
+		String rq = makeQuery(QUERY, otherGraph, classExclusion);
+		final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, rq);
 		pbq.setBinding("sourceGraphName", gd.getGraph());
 		pbq.setBinding("predicate", predicate);
 		pbq.setBinding("targetGraphName", otherGraph.getGraph());
 		pbq.setBinding("sourceType", sourceType);
-		setQuery(query, pbq.getBindings());
+		setQuery(rq, pbq.getBindings());
 		List<LinkSetToOtherGraph> res = new ArrayList<>();
 		try (TupleQueryResult tqr = pbq.evaluate()) {
 			while (tqr.hasNext()) {
@@ -96,12 +99,27 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		return res;
 	}
 
-	private String makeQuery() {
+	private static String makeQuery(String query, GraphDescription otherGraph, String classExclusion) {
+		String withKnownClasses = addKnownClasses(query, otherGraph.getClasses());
 		if (classExclusion == null) {
-			return query;
+			return withKnownClasses;
 		} else {
-			return new StringBuilder(query).insert(query.length() - 2, "FILTER(" + classExclusion + ")").toString();
+			return insertBeforeEnd(withKnownClasses, "   FILTER(" + classExclusion + ")\n");
 		}
+	}
+
+	private static String addKnownClasses(String query2, Set<ClassPartition> classes) {
+		if (classes.isEmpty())
+			return query2;
+		else {
+			String collect = classes.stream().map(ClassPartition::getClazz).map(c -> "(<" + c.stringValue() + ">)")
+					.collect(Collectors.joining(" "));
+			return insertBeforeEnd(query2, "VALUES (?clazz) {"+collect+"}\n");
+		}
+	}
+
+	private static String insertBeforeEnd(String query, String collect) {
+		return new StringBuilder(query).insert(query.length() - 2, collect).toString();
 	}
 
 	@Override
