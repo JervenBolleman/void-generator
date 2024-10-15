@@ -1,41 +1,22 @@
 package swiss.sib.swissprot.voidcounter;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.roaringbitmap.RoaringBitmap;
+import org.roaringbitmap.RoaringBitmapWriter;
 
 public class DistinctIntegerCounter {
-	public static final int CACHE_SIZE = 64 * 1048;
-	private RoaringBitmap bitmap = new RoaringBitmap();
-	private Set<Integer> cache = new HashSet<>(CACHE_SIZE * 2);
-	private long lastOptimizedCardinality = 0;
+	public static final int CACHE_SIZE = 4096; // Max size of an ArrayContainer
+	private RoaringBitmapWriter<RoaringBitmap> bitmap = RoaringBitmapWriter.writer().initialCapacity(CACHE_SIZE)
+			.optimiseForRuns().get();
+	private long lastFlushed = 0;
 
 	public void add(int isItDistinct) {
-		cache.add(isItDistinct);
-		if (CACHE_SIZE == cache.size()) {
-			addCacheToRoarding();
-			long currentCardinality = bitmap.getLongCardinality();
-			if (currentCardinality - lastOptimizedCardinality > CACHE_SIZE) {
-				bitmap.runOptimize();
-				lastOptimizedCardinality = currentCardinality;
-			}
-			cache.clear();
+		bitmap.add(isItDistinct);
+		if (CACHE_SIZE == lastFlushed) {
+			bitmap.flush();
 		}
-	}
-
-	private void addCacheToRoarding() {
-		RoaringBitmap rb = new RoaringBitmap();
-		for (Integer i : cache) {
-			rb.add(i);
-		}
-		bitmap.or(rb);
 	}
 
 	public long cardinality() {
-		addCacheToRoarding();
-		bitmap.runOptimize();
-		cache.clear();
-		return bitmap.getLongCardinality();
+		return bitmap.get().getLongCardinality();
 	}
 }
