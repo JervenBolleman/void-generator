@@ -186,8 +186,9 @@ public class Generate implements Callable<Integer> {
 			repository = new SailRepository(ms);
 			repository.init();
 			try (RepositoryConnection conn = repository.getConnection()) {
+				IRI graph = conn.getValueFactory().createIRI(fromTestFile.toURI().toString());
 				conn.begin();
-				conn.add(fromTestFile);
+				conn.add(fromTestFile, graph);
 				conn.commit();
 			}
 		} else if (repositoryLocator.startsWith("http")) {
