@@ -12,6 +12,7 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -23,11 +24,17 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	public static final Logger log = LoggerFactory.getLogger(FindPredicateLinkSets.class);
-
+	private static final String QUERY ="""
+			SELECT (COUNT(?subject) AS ?count) 
+			WHERE {GRAPH ?graph {
+				?subject a ?sourceClass ; 
+					?predicate ?target. 
+				}
+			}
+			""";
 	private final Set<ClassPartition> classes;
 	private final PredicatePartition pp;
 	private final ClassPartition source;
@@ -93,10 +100,12 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			PredicatePartition predicatePartition, ClassPartition source) {
 
 		try (RepositoryConnection localConnection = repository.getConnection()) {
-			query = "SELECT (COUNT(?subject) AS ?count) WHERE {GRAPH <" + gd.getGraphName()
-					+ "> {?subject a <" + source.getClazz() + "> ; <" + predicatePartition.getPredicate()
-					+ "> ?target .}}";
-			try (TupleQueryResult triples = Helper.runTupleQuery(query, localConnection)) {
+			TupleQuery tq = localConnection.prepareTupleQuery(QUERY);
+			tq.setBinding("graph", gd.getGraph());
+			tq.setBinding("sourceClass", source.getClazz());
+			tq.setBinding("predicate", predicatePartition.getPredicate());
+			setQuery(QUERY, tq.getBindings());
+			try (TupleQueryResult triples = tq.evaluate()) {
 				if (triples.hasNext()) {
 					return ((Literal) triples.next().getBinding("count").getValue()).longValue();
 				}
