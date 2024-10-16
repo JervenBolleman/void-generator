@@ -98,7 +98,8 @@ public class ServiceDescriptionRDFReader {
 	private static void handlePredicatePartition(Model source, Iterator<Statement> predicates,
 			Collection<PredicatePartition> predicates2) {
 		while (predicates.hasNext()) {
-			IRI predicate = (IRI) predicates.next().getObject();
+			Statement next = predicates.next();
+			IRI predicate = (IRI) next.getObject();
 			PredicatePartition pp = new PredicatePartition();
 			predicates2.add(pp);
 			pp.setPredicate(predicate);
@@ -108,10 +109,21 @@ public class ServiceDescriptionRDFReader {
 					o -> pp.setDistinctObjectCount(asLong(o)));
 			getAndSetOne(source, predicate, VOID.DISTINCT_SUBJECTS, null, Statement::getObject,
 					o -> pp.setDistinctSubjectCount(asLong(o)));
-
 		}
 	}
 
+	/**
+	 * Get one result from the model for a triple specification.
+	 * 
+	 * 
+	 * @param <T> The resulting type of the data extracted from the statement
+	 * @param source model to extract data from
+	 * @param subject may be null
+	 * @param predicate may be null
+	 * @param object may be null
+	 * @param extract the function to extract anything from a statement
+	 * @return the desired value or null
+	 */
 	private static <T extends Value> T getOne(Model source, Resource subject, IRI predicate, Value object,
 			Function<Statement, T> extract) {
 		Iterator<Statement> iter = source.getStatements(subject, predicate, object).iterator();
@@ -122,6 +134,16 @@ public class ServiceDescriptionRDFReader {
 		return null;
 	}
 
+	/**
+	 * Take a value from a statement, convert to a value T and if not null pass it to an accepting consumer.
+	 * @param <T> The resulting type of the data extracted from the statement
+	 * @param source model to extract data from
+	 * @param subject may be null
+	 * @param predicate may be null
+	 * @param object may be null
+	 * @param extract a value from the statement and convert
+	 * @param setter take a <T> and if not null accept it
+	 */
 	private static <T extends Value> void getAndSetOne(Model source, Resource subject, IRI predicate, Value object,
 			Function<Statement, T> extract, Consumer<T> setter) {
 		Iterator<Statement> iter = source.getStatements(subject, predicate, object).iterator();
@@ -134,6 +156,11 @@ public class ServiceDescriptionRDFReader {
 		}
 	}
 
+	/**
+	 * Turn a value into a long, assumes this will be successful. 
+	 * @param o a value
+	 * @return an long
+	 */
 	private static Long asLong(Value o) {
 		return ((Literal) o).longValue();
 	}
