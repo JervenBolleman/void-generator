@@ -29,7 +29,9 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 				GRAPH ?graphName { 
 					?subject a ?sourceType 
 				} 
-				?subject ?predicate ?target . 
+				GRAPH ?linkingGraphName { 
+					?subject ?predicate ?target
+				} 
 				GRAPH ?otherGraphName {
 				 	?target a ?targetType 
 				}
@@ -85,6 +87,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		tupleQuery.setBinding("predicate", predicate);
 		tupleQuery.setBinding("otherGraphName", vf.createIRI(otherGraphName));
 		tupleQuery.setBinding("targetType", targetType);
+		tupleQuery.setBinding("linkingGraphName", ls.getLinkingGraph());
 		setQuery(COUNT_TRIPLES_LINKING, tupleQuery.getBindings());
 		
 		BindingSet next = tupleQuery.evaluate().next();

@@ -11,6 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
@@ -60,6 +61,14 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	public void testRun() throws Exception {
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
 				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, null);
+		try (RepositoryConnection connection = repository.getConnection()) {
+			SimpleValueFactory vf = SimpleValueFactory.getInstance();
+			connection.begin();
+			connection.add(vf.createStatement(source, RDF.TYPE, sourceClass.getClazz(), gd.getGraph()));
+			connection.add(vf.createStatement(source, predicate, source, gd.getGraph()), gd.getGraph());
+			connection.add(vf.createStatement(target, RDF.TYPE, targetClass.getClazz(), RDFS.COMMENT));
+			connection.commit();
+		}
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
 		assertEquals(1, predicatePartition.getLinkSets().size());

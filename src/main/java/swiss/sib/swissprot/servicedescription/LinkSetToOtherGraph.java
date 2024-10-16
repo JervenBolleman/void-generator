@@ -9,12 +9,14 @@ public class LinkSetToOtherGraph {
 	private final GraphDescription otherGraph;
 	private long count;
 	private final IRI sourceType;
+	private final IRI linkingGraph;
 
-	public LinkSetToOtherGraph(PredicatePartition predicatePartition, IRI targetType, IRI sourceType, GraphDescription otherGraph) {
+	public LinkSetToOtherGraph(PredicatePartition predicatePartition, IRI targetType, IRI sourceType, GraphDescription otherGraph, IRI linkingGraph) {
 		this.predicatePartition = predicatePartition;
 		this.targetType = targetType;
 		this.sourceType = sourceType;
 		this.otherGraph = otherGraph;
+		this.linkingGraph = linkingGraph;
 	}
 
 	public PredicatePartition getPredicatePartition() {
@@ -39,5 +41,9 @@ public class LinkSetToOtherGraph {
 
 	public long getTripleCount() {
 		return count;
+	}
+
+	public IRI getLinkingGraph() {
+		return linkingGraph;
 	}
 }

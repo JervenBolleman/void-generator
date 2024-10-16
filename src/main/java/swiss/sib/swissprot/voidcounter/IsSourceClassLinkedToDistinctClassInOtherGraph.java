@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
@@ -26,11 +27,17 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
 	private static final String QUERY = """
-			SELECT DISTINCT ?clazz
+			SELECT DISTINCT ?clazz ?linkingGraphName
 			WHERE {
-				GRAPH ?sourceGraphName { ?subject a ?sourceType . }
-				?subject ?predicate ?target .
-				GRAPH ?targetGraphName {?target a ?clazz }
+				GRAPH ?sourceGraphName {
+					?subject a ?sourceType
+				}
+				GRAPH ?linkingGraphName {
+					?subject ?predicate ?target
+				}
+				GRAPH ?targetGraphName {
+					?target a ?clazz
+				}
 			}
 			""";
 
@@ -88,9 +95,11 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		List<LinkSetToOtherGraph> res = new ArrayList<>();
 		try (TupleQueryResult tqr = pbq.evaluate()) {
 			while (tqr.hasNext()) {
-				IRI targetType = (IRI) tqr.next().getBinding("clazz").getValue();
+				BindingSet next = tqr.next();
+				IRI targetType = (IRI) next.getBinding("clazz").getValue();
+				IRI linkingGraph = (IRI) next.getBinding("linkingGraphName").getValue();
 				LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
-						otherGraph);
+						otherGraph, linkingGraph);
 				res.add(subTarget);
 				schedule.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock,
 						limiter, finishedQueries));

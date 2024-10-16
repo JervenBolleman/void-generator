@@ -120,7 +120,7 @@ public class ServiceDescriptionStatementGenerator {
 		IRI namedGraph = graphName;
 		statement(defaultDatasetId, SD.NAMED_GRAPH_PROPERTY, namedGraph);
 		statement(namedGraph, RDF.TYPE, SD.NAMED_GRAPH_CLASS);
-		IRI graph = vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName() +"!"+ new MD5().evaluate(vf, vf.createLiteral(namedGraph.stringValue())).stringValue());
+		IRI graph = getResourceForGraph(graphName, voidLocation);
 		statement(namedGraph, SD.NAME, graphName);
 		statement(namedGraph, SD.GRAPH_PROPERTY, graph);
 		if (gd.getTitle() != null)
@@ -174,6 +174,10 @@ public class ServiceDescriptionStatementGenerator {
 		describeClassPartitions(gd, voidLocation, namedGraph);
 
 		describePredicatePartitions(gd, voidLocation, namedGraph);
+	}
+
+	public IRI getResourceForGraph(IRI graphName, String voidLocation) {
+		return vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName() +"!"+ new MD5().evaluate(vf, vf.createLiteral(graphName.stringValue())).stringValue());
 	}
 
 	protected void describePredicatePartitions(GraphDescription gd, String voidLocation, IRI namedGraph) {
@@ -253,15 +257,23 @@ public class ServiceDescriptionStatementGenerator {
 				for (LinkSetToOtherGraph ls: pp.getLinkSets()) {
 					//TODO generate nicer IRI
 					Resource bNode = vf.createBNode();
-					statement(bNode, RDF.TYPE, VOID.LINKSET);
-					statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
-					statement(bNode, VOID.SUBJECTS_TARGET, dataSetClassPartition);
-					if (ls.getTripleCount() > 0) {
-						statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
-					}
-					statement(bNode, VOID.OBJECTS_TARGET, getResourceForPartition(ls.getOtherGraph().getGraph(), ls.getTargetType(), voidLocation));
+					generateLinkset(voidLocation, dataSetClassPartition, pp, ls, bNode);
 				}
 			}
+		}
+	}
+
+	public void generateLinkset(String voidLocation, IRI dataSetClassPartition, PredicatePartition pp,
+			LinkSetToOtherGraph ls, Resource bNode) {
+		statement(bNode, RDF.TYPE, VOID.LINKSET);
+		statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
+		statement(bNode, VOID.SUBJECTS_TARGET, dataSetClassPartition);
+		if (ls.getTripleCount() > 0) {
+			statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
+		}
+		statement(bNode, VOID.OBJECTS_TARGET, getResourceForPartition(ls.getOtherGraph().getGraph(), ls.getTargetType(), voidLocation));
+		if(ls.getLinkingGraph() != null) {
+			statement(bNode, VOID.SUBSET, getResourceForGraph(ls.getLinkingGraph(), voidLocation));
 		}
 	}
 
