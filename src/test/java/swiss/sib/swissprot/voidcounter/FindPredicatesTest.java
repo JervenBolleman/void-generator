@@ -79,7 +79,7 @@ public class FindPredicatesTest {
 		}
 		final ServiceDescription sd = new ServiceDescription();
 		final GraphDescription gd = new GraphDescription();
-		gd.setGraphName(RDF.BAG.stringValue());
+		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
@@ -105,7 +105,7 @@ public class FindPredicatesTest {
 		}
 		final ServiceDescription sd = new ServiceDescription();
 		final GraphDescription gd = new GraphDescription();
-		gd.setGraphName(RDF.BAG.stringValue());
+		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);

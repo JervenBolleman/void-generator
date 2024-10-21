@@ -17,6 +17,7 @@ import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -27,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class FindPredicates extends QueryCallable<List<PredicatePartition>> {
 	private final GraphDescription gd;
@@ -38,7 +38,15 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 	private final ServiceDescription sd;
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 	private final Supplier<QueryCallable<?>> onSuccess;
-
+	private static final String QUERY = """
+			SELECT ?predicate (COUNT(?object) AS ?count) 
+			WHERE { 
+				GRAPH ?graph { 
+					?subject ?predicate ?object 
+				}
+			} GROUP BY ?predicate
+			""";
+	
 	public FindPredicates(GraphDescription gd, Repository repository, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd, Supplier<QueryCallable<?>> onSuccess) {
 		super(repository, limiter, finishedQueries);
@@ -54,10 +62,10 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 
 	private List<PredicatePartition> findPredicates(GraphDescription gd, RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		query = "SELECT ?predicate (COUNT(?object) AS ?count) WHERE { GRAPH <" + gd.getGraphName()
-						+ "> { ?subject ?predicate ?object }} GROUP BY ?predicate";
-		try (TupleQueryResult predicateQuery = Helper
-				.runTupleQuery(query, connection)) {
+		TupleQuery tq = connection.prepareTupleQuery(QUERY);
+		tq.setBinding("graph", gd.getGraph());
+		setQuery(QUERY, tq.getBindings());
+		try (TupleQueryResult predicateQuery = tq.evaluate()) {
 			List<PredicatePartition> res = new ArrayList<>();
 			while (predicateQuery.hasNext()) {
 
