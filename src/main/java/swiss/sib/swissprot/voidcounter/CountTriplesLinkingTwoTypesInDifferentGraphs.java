@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCallable<Long> {
 	private static final Logger log = LoggerFactory.getLogger(CountTriplesLinkingTwoTypesInDifferentGraphs.class);
@@ -41,14 +42,17 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 	private final LinkSetToOtherGraph ls;
 	private final GraphDescription gd;
 
+	private final PredicatePartition predicatePartition;
+
 
 	public CountTriplesLinkingTwoTypesInDifferentGraphs(GraphDescription gd, LinkSetToOtherGraph ls,
 			Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries) {
+			AtomicInteger finishedQueries, PredicatePartition predicatePartition) {
 		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.ls = ls;
 		this.writeLock = writeLock;
+		this.predicatePartition = predicatePartition;
 	}
 
 	@Override
@@ -98,7 +102,10 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 	protected void set(Long count) {
 		try {
 			writeLock.lock();
-			ls.setTripleCount(count);
+			if (count > 0) {
+				predicatePartition.putLinkPartition(ls);
+				ls.setTripleCount(count);
+			}
 		} finally {
 			writeLock.unlock();
 		}

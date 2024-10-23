@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.TupleQuery;
@@ -27,7 +28,7 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
 	private static final String QUERY = """
-			SELECT DISTINCT ?clazz ?linkingGraphName
+			SELECT ?clazz ?linkingGraphName (COUNT(?subject) AS ?count)
 			WHERE {
 				GRAPH ?sourceGraphName {
 					?subject a ?sourceType
@@ -38,7 +39,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 				GRAPH ?targetGraphName {
 					?target a ?clazz
 				}
-			}
+			} GROUP BY ?clazz ?linkingGraphName
 			""";
 
 	public static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraph.class);
@@ -49,8 +50,6 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	private final GraphDescription gd;
 	private final Lock writeLock;
 	private final GraphDescription otherGraph;
-
-	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 
 	private final String classExclusion;
 
@@ -65,7 +64,6 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		this.gd = gd;
 		this.writeLock = writeLock;
 		this.otherGraph = otherGraph;
-		this.schedule = schedule;
 		this.classExclusion = classExclusion;
 	}
 
@@ -85,6 +83,16 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	protected List<LinkSetToOtherGraph> run(RepositoryConnection connection) throws Exception {
 		final IRI sourceType = source.getClazz();
 
+		if (otherGraph.getPredicates().isEmpty()) {
+			return rediscoverPossibleLinkClasses(connection, sourceType);
+		} else {
+
+		}
+		return null;
+	}
+
+	public List<LinkSetToOtherGraph> rediscoverPossibleLinkClasses(RepositoryConnection connection,
+			final IRI sourceType) throws Exception {
 		String rq = makeQuery(QUERY, otherGraph, classExclusion);
 		final TupleQuery pbq = connection.prepareTupleQuery(QueryLanguage.SPARQL, rq);
 		pbq.setBinding("sourceGraphName", gd.getGraph());
@@ -92,20 +100,22 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		pbq.setBinding("targetGraphName", otherGraph.getGraph());
 		pbq.setBinding("sourceType", sourceType);
 		setQuery(rq, pbq.getBindings());
-		List<LinkSetToOtherGraph> res = new ArrayList<>();
+		List<LinkSetToOtherGraph> pps = new ArrayList<>();
 		try (TupleQueryResult tqr = pbq.evaluate()) {
 			while (tqr.hasNext()) {
 				BindingSet next = tqr.next();
-				IRI targetType = (IRI) next.getBinding("clazz").getValue();
-				IRI linkingGraph = (IRI) next.getBinding("linkingGraphName").getValue();
-				LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
-						otherGraph, linkingGraph);
-				res.add(subTarget);
-				schedule.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, subTarget, repository, writeLock,
-						limiter, finishedQueries));
+				long count = ((Literal) next.getBinding("count").getValue()).longValue();
+				if (count > 0) {
+					IRI targetType = (IRI) next.getBinding("clazz").getValue();
+					IRI linkingGraph = (IRI) next.getBinding("linkingGraphName").getValue();
+					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
+							otherGraph, linkingGraph);
+					subTarget.setTripleCount(count);
+					pps.add(subTarget);
+				}
 			}
 		}
-		return res;
+		return pps;
 	}
 
 	private static String makeQuery(String query, GraphDescription otherGraph, String classExclusion) {
@@ -113,7 +123,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		if (classExclusion == null) {
 			return withKnownClasses;
 		} else {
-			return insertBeforeEnd(withKnownClasses, "   FILTER(" + classExclusion + ")\n");
+			return insertBeforeEnd(withKnownClasses, "\tFILTER(" + classExclusion + ")\n");
 		}
 	}
 
@@ -123,26 +133,23 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		else {
 			String collect = classes.stream().map(ClassPartition::getClazz).map(c -> "(<" + c.stringValue() + ">)")
 					.collect(Collectors.joining(" "));
-			return insertBeforeEnd(query2, "VALUES (?clazz) {"+collect+"}\n");
+			return insertBeforeEnd(query2, "\tVALUES (?clazz) {" + collect + "}\n");
 		}
 	}
 
 	private static String insertBeforeEnd(String query, String collect) {
-		return new StringBuilder(query).insert(query.length() - 2, collect).toString();
+		return new StringBuilder(query).insert(query.lastIndexOf('}') - 1, collect).toString();
 	}
 
 	@Override
-	protected void set(List<LinkSetToOtherGraph> has) {
-		if (!has.isEmpty()) {
-			try {
-				writeLock.lock();
-				for (LinkSetToOtherGraph subTarget : has) {
-					predicatePartition.putLinkPartition(subTarget);
-				}
-			} finally {
-				writeLock.unlock();
+	protected void set(List<LinkSetToOtherGraph> pps) {
+		try {
+			writeLock.lock();
+			for (LinkSetToOtherGraph lstog : pps) {
+				predicatePartition.putLinkPartition(lstog);
 			}
+		} finally {
+			writeLock.unlock();
 		}
-
 	}
 }
