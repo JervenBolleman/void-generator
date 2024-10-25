@@ -233,16 +233,16 @@ public class ServiceDescriptionStatementGenerator {
 	protected void describeClassPartitions(GraphDescription gd, String voidLocation, IRI namedGraph) {
 		for (ClassPartition cp : gd.getClasses()) {
 			final IRI iriOfType = getIRI(cp.getClazz().toString());
-			IRI dataSetClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
+			IRI classClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
 //			statement(graph, VOID.CLASS_PARTITION, dataSetClassPartition);
-			statement(dataSetClassPartition, RDF.TYPE, VOID.DATASET);
-			statement(dataSetClassPartition, VOID.CLASS, iriOfType);
+			statement(classClassPartition, RDF.TYPE, VOID.DATASET);
+			statement(classClassPartition, VOID.CLASS, iriOfType);
 			if (cp.getTripleCount() > 0) {
-				statement(dataSetClassPartition, VOID.ENTITIES, vf.createLiteral(cp.getTripleCount()));
+				statement(classClassPartition, VOID.ENTITIES, vf.createLiteral(cp.getTripleCount()));
 			}
 			for (PredicatePartition pp : cp.getPredicatePartitions()) {
 				IRI ppr = getResourceForSubPartition(namedGraph, cp.getClazz(), pp.getPredicate(), voidLocation);
-				statement(dataSetClassPartition, VOID.PROPERTY_PARTITION, ppr);
+				statement(classClassPartition, VOID.PROPERTY_PARTITION, ppr);
 				statement(ppr, RDF.TYPE, VOID.DATASET);
 				statement(ppr, VOID.PROPERTY, pp.getPredicate());
 				generateClassPartitions(namedGraph, cp, pp, ppr, voidLocation);
@@ -257,9 +257,21 @@ public class ServiceDescriptionStatementGenerator {
 				for (LinkSetToOtherGraph ls: pp.getLinkSets()) {
 					//TODO generate nicer IRI
 					Resource bNode = vf.createBNode();
-					generateLinkset(voidLocation, dataSetClassPartition, pp, ls, bNode);
+					generateLinkset(voidLocation, classClassPartition, pp, ls, bNode);
 				}
+				generateClassPartitionsAsLinkset(namedGraph, cp, pp, ppr, voidLocation, classClassPartition);
 			}
+		}
+	}
+
+	private void generateClassPartitionsAsLinkset(IRI namedGraph, ClassPartition cp, PredicatePartition pp, IRI ppr,
+			String voidLocation, IRI iriOfType) {
+		for (ClassPartition cpp:pp.getClassPartitions()) {
+			Resource bNode = vf.createBNode();
+			statement(bNode, RDF.TYPE, VOID.LINKSET);
+			statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
+			statement(bNode, VOID.SUBJECTS_TARGET, iriOfType);
+			statement(bNode, VOID.OBJECTS_TARGET, getResourceForPartition(namedGraph, cpp.getClazz(), voidLocation));
 		}
 	}
 
