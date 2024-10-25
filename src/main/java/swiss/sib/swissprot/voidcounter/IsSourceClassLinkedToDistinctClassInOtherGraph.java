@@ -53,6 +53,8 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	private final String classExclusion;
 
+	//TODO pass in a different waiter/limiter and logic to make sure that the other graph class list is known before we start here.
+	//this can't use the current limiter logic as that would deadlock.
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
 			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph,
@@ -119,8 +121,10 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	}
 
 	private static String makeQuery(String query, GraphDescription otherGraph, String classExclusion) {
-		String withKnownClasses = addKnownClasses(query, otherGraph.getClasses());
-		if (classExclusion == null) {
+		Set<ClassPartition> classes = otherGraph.getClasses();
+		String withKnownClasses = addKnownClasses(query, classes);
+		//If we already know the other classes then we do not need to filter them out
+		if (classExclusion == null || !classes.isEmpty()) {
 			return withKnownClasses;
 		} else {
 			return insertBeforeEnd(withKnownClasses, "\tFILTER(" + classExclusion + ")\n");
