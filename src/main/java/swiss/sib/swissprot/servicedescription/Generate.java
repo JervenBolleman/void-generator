@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -152,6 +154,14 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be '?clazz'")
 	private String classExclusion;
 	
+	@Option(names = { "--data-release-version" }, description = "Set a 'version' for the sparql-endpoint data and the datasets")
+	private String dataVersion;
+	
+
+	@Option(names = { "--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
+	private String dataReleaseDate;
+
+	
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -239,6 +249,10 @@ public class Generate implements Callable<Integer> {
 
 	public void update() {
 		log.debug("Void listener for " + graphNames.stream().collect(Collectors.joining(", ")));
+		if (dataReleaseDate != null) {
+			sd.setReleaseDate(LocalDate.from(DateTimeFormatter.ISO_DATE.parse(dataReleaseDate)));
+		}
+		sd.setVersion(dataVersion);
 		if (commaSeperatedKnownPredicates != null) {
 			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
 					.collect(Collectors.toSet());
