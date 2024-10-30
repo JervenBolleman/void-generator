@@ -16,6 +16,7 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -40,8 +41,9 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	private final Supplier<QueryCallable<?>> onSuccess;
 
 	public FindDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler,
-			ServiceDescription sd, String classExclusion, Supplier<QueryCallable<?>> onSuccess) {
+			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, ServiceDescription sd,
+			String classExclusion, Supplier<QueryCallable<?>> onSuccess) {
 		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.writeLock = writeLock;
@@ -72,8 +74,11 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	protected List<ClassPartition> run(RepositoryConnection connection)
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
 		List<ClassPartition> classesList = new ArrayList<>();
-		query = makeQuery();
-		try (TupleQueryResult classes = Helper.runTupleQuery(query, connection)) {
+		String rq = makeQuery();
+		TupleQuery tq = connection.prepareTupleQuery(rq);
+		tq.setBinding("graph", gd.getGraph());
+		setQuery(rq, tq.getBindings());
+		try (TupleQueryResult classes = tq.evaluate()) {
 			while (classes.hasNext()) {
 				Binding classesCount = classes.next().getBinding("clazz");
 				Value value = classesCount.getValue();
@@ -83,22 +88,14 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 				}
 			}
 		}
-		for (ClassPartition cp : classesList) {
-			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries));
-		}
-		if (onSuccess != null) {
-			scheduler.apply(onSuccess.get());
-		}
-		saver.accept(sd);
 		return classesList;
 	}
 
 	private String makeQuery() {
 		if (classExclusion == null) {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz }}";
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz }}";
 		} else {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH <" + gd.getGraphName() + "> {?thing a ?clazz . FILTER ("
-					+ classExclusion + ")}}";
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz . FILTER (" + classExclusion + ")}}";
 		}
 	}
 
@@ -112,11 +109,20 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		} finally {
 			writeLock.unlock();
 		}
-
+		saver.accept(sd);
+		for (ClassPartition cp : count) {
+			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries));
+		}
+		if (onSuccess != null) {
+			scheduler.apply(onSuccess.get());
+		}
 	}
 
 	private final class CountMembersOfClassPartition extends QueryCallable<Long> {
-		public CountMembersOfClassPartition(Repository repository, Semaphore limiter, ClassPartition cp, AtomicInteger finishedQueries) {
+		private static final String COUNT_TYPE_ARCS = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH ?graph {?thing a ?class }}";
+
+		public CountMembersOfClassPartition(Repository repository, Semaphore limiter, ClassPartition cp,
+				AtomicInteger finishedQueries) {
 			super(repository, limiter, finishedQueries);
 			this.cp = cp;
 		}
@@ -125,20 +131,23 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 		@Override
 		protected void logStart() {
-			log.debug("Counting distinct triples for clas "+cp.getClazz()+" for " + gd.getGraphName());
+			log.debug("Counting distinct triples for clas " + cp.getClazz() + " for " + gd.getGraphName());
 
 		}
 
 		@Override
 		protected void logEnd() {
-			log.debug("Counted distinct triples for clas "+cp.getClazz()+" for " + gd.getGraphName());
+			log.debug("Counted distinct triples for clas " + cp.getClazz() + " for " + gd.getGraphName());
 		}
 
 		@Override
 		protected Long run(RepositoryConnection connection) throws Exception {
-			query = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH <" + gd.getGraphName() + "> {?thing a <"
-					+ cp.getClazz().stringValue() + "> }}";
-			return Helper.getSingleLongFromSparql(query, connection, "count");
+
+			TupleQuery tq = connection.prepareTupleQuery(COUNT_TYPE_ARCS);
+			tq.setBinding("graph", gd.getGraph());
+			tq.setBinding("class", cp.getClazz());
+			setQuery(COUNT_TYPE_ARCS, tq.getBindings());
+			return Helper.getSingleLongFromSparql(tq, connection, "count");
 		}
 
 		@Override

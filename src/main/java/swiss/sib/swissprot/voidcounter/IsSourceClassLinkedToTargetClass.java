@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
@@ -16,6 +17,18 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> {
+
+	private static final String COUNT_LINKS_IN_SAME_GRAPH = """
+			SELECT 
+				(COUNT (?subject) AS ?subjects) 
+			WHERE { 
+				GRAPH  ?graph { 
+					?subject a ?sourceType ; 
+						?predicate ?target . 
+					?target a ?targetType 
+				}
+			}
+			""";
 
 	private static final String SUBJECTS = "subjects";
 
@@ -56,9 +69,13 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 	protected Long run(RepositoryConnection connection) throws Exception {
 		final IRI sourceType = source.getClazz();
 		final IRI targetType = target.getClazz();
-		query = "SELECT (COUNT (?subject) AS ?subjects) WHERE { GRAPH <" + gd.getGraphName() + ">{ ?subject a <" + sourceType + "> ; <"
-				+ predicate + "> ?target . ?target a <" + targetType + "> }}";
-		return Helper.getSingleLongFromSparql(query, connection, SUBJECTS);
+		TupleQuery tq = connection.prepareTupleQuery(COUNT_LINKS_IN_SAME_GRAPH);
+		tq.setBinding("source", sourceType);
+		tq.setBinding("target", targetType);
+		tq.setBinding("graph", gd.getGraph());
+		tq.setBinding("predicate", predicate);
+		setQuery(COUNT_LINKS_IN_SAME_GRAPH, tq.getBindings());
+		return Helper.getSingleLongFromSparql(tq, connection, SUBJECTS);
 	}
 
 	@Override
@@ -74,6 +91,5 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 				writeLock.unlock();
 			}
 		}
-
 	}
 }

@@ -22,14 +22,28 @@ public class Helper {
 		return Helper.getSingleLongFromSparql(sq, connection, "types");
 	}
 
+	public static long getSingleLongFromSparql(TupleQuery tq, RepositoryConnection connection, String variable)
+			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+		try (TupleQueryResult res = tq.evaluate()) {
+			if (res.hasNext()) {
+				Binding bind = res.next().getBinding(variable);
+				assert bind.getValue().isLiteral();
+				assert !res.hasNext();
+				return ((Literal) bind.getValue()).longValue();
+			} else {
+				return 0;
+			}
+		}
+	}
+	
 	public static long getSingleLongFromSparql(String sq, RepositoryConnection connection, String variable)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		try (TupleQueryResult classes = runTupleQuery(sq, connection)) {
-			if (classes.hasNext()) {
-				Binding types = classes.next().getBinding(variable);
-				assert types.getValue().isLiteral();
-				assert !classes.hasNext();
-				return ((Literal) types.getValue()).longValue();
+		try (TupleQueryResult res = runTupleQuery(sq, connection)) {
+			if (res.hasNext()) {
+				Binding bind = res.next().getBinding(variable);
+				assert bind.getValue().isLiteral();
+				assert !res.hasNext();
+				return ((Literal) bind.getValue()).longValue();
 			} else {
 				return 0;
 			}
