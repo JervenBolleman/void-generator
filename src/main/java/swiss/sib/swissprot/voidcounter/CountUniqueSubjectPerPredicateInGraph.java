@@ -80,4 +80,9 @@ public class CountUniqueSubjectPerPredicateInGraph
 			writeLock.unlock();
 		}
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

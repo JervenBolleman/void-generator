@@ -76,8 +76,8 @@ public class CountUniqueObjectsPerPredicateInGraph
 		}
 		else
 		{
-			query = "SELECT (count(distinct ?object) as ?objects) WHERE { GRAPH <"
-			    + gd.getGraphName() + "> {?subject <" + predicate + "> ?object}}";
+			setQuery("SELECT (count(distinct ?object) as ?objects) WHERE { GRAPH <"
+			    + gd.getGraphName() + "> {?subject <" + predicate + "> ?object}}");
 			return Helper.getSingleLongFromSparql(query, connection, OBJECTS);
 		}
 	}
@@ -85,9 +85,9 @@ public class CountUniqueObjectsPerPredicateInGraph
 	private long countDistinctLiteralObjects(RepositoryConnection connection, Resource predicate, long countOfLiterals)
 	    throws MalformedQueryException, RepositoryException
 	{
-		query = "SELECT (COUNT(DISTINCT(RDF_QUAD.O))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+		setQuery("SELECT (COUNT(DISTINCT(RDF_QUAD.O))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
 		    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
-		    + "') AND isiri_id(RDF_QUAD.O) = 0";
+		    + "') AND isiri_id(RDF_QUAD.O) = 0");
 		VirtuosoRepositoryConnection virtuosoRepositoryConnection = (VirtuosoRepositoryConnection) connection;
 		Connection vrc = virtuosoRepositoryConnection.getQuadStoreConnection();
 		try (java.sql.Statement stat = vrc.createStatement())
@@ -120,9 +120,9 @@ public class CountUniqueObjectsPerPredicateInGraph
 	    throws QueryEvaluationException, RepositoryException
 	{
 		//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-		query = "SELECT iri_id_num(RDF_QUAD.O) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+		setQuery("SELECT iri_id_num(RDF_QUAD.O) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
 		    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
-		    + "') AND isiri_id(RDF_QUAD.O) = 1";
+		    + "') AND isiri_id(RDF_QUAD.O) = 1");
 		return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, query);
 	}
 
@@ -136,5 +136,10 @@ public class CountUniqueObjectsPerPredicateInGraph
 		} finally {
 			writeLock.unlock();
 		}
+	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
 	}
 }

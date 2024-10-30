@@ -76,6 +76,11 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		return null;
 	}
 
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
+	
 	private static class FindClassPredicatePairs extends QueryCallable<Void> {
 		private static final Logger log = LoggerFactory.getLogger(FindClassPredicatePairs.class);
 		private final ReadWriteLock rwLock;
@@ -137,6 +142,11 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		protected void set(Void t) {
 			// TODO Auto-generated method stub
 
+		}
+		
+		@Override
+		protected Logger getLog() {
+			return log;
 		}
 
 	}

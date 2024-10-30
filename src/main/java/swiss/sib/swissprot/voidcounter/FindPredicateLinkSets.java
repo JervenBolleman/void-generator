@@ -158,4 +158,9 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			saver.accept(sd);
 		}
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

@@ -103,4 +103,9 @@ public final class CountDistinctIriObjects
 		}
 		saver.accept(sd);
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

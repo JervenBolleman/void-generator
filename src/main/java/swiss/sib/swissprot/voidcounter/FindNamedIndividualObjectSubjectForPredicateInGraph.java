@@ -60,8 +60,8 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 
 	@Override
 	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
-		query = "SELECT DISTINCT ?target  WHERE { GRAPH <" + gd.getGraphName() + "> { ?subject a <"
-				+ cp.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target . ?target a <" + OWL.NAMEDINDIVIDUAL + ">}}";
+		setQuery("SELECT DISTINCT ?target  WHERE { GRAPH <" + gd.getGraphName() + "> { ?subject a <"
+				+ cp.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target . ?target a <" + OWL.NAMEDINDIVIDUAL + ">}}");
 		try (final TupleQueryResult tr = Helper.runTupleQuery(query, connection)) {
 			Set<IRI> namedObjects = new HashSet<>();
 			while (tr.hasNext()) {
@@ -88,5 +88,10 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 				writeLock.unlock();
 			}
 		}
+	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
 	}
 }

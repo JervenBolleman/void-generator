@@ -156,4 +156,9 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 			writeLock.unlock();
 		}
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

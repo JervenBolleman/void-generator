@@ -49,5 +49,8 @@ public final class CountDistinctIriSubjectsInAGraphVirtuoso extends CountDistinc
 		return "select iri_id_num(RDF_QUAD.S) from RDF_QUAD table option (index RDF_QUAD_GS) where RDF_QUAD.G = iri_to_id('" + graphIri+ "') and isiri_id(RDF_QUAD.S) > 0 and is_bnode_iri_id(RDF_QUAD.S) = 0";
 	}
 	
-	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

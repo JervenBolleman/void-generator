@@ -70,15 +70,15 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 					+ getCount(vrc, SELECT_OBJECTS_IN_RDF_OBJ);
 			return countOfLiterals;
 		} else {
-			query = COUNT_OBJECTS_WITH_SPARQL;
+			setQuery(COUNT_OBJECTS_WITH_SPARQL);
 			return Helper.getSingleLongFromSparql(COUNT_OBJECTS_WITH_SPARQL, connection, OBJECTS);
 		}
 	}
 
 	private Long getCount(Connection vrc, String countOfInlineQuery) {
 		try (java.sql.Statement stat = vrc.createStatement()) {
-			query = countOfInlineQuery;
-			try (ResultSet res = stat.executeQuery(countOfInlineQuery)) {
+			setQuery(countOfInlineQuery);
+			try (ResultSet res = stat.executeQuery(query)) {
 				log.debug("Counting literal objects for all graphs");
 				long countOfLiterals = 0;
 				while (res.next()) {
@@ -105,5 +105,10 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 			writeLock.unlock();
 		}
 		saver.accept(sd);
+	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
 	}
 }

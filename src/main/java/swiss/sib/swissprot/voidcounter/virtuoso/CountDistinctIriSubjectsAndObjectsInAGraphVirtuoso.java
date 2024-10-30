@@ -150,7 +150,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement, Roaring64NavigableMap subjects,
 			Roaring64NavigableMap objects) throws SQLException {
 
-		query = queryForGraph();
+		setQuery(queryForGraph());
 		final ReentrantLock subLock = new ReentrantLock();
 		final ReentrantLock objLock = new ReentrantLock();
 		AddedStatus subjectIdx = new AddedStatus(0, 0, new Roaring64NavigableMap(), subLock);
@@ -318,5 +318,10 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		}
 		final long iricounts = all.getLongCardinality();
 		return iricounts;
+	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
 	}
 }

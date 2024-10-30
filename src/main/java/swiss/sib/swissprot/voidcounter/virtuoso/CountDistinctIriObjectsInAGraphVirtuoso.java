@@ -48,4 +48,9 @@ public final class CountDistinctIriObjectsInAGraphVirtuoso extends CountDistinct
 				+ graphIri + "')";
 		return query;
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

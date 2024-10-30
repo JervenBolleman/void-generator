@@ -67,15 +67,15 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	}
 
 	private Long pureSparql(RepositoryConnection connection) {
-		query = "SELECT (count(distinct ?object) AS ?objects) WHERE { GRAPH <" + graphname
-				+ "> {?subject ?predicate ?object . FILTER (isLiteral(?object))}}";
+		setQuery("SELECT (count(distinct ?object) AS ?objects) WHERE { GRAPH <" + graphname
+				+ "> {?subject ?predicate ?object . FILTER (isLiteral(?object))}}");
 		return Helper.getSingleLongFromSparql(query, connection, "objects");
 	}
 
 	private Long virtuosoOptimized(RepositoryConnection connection) {
 		Connection vrc = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
-		query = "SELECT COUNT(DISTINCT(RDF_QUAD.O)) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-				+ gd.getGraphName() + "') AND RDF_IS_LITERAL(RDF_QUAD.O) = 1";
+		setQuery("SELECT COUNT(DISTINCT(RDF_QUAD.O)) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+				+ gd.getGraphName() + "') AND RDF_IS_LITERAL(RDF_QUAD.O) = 1");
 		long countOfLiterals = 0;
 		try (java.sql.Statement stat = vrc.createStatement()) {
 			try (ResultSet res = stat.executeQuery(query)) {
@@ -104,5 +104,10 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 			writeLock.unlock();
 		}
 		saver.accept(sd);
+	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
 	}
 }

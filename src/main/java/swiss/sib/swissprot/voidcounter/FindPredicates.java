@@ -129,4 +129,9 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			schedule.apply(new CountUniqueObjectsPerPredicateInGraph(gd, predicatePartition, repository, writeLock, limiter, finishedQueries));
 		}
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

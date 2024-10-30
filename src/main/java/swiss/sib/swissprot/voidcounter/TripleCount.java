@@ -56,4 +56,9 @@ public class TripleCount extends QueryCallable<Long> {
 		}
 		saver.accept(sd);
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

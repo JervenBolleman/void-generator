@@ -92,4 +92,9 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 			}
 		}
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

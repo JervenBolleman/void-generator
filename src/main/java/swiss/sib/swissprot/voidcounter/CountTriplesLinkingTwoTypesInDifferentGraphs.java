@@ -109,6 +109,10 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		} finally {
 			writeLock.unlock();
 		}
-
+	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
 	}
 }

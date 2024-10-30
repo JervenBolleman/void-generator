@@ -129,4 +129,9 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 			}
 		}
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

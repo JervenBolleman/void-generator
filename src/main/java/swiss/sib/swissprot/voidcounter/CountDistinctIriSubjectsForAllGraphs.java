@@ -75,5 +75,9 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 		}
 		saver.accept(sd);
 	}
-
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

@@ -32,8 +32,6 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 			WHERE {
 				GRAPH ?sourceGraphName {
 					?subject a ?sourceType
-				}
-				GRAPH ?linkingGraphName {
 					?subject ?predicate ?target
 				}
 				GRAPH ?targetGraphName {
@@ -115,9 +113,8 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 				long count = ((Literal) next.getBinding("count").getValue()).longValue();
 				if (count > 0) {
 					IRI targetType = (IRI) next.getBinding("clazz").getValue();
-					IRI linkingGraph = (IRI) next.getBinding("linkingGraphName").getValue();
 					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
-							otherGraph, linkingGraph);
+							otherGraph, gd.getGraph());
 					subTarget.setTripleCount(count);
 					pps.add(subTarget);
 				}
@@ -161,5 +158,10 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		} finally {
 			writeLock.unlock();
 		}
+	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
 	}
 }

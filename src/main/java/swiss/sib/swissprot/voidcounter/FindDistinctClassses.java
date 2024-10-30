@@ -62,7 +62,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 	@Override
 	protected void logFailed(Exception e) {
-		log.error("failed counting distinct classses " + gd.getGraphName(), e);
+		log.error("failed finding distinct classses " + gd.getGraphName(), e);
 	}
 
 	@Override
@@ -117,6 +117,11 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			scheduler.apply(onSuccess.get());
 		}
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 
 	private final class CountMembersOfClassPartition extends QueryCallable<Long> {
 		private static final String COUNT_TYPE_ARCS = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH ?graph {?thing a ?class }}";
@@ -131,13 +136,16 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 		@Override
 		protected void logStart() {
-			log.debug("Counting distinct triples for clas " + cp.getClazz() + " for " + gd.getGraphName());
+			log.debug("Counting distinct triples for class " + cp.getClazz() + " for " + gd.getGraphName());
 
 		}
-
+		@Override
+		protected void logFailed(Exception e) {
+			log.error("failed counting distinct triples for class " + gd.getGraphName(), e);
+		}
 		@Override
 		protected void logEnd() {
-			log.debug("Counted distinct triples for clas " + cp.getClazz() + " for " + gd.getGraphName());
+			log.debug("Counted distinct triples for class " + cp.getClazz() + " for " + gd.getGraphName());
 		}
 
 		@Override
@@ -155,5 +163,10 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			cp.setTripleCount(t);
 		}
 
+		@Override
+		protected Logger getLog() {
+			return log;
+		}
+		
 	}
 }

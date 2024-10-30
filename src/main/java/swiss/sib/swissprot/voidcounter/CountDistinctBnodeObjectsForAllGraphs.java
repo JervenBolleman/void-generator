@@ -152,4 +152,9 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 	protected void set(Long count) {
 		saver.accept(sd);
 	}
+	
+	@Override
+	protected Logger getLog() {
+		return log;
+	}
 }

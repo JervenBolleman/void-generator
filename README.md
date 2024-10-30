@@ -46,3 +46,7 @@ When looking to generate shapes or code from a VoID file the main thing to look 
 These `void:classPartitions`s will have `void:predicatePartition`s and `void:datatypePartition`s. The predicatePartions will lead to other resources (objects that are denoted by an IRI or BNode) while the datatypePartitions will lead to literal values.
 
 The `void:predicatePartition`s are objects of a triple where a `void:subjectTarget` will be that triples predicate. The subject of that triple will also be a type `void:LinkSet` and the `void:objectTarget` will point to a different object of a `void:classPartition` triple.
+
+# Logging for debugging
+
+-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.log.org.apache=info

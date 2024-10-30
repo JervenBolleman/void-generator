@@ -8,6 +8,7 @@ import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class QueryCallable<T> implements Callable<Exception> {
@@ -67,6 +68,11 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 		return query;
 	}
 
+	protected void setQuery(String query) {
+		this.query = query;
+		getLog().debug("query: " + query);
+	}
+	
 	protected void setQuery(String dataTypeQuery, BindingSet bindings) {
 		String sb = new String(dataTypeQuery);
 		for (Binding bs : bindings) {
@@ -76,6 +82,8 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 				sb = sb.replace("?" + bs.getName(), bs.getValue().stringValue());
 			}
 		}
-		query = sb.toString();
+		setQuery(sb.toString());
 	}
+
+	protected abstract Logger getLog();
 }
