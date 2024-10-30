@@ -86,7 +86,7 @@ public class Generate implements Callable<Integer> {
 
 	protected static final Logger log = LoggerFactory.getLogger(Generate.class);
 
-	private Set<String> graphNames;
+	private Set<String> graphNames = Set.of();
 	private Repository repository;
 
 	private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -674,6 +674,7 @@ public class Generate implements Callable<Integer> {
 
 	public void setIriOfVoid(IRI iriOfVoid) {
 		this.iriOfVoid = iriOfVoid;
+		this.iriOfVoidAsString = iriOfVoid.stringValue();
 	}
 
 	public void setKnownPredicates(Set<IRI> knownPredicates) {
@@ -695,7 +696,7 @@ public class Generate implements Callable<Integer> {
 	 * The IRI of the endpoint
 	 * @param rl
 	 */
-	void setRepositoryLocator(String rl) {
+	public void setRepositoryLocator(String rl) {
 		this.repositoryLocator = rl;
 	}
 }
