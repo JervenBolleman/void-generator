@@ -53,12 +53,14 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	private final String classExclusion;
 
+	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
+
 	//TODO pass in a different waiter/limiter and logic to make sure that the other graph class list is known before we start here.
 	//this can't use the current limiter logic as that would deadlock.
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(Repository repository, IRI predicate,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd, Lock writeLock,
 			Semaphore limiter, AtomicInteger finishedQueries, GraphDescription otherGraph,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
+			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, String classExclusion) {
 		super(repository, limiter, finishedQueries);
 		this.predicate = predicate;
 		this.predicatePartition = predicatePartition;
@@ -66,6 +68,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		this.gd = gd;
 		this.writeLock = writeLock;
 		this.otherGraph = otherGraph;
+		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
 	}
 
@@ -88,9 +91,12 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		if (otherGraph.getPredicates().isEmpty()) {
 			return rediscoverPossibleLinkClasses(connection, sourceType);
 		} else {
-
+			for (ClassPartition cp : otherGraph.getClasses()) {
+				LinkSetToOtherGraph ls = new LinkSetToOtherGraph(predicatePartition, sourceType, cp.getClazz(), otherGraph, gd.getGraph());
+				scheduler.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(gd, ls, repository, writeLock, limiter, finishedQueries, predicatePartition));
+			}
+			return List.of();    
 		}
-		return null;
 	}
 
 	public List<LinkSetToOtherGraph> rediscoverPossibleLinkClasses(RepositoryConnection connection,
