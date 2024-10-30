@@ -1,0 +1,29 @@
+prefix fruit:<https://example.org/void-generator/test/fruits#>
+prefix tree:<https://example.org/void-generator/test/trees#>
+prefix ex:<https://example.org/void-generator/test/schema#>
+
+
+tree:trees {
+	tree:apple_tree a ex:FruitTree .
+
+	tree:pear_tree a ex:FruitTree .
+
+	tree:lemon_tree a ex:FruitTree .
+}
+
+fruit:fruits {
+	fruit:red_apple a ex:Fruit, ex:Apple ;
+		ex:color "red" ;
+		ex:grows_on tree:apple_tree .
+
+	fruit:green_apple a ex:Fruit, ex:Apple ;
+		ex:color "green" ;
+		ex:grows_on tree:apple_tree .
+
+	fruit:rotton_apple a ex:Fruit, ex:Apple ;
+		ex:color "brownish" .
+
+	fruit:green_pear a ex:Fruit, ex:Pear ;
+		ex:color "green" ;
+		ex:growns_on tree:pear_tree .
+}
