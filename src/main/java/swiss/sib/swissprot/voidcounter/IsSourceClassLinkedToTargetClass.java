@@ -25,7 +25,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 				GRAPH  ?graph { 
 					?subject a ?sourceType ; 
 						?predicate ?target . 
-					?target a ?targetType 
+					?target a ?targetType .
 				}
 			}
 			""";
@@ -70,8 +70,8 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 		final IRI sourceType = source.getClazz();
 		final IRI targetType = target.getClazz();
 		TupleQuery tq = connection.prepareTupleQuery(COUNT_LINKS_IN_SAME_GRAPH);
-		tq.setBinding("source", sourceType);
-		tq.setBinding("target", targetType);
+		tq.setBinding("sourceType", sourceType);
+		tq.setBinding("targetType", targetType);
 		tq.setBinding("graph", gd.getGraph());
 		tq.setBinding("predicate", predicate);
 		setQuery(COUNT_LINKS_IN_SAME_GRAPH, tq.getBindings());

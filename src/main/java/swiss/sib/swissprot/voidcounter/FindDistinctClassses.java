@@ -23,7 +23,6 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.CDATASection;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
@@ -89,14 +88,20 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 				}
 			}
 		}
+		for (ClassPartition cp : classesList) {
+			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries));
+		}
+		if (onSuccess != null) {
+			scheduler.apply(onSuccess.get());
+		}
 		return classesList;
 	}
 
 	private String makeQuery() {
 		if (classExclusion == null) {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graphI {?thing a ?clazz }}";
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz }}";
 		} else {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graphI {?thing a ?clazz . FILTER (" + classExclusion + ")}}";
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz . FILTER (" + classExclusion + ")}}";
 		}
 	}
 
@@ -111,12 +116,6 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			writeLock.unlock();
 		}
 		saver.accept(sd);
-		for (ClassPartition cp : count) {
-			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries));
-		}
-		if (onSuccess != null) {
-			scheduler.apply(onSuccess.get());
-		}
 	}
 
 	@Override
