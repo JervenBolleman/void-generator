@@ -15,14 +15,14 @@ mvn package
 
 Runs on a java 17+ jdk, see the help for how to use
 ```sh
-java -jar target/void-generator-*.jar --help
+java -jar target/void-generator-*uber.jar --help
 ```
 
 
 # Running against a local Virtuoso endpoint
 
 ```sh
-java -jar target/void-generator-*.jar \
+java -jar target/void-generator-*uber.jar \
     --user dba \
     --password dba \
     -r jdbc:virtuoso://localhost:1111/charset=UTF-8 \ # note the localhost and "isql-t" port

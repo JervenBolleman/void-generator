@@ -121,6 +121,8 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <shadedArtifactAttached>false</shadedArtifactAttached>
+              <shadedClassifierName>uber</shadedClassifierName>
               <filters>
                 <filter>
                   <artifact>*:*</artifact>
@@ -140,10 +142,7 @@
                 </transformer>
               </transformers>
               <artifactSet/>
-              <configuration>
-                <minimizeJar>true</minimizeJar>
-              </configuration>
-              <!--      <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>-->
+              <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-uber.jar</outputFile>
             </configuration>
           </execution>
         </executions>
