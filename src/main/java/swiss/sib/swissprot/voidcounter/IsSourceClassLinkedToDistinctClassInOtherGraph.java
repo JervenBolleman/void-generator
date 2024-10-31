@@ -31,8 +31,8 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 			SELECT ?clazz ?linkingGraphName (COUNT(?subject) AS ?count)
 			WHERE {
 				GRAPH ?sourceGraphName {
-					?subject a ?sourceType
-					?subject ?predicate ?target
+					?subject a ?sourceType ;
+						?predicate ?target .
 				}
 				GRAPH ?targetGraphName {
 					?target a ?clazz

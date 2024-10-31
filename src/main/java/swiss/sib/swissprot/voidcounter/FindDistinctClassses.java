@@ -23,6 +23,7 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.CDATASection;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
@@ -93,9 +94,9 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 	private String makeQuery() {
 		if (classExclusion == null) {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz }}";
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graphI {?thing a ?clazz }}";
 		} else {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz . FILTER (" + classExclusion + ")}}";
+			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graphI {?thing a ?clazz . FILTER (" + classExclusion + ")}}";
 		}
 	}
 
@@ -117,7 +118,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			scheduler.apply(onSuccess.get());
 		}
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;
@@ -139,10 +140,12 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			log.debug("Counting distinct triples for class " + cp.getClazz() + " for " + gd.getGraphName());
 
 		}
+
 		@Override
 		protected void logFailed(Exception e) {
 			log.error("failed counting distinct triples for class " + gd.getGraphName(), e);
 		}
+
 		@Override
 		protected void logEnd() {
 			log.debug("Counted distinct triples for class " + cp.getClazz() + " for " + gd.getGraphName());
@@ -160,13 +163,18 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 		@Override
 		protected void set(Long t) {
-			cp.setTripleCount(t);
+			
+			if (t > 0) {
+				cp.setTripleCount(t);
+			} else {
+				gd.getClasses().remove(cp);
+			}
 		}
 
 		@Override
 		protected Logger getLog() {
 			return log;
 		}
-		
+
 	}
 }
