@@ -177,7 +177,11 @@ public class ServiceDescriptionStatementGenerator {
 	}
 
 	public IRI getResourceForGraph(IRI graphName, String voidLocation) {
-		return vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName() +"!"+ new MD5().evaluate(vf, vf.createLiteral(graphName.stringValue())).stringValue());
+		return vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName() +"!"+ hash(graphName.stringValue()));
+	}
+
+	private String hash(String graphName) {
+		return new MD5().evaluate(vf, vf.createLiteral(graphName)).stringValue().substring(0, 8);
 	}
 
 	protected void describePredicatePartitions(GraphDescription gd, String voidLocation, IRI namedGraph) {
@@ -204,18 +208,7 @@ public class ServiceDescriptionStatementGenerator {
 				
 			}
 			for (LinkSetToOtherGraph ls: predicate.getLinkSets()) {
-				//TODO generate nicer IRI
-				Resource bNode = vf.createBNode();
-				statement(bNode, RDF.TYPE, VOID.LINKSET);
-				statement(bNode, VOID.LINK_PREDICATE, predicate.getPredicate());
-				statement(bNode, VOID.SUBJECTS_TARGET, dataSetPropertyPartition);
-				if (ls.getTripleCount() > 0) {
-					statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
-				}
-				for (ClassPartition cp : ls.getOtherGraph().getClasses()) {
-					if (cp.getClazz().equals(ls.getTargetType()))
-						statement(bNode, VOID.OBJECTS_TARGET, ls.getTargetType());
-				}
+				generateLinkset(voidLocation, dataSetPropertyPartition, ls);
 			}
 			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
 			generateSubjectPartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
@@ -255,19 +248,19 @@ public class ServiceDescriptionStatementGenerator {
 				if (pp.getDistinctObjectCount() > 0L)
 					statement(ppr, VOID.DISTINCT_OBJECTS, vf.createLiteral(pp.getDistinctObjectCount()));
 				for (LinkSetToOtherGraph ls: pp.getLinkSets()) {
-					//TODO generate nicer IRI
-					Resource bNode = vf.createBNode();
-					generateLinkset(voidLocation, classClassPartition, pp, ls, bNode);
+
+					generateLinkset(voidLocation, classClassPartition, ls);
 				}
-				generateClassPartitionsAsLinkset(namedGraph, cp, pp, ppr, voidLocation, classClassPartition);
+				generateClassPartitionsAsLinkset(namedGraph, cp, pp, ppr, voidLocation, classClassPartition, gd);
 			}
 		}
 	}
 
 	private void generateClassPartitionsAsLinkset(IRI namedGraph, ClassPartition cp, PredicatePartition pp, IRI ppr,
-			String voidLocation, IRI iriOfType) {
+			String voidLocation, IRI iriOfType, GraphDescription gp) {
 		for (ClassPartition cpp:pp.getClassPartitions()) {
-			Resource bNode = vf.createBNode();
+			Resource bNode = vf.createIRI(voidLocation, "#linkset_" + hash(pp.getPredicate().getLocalName() + "_"
+					+ cp.getClazz().getLocalName() + "_" + cpp.getClazz().getLocalName()+"_"+gp.getGraph().getLocalName()));
 			statement(bNode, RDF.TYPE, VOID.LINKSET);
 			statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
 			statement(bNode, VOID.SUBJECTS_TARGET, iriOfType);
@@ -276,10 +269,11 @@ public class ServiceDescriptionStatementGenerator {
 		}
 	}
 
-	public void generateLinkset(String voidLocation, IRI dataSetClassPartition, PredicatePartition pp,
-			LinkSetToOtherGraph ls, Resource bNode) {
+	public void generateLinkset(String voidLocation, IRI dataSetClassPartition, LinkSetToOtherGraph ls) {
+		Resource bNode = vf.createIRI(voidLocation, "#linkset_" + hash(ls.getPredicatePartition().getPredicate().stringValue() + "_"
+                + ls.getSourceType().stringValue() + "_" + ls.getTargetType().stringValue()+ ls.getOtherGraph().getGraph()) + ls.getPredicatePartition());
 		statement(bNode, RDF.TYPE, VOID.LINKSET);
-		statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
+		statement(bNode, VOID.LINK_PREDICATE, ls.getPredicatePartition().getPredicate());
 		statement(bNode, VOID.SUBJECTS_TARGET, dataSetClassPartition);
 		if (ls.getTripleCount() > 0) {
 			statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
@@ -345,7 +339,7 @@ public class ServiceDescriptionStatementGenerator {
 	}
 
 	protected IRI getResourceForPartition(final IRI namedGraph, final IRI rt, String voidLocation) {
-		String md5 = new MD5().evaluate(vf, vf.createLiteral(rt.stringValue())).stringValue();
+		String md5 = hash(rt.stringValue());
 		if (voidLocation.endsWith("#")) {
 			return vf.createIRI(voidLocation, namedGraph.getLocalName() + '!' + md5 + '!' + rt.getLocalName());
 		} else {
