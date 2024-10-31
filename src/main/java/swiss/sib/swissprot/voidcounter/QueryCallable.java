@@ -72,14 +72,14 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 		this.query = query;
 		getLog().debug("query: " + query);
 	}
-	
+
 	protected void setQuery(String dataTypeQuery, BindingSet bindings) {
 		String sb = new String(dataTypeQuery);
 		for (Binding bs : bindings) {
 			if (bs.getValue().isIRI()) {
-				sb = sb.replace("?" + bs.getName(), '<'+bs.getValue().stringValue()+'>');
+				sb = sb.replace("?" + bs.getName() + " ", '<' + bs.getValue().stringValue() + "> ");
 			} else {
-				sb = sb.replace("?" + bs.getName(), bs.getValue().stringValue());
+				sb = sb.replace("?" + bs.getName() + " ", bs.getValue().stringValue()) + " ";
 			}
 		}
 		setQuery(sb.toString());
