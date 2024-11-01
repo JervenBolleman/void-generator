@@ -5,6 +5,7 @@ Building uses java 17 and maven 3.6+
 mvn package
 ```
 
+Or you can use one of the pre build [releases](https://github.com/JervenBolleman/void-generator/releases).
 
 # HOW TO USE
 
