@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.eclipse.rdf4j.model.IRI;
+
 
 public class ServiceDescription
 {
@@ -15,7 +17,7 @@ public class ServiceDescription
 	private long totalTripleCount;
 	private String version;
 	private LocalDate releaseDate;
-	
+	private IRI endpoint;
 	private String title;
 	private long distinctBnodeObjectCount;
 	private long distinctIriObjectCount;
@@ -205,5 +207,11 @@ public class ServiceDescription
 		return this.distinctIriSubjectCount;
 	}
 
-	
+	public IRI getEndpoint() {
+		return endpoint;
+	}
+
+	public void setEndpoint(IRI endpoint) {
+		this.endpoint = endpoint;
+	}	
 }

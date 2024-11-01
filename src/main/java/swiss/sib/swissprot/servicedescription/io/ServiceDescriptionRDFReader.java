@@ -40,6 +40,10 @@ public class ServiceDescriptionRDFReader {
 
 		Resource serviceIri = getOne(source, null, RDF.TYPE, SD.SERVICE, Statement::getSubject);
 
+		IRI endpoint = (IRI) getOne(source, serviceIri, SD.ENDPOINT, null, Statement::getObject);
+		
+		sd.setEndpoint(endpoint);
+		
 		Resource defaultDataset = (Resource) getOne(source, serviceIri, SD.DEFAULT_DATASET, null, Statement::getObject);
 
 		Resource defaultGraph = (Resource) getOne(source, defaultDataset, SD.DEFAULT_GRAPH, null, Statement::getObject);
