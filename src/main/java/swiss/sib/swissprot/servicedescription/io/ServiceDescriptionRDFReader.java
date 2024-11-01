@@ -65,48 +65,52 @@ public class ServiceDescriptionRDFReader {
 			GraphDescription gd = new GraphDescription();
 			gd.setGraph(namedGraph);
 			sd.putGraphDescription(gd);
+			
+			IRI graphIri = (IRI) getOne(source, namedGraph, SD.GRAPH_PROPERTY, null, Statement::getObject);
 			getAndSetOne(source, namedGraph, SD.NAME, null, Statement::getObject,
 					o -> gd.setGraphName(o.stringValue()));
-			getAndSetOne(source, namedGraph, VOID.TRIPLES, null, Statement::getObject,
+			getAndSetOne(source, graphIri, VOID.TRIPLES, null, Statement::getObject,
 					o -> gd.setTripleCount(asLong(o)));
-			getAndSetOne(source, namedGraph, VOID_EXT.DISTINCT_BLANK_NODE_OBJECTS, null, Statement::getObject,
+			getAndSetOne(source, graphIri, DCTERMS.LICENSE, null, Statement::getObject,
+					o -> gd.setLicense((IRI) o));
+			getAndSetOne(source, graphIri, VOID_EXT.DISTINCT_BLANK_NODE_OBJECTS, null, Statement::getObject,
 					o -> gd.setDistinctBnodeObjectCount(asLong(o)));
-			getAndSetOne(source, namedGraph, VOID_EXT.DISTINCT_IRI_REFERENCE_OBJECTS, null, Statement::getObject,
+			getAndSetOne(source, graphIri, VOID_EXT.DISTINCT_IRI_REFERENCE_OBJECTS, null, Statement::getObject,
 					o -> gd.setDistinctIriObjectCount(asLong(o)));
-			getAndSetOne(source, namedGraph, VOID_EXT.DISTINCT_LITERALS, null, Statement::getObject,
+			getAndSetOne(source, graphIri, VOID_EXT.DISTINCT_LITERALS, null, Statement::getObject,
 					o -> gd.setDistinctLiteralObjectCount(asLong(o)));
-			getAndSetOne(source, namedGraph, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS, null, Statement::getObject,
+			getAndSetOne(source, graphIri, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS, null, Statement::getObject,
 					o -> gd.setDistinctBnodeSubjectCount(asLong(o)));
-			getAndSetOne(source, namedGraph, VOID_EXT.DISTINCT_IRI_REFERENCE_SUBJECTS, null, Statement::getObject,
+			getAndSetOne(source, graphIri, VOID_EXT.DISTINCT_IRI_REFERENCE_SUBJECTS, null, Statement::getObject,
 					o -> gd.setDistinctIriSubjectCount(asLong(o)));
-
-			Iterator<Statement> predicates = source.getStatements(namedGraph, VOID.PROPERTY_PARTITION, null).iterator();
+	
+			Iterator<Statement> predicates = source.getStatements(graphIri, VOID.PROPERTY_PARTITION, null).iterator();
 			Set<PredicatePartition> predicates2 = gd.getPredicates();
-			handlePredicatePartition(source, predicates, predicates2);
+			handlePredicatePartition(source, predicates, predicates2, gd.getPredicates()::add);
 
-			Iterator<Statement> classPartitions = source.getStatements(namedGraph, VOID.CLASS_PARTITION, null)
+			Iterator<Statement> classPartitions = source.getStatements(graphIri, VOID.CLASS_PARTITION, null)
 					.iterator();
 			while (classPartitions.hasNext()) {
 				Resource classPartition = (Resource) classPartitions.next().getObject();
 				IRI clazzIri = (IRI) getOne(source, classPartition, VOID.CLASS, null, Statement::getObject);
 				ClassPartition cp = new ClassPartition(clazzIri);
 				gd.getClasses().add(cp);
-				Iterator<Statement> cpPredicates = source.getStatements(namedGraph, VOID.PROPERTY_PARTITION, null)
+				Iterator<Statement> cpPredicates = source.getStatements(graphIri, VOID.PROPERTY_PARTITION, null)
 						.iterator();
-				handlePredicatePartition(source, cpPredicates, cp.getPredicatePartitions());
+				handlePredicatePartition(source, cpPredicates, cp.getPredicatePartitions(), cp::putPredicatePartition);
 			}
 		}
 		return sd;
 	}
 
 	private static void handlePredicatePartition(Model source, Iterator<Statement> predicates,
-			Collection<PredicatePartition> predicates2) {
+			Collection<PredicatePartition> predicates2, Consumer<PredicatePartition> cp) {
 		while (predicates.hasNext()) {
 			Statement next = predicates.next();
 			IRI predicate = (IRI) next.getObject();
 			PredicatePartition pp = new PredicatePartition();
-			predicates2.add(pp);
 			pp.setPredicate(predicate);
+			cp.accept(pp);
 			getAndSetOne(source, predicate, VOID.TRIPLES, null, Statement::getObject,
 					o -> pp.setTripleCount(asLong(o)));
 			getAndSetOne(source, predicate, VOID.DISTINCT_OBJECTS, null, Statement::getObject,

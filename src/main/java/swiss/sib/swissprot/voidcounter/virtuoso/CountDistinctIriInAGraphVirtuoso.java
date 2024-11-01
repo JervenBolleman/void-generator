@@ -69,8 +69,7 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 
 		// If we did not save this data before recalculate it.
 		Roaring64NavigableMap rb;
-		if (!graphIriIds.containsKey(graphIri)) {
-
+		if (!graphIriIds.containsKey(graphIri) || graphIriIds.get(graphIri).isEmpty()) {
 			rb = findUniqueIriIds(quadStoreConnection);
 			graphIriIds.put(graphIri, rb);
 		} else {

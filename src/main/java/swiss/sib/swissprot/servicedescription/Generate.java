@@ -381,10 +381,6 @@ public class Generate implements Callable<Integer> {
 				CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
 						sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, finishedQueries);
 				schedule(cdso);
-//				futures.add(executors.submit(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver,
-//						writeLock, distinctSubjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
-//				futures.add(executors.submit(new CountDistinctIriObjectsInAGraphVirtuoso(sd, repository, saver,
-//						writeLock, distinctObjectIris, voidGraphUri, limit, scheduledQueries, finishedQueries)));
 			}
 			countSpecificThingsPerGraph(sd, knownPredicates, voidGraphUri, limit, saver);
 		}
@@ -505,7 +501,7 @@ public class Generate implements Callable<Integer> {
 						distinctSubjectIris, graphName, limit, finishedQueries));
 			}
 		}
-		schedule(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, finishedQueries));
+		schedule(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, finishedQueries, saver));
 	}
 
 	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates,
@@ -537,8 +533,8 @@ public class Generate implements Callable<Integer> {
 					finishedQueries));
 		}
 		if (countDistinctSubjects) {
-			schedule(new CountDistinctBnodeSubjects(gd, repository, writeLock, limit,
-					finishedQueries));
+			schedule(new CountDistinctBnodeSubjects(gd, sd, repository, writeLock, limit,
+					finishedQueries, saver));
 		}
 		schedule(new TripleCount(gd, repository, writeLock, limit, finishedQueries, saver, sd));
 	}

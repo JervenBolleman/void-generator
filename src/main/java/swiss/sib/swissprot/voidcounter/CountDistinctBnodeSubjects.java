@@ -3,6 +3,7 @@ package swiss.sib.swissprot.voidcounter;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -32,23 +33,29 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 	private final String graphname;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjects.class);
 	private final Lock writeLock;
+	private final Consumer<ServiceDescription> saver;
+	private final boolean  defaultGraph;
 
-	public CountDistinctBnodeSubjects(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries) {
+	public CountDistinctBnodeSubjects(GraphDescription gd, ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter,
+			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver) {
 		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.writeLock = writeLock;
-		this.sd = null;
+		this.saver = saver;
+		this.sd = sd;
 		this.graphname = gd.getGraphName();
+		this.defaultGraph = false;
 	}
 
 	public CountDistinctBnodeSubjects(ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries) {
+			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver) {
 		super(repository, limiter, finishedQueries);
 		this.writeLock = writeLock;
+		this.saver = saver;
 		this.gd = null;
 		this.sd = sd;
 		this.graphname = "all";
+		this.defaultGraph = true;
 	}
 
 	@Override
@@ -66,7 +73,7 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 			throws QueryEvaluationException, RepositoryException, MalformedQueryException
 
 	{
-		if (gd != null)
+		if (!defaultGraph)
 			return countDistinctBnodeSubjectsInGraph(connection);
 		else
 			return countDistinctBnodeSubjects(connection);	
@@ -113,7 +120,7 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 
 	@Override
 	protected void set(Long count) {
-		if (gd != null)
+		if (!defaultGraph)
 			try {
 				writeLock.lock();
 				gd.setDistinctBnodeSubjectCount(count);
@@ -127,6 +134,9 @@ public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 			} finally {
 				writeLock.unlock();
 			}
+		}
+		if (sd != null) {
+			saver.accept(sd);
 		}
 	}
 	

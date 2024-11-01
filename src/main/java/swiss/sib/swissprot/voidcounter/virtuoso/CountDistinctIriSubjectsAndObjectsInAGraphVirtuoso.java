@@ -12,7 +12,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -52,8 +51,6 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	private final Lock writeLock;
 	private final Consumer<Long> objectAllSetter;
 	private final Consumer<Long> subjectAllSetter;
-	private final BiConsumer<GraphDescription, Long> graphObjectSetter;
-	private final BiConsumer<GraphDescription, Long> graphSubjectSetter;
 	private final Map<String, Roaring64NavigableMap> objectGraphIriIds;
 	private final Map<String, Roaring64NavigableMap> subjectGraphIriIds;
 	private final AtomicInteger running = new AtomicInteger(0);
@@ -66,8 +63,6 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		this.objectGraphIriIds = graphObjectIriIds;
 		this.objectAllSetter = sd::setDistinctIriObjectCount;
 		this.subjectAllSetter = sd::setDistinctIriSubjectCount;
-		this.graphObjectSetter = GraphDescription::setDistinctIriObjectCount;
-		this.graphSubjectSetter = GraphDescription::setDistinctIriSubjectCount;
 		this.writeLock = writeLock;
 		this.sd = sd;
 		this.saver = saver;
@@ -290,10 +285,8 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 			writeLock.lock();
 
 			final GraphDescription graph = sd.getGraph(graphIri);
-			if (graph != null) {
-				graphSubjectSetter.accept(graph, count.subjects.getLongCardinality());
-				graphObjectSetter.accept(graph, count.objects.getLongCardinality());
-			}
+			graph.setDistinctIriSubjectCount(count.subjects.getLongCardinality());
+			graph.setDistinctIriObjectCount(count.objects.getLongCardinality());
 		} finally {
 			writeLock.unlock();
 		}
