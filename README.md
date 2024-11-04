@@ -1,4 +1,8 @@
-# A Detailed Statistics generator for a void file
+# A Detailed Statistics generator for a VoID file
+
+This CLI tool will automatically generates [VoID description](https://www.w3.org/TR/void/) as RDF for a public endpoint given its URL.
+
+## Build
 
 Building uses java 17 and maven 3.6+
 
@@ -65,9 +69,11 @@ The `void:predicatePartition`s are objects of a triple where a `void:subjectTarg
 
 ## Logging for debugging
 
--Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.log.org.apache=info
+`-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.log.org.apache=info`
 
-## SPARQL query to retrieve VoID descriptions
+## SPARQL queries to retrieve VoID descriptions
+
+Once the VoID description turtle file has been generated you can upload it to your endpoint and retrieve its information with the SPARQL queries below.
 
 Without subject/objects count:
 
