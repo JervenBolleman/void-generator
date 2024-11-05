@@ -50,7 +50,7 @@ public class ServiceDescriptionStatementGenerator {
 		describeDefaultGraph(item, defaultGraphId, calendar);
 		Resource graphCollection = vf.createBNode();
 		statement(endpoint, SD.AVAILBLE_GRAPHS, graphCollection);
-		
+
 		for (GraphDescription gd : item.getGraphs()) {
 			statement(graphCollection, SD.NAMED_GRAPH_PROPERTY, getIRI(gd.getGraphName()));
 		}
@@ -226,7 +226,6 @@ public class ServiceDescriptionStatementGenerator {
 		for (ClassPartition cp : gd.getClasses()) {
 			final IRI iriOfType = getIRI(cp.getClazz().toString());
 			IRI classClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
-//			statement(graph, VOID.CLASS_PARTITION, dataSetClassPartition);
 			statement(classClassPartition, RDF.TYPE, VOID.DATASET);
 			statement(classClassPartition, VOID.CLASS, iriOfType);
 			if (cp.getTripleCount() > 0) {
@@ -327,18 +326,20 @@ public class ServiceDescriptionStatementGenerator {
 	}
 
 	private IRI getResourceForSubPartition(IRI namedGraph, IRI clazz, IRI predicate, String voidLocation) {
-		IRI partition = getResourceForPartition(namedGraph, clazz, voidLocation);
-		IRI subpartition = getResourceForPartition(namedGraph, predicate, voidLocation);
-		return vf.createIRI(partition.getNamespace(), partition.getLocalName() + subpartition.getLocalName());
+		return vf.createIRI(voidLocation,
+				namedGraph.getLocalName() + '!'
+						+ hash(namedGraph.stringValue() + clazz.stringValue() + predicate.stringValue()) + '!' + '-'
+						+ clazz.getLocalName() + '-' + predicate.getLocalName());
 	}
 
 	private IRI getResourceForSubPartition(IRI namedGraph, IRI sourceClass, IRI predicate, IRI targetClass,
 			String voidLocation) {
-		IRI partition = getResourceForPartition(namedGraph, sourceClass, voidLocation);
-		IRI subpartition = getResourceForPartition(namedGraph, predicate, voidLocation);
-		IRI subsubpartition = getResourceForPartition(namedGraph, targetClass, voidLocation);
-		return vf.createIRI(partition.getNamespace(),
-				partition.getLocalName() + subpartition.getLocalName() + subsubpartition.getLocalName());
+		return vf.createIRI(voidLocation,
+				namedGraph.getLocalName() + '!'
+						+ hash(namedGraph.stringValue() + sourceClass.stringValue() + predicate.stringValue()
+								+ targetClass.stringValue())
+						+ '!' + '-' + sourceClass.getLocalName() + '-' + predicate.getLocalName() + '-'
+						+ targetClass.getLocalName());
 	}
 
 	protected IRI getResourceForPartition(final IRI namedGraph, final IRI rt, String voidLocation) {
