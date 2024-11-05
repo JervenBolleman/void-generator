@@ -211,7 +211,7 @@ public class ServiceDescriptionStatementGenerator {
 				generateLinkset(voidLocation, dataSetPropertyPartition, ls);
 			}
 			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
-			generateSubjectPartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
+			generateObjectPartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
 			if (predicate.getTripleCount() > 0L)
 				statement(dataSetPropertyPartition, VOID.TRIPLES, vf.createLiteral(predicate.getTripleCount()));
 			if (predicate.getDistinctSubjectCount() > 0L)
@@ -240,7 +240,7 @@ public class ServiceDescriptionStatementGenerator {
 				statement(ppr, VOID.PROPERTY, pp.getPredicate());
 				generateClassPartitions(namedGraph, cp, pp, ppr, voidLocation);
 				generateDatatypePartitions(namedGraph, pp, ppr, voidLocation);
-				generateSubjectPartitions(namedGraph, pp, ppr, voidLocation);
+				generateObjectPartitions(namedGraph, pp, ppr, voidLocation);
 				if (pp.getTripleCount() > 0L)
 					statement(ppr, VOID.TRIPLES, vf.createLiteral(pp.getTripleCount()));
 				if (pp.getDistinctSubjectCount() > 0L)
@@ -311,12 +311,12 @@ public class ServiceDescriptionStatementGenerator {
 		}
 	}
 
-	private void generateSubjectPartitions(IRI namedGraph, PredicatePartition pp, IRI ppr, String voidLocation) {
-		for (SubjectPartition spr : pp.getSubjectPartitions()) {
-			final IRI datatype = spr.getSubject();
+	private void generateObjectPartitions(IRI namedGraph, PredicatePartition pp, IRI ppr, String voidLocation) {
+		for (ObjectPartition spr : pp.getSubjectPartitions()) {
+			final IRI datatype = spr.getObject();
 			IRI cppr = getResourceForSubPartition(namedGraph, pp.getPredicate(), datatype, voidLocation);
-			statement(ppr, VOID_EXT.SUBJECT_PARTITION, cppr);
-			statement(cppr, VOID_EXT.SUBJECT, datatype);
+			statement(ppr, VOID_EXT.OBJECT_PARTITION, cppr);
+			statement(cppr, VOID_EXT.OBJECT, datatype);
 			if (spr.getTripleCount() > 0) {
 				statement(cppr, VOID.TRIPLES, vf.createLiteral(spr.getTripleCount()));
 			}

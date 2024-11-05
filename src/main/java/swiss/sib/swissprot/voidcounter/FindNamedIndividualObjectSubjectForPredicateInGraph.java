@@ -7,9 +7,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -18,12 +19,22 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.ObjectPartition;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.servicedescription.SubjectPartition;
-import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
-public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<IRI>> {
-
+public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<ObjectPartition>> {
+	private static final String QUERY = """
+			PREFIX owl: <http://www.w3.org/2002/07/owl#>
+			SELECT 
+				?target (COUNT(?subject) as ?count)
+			WHERE {
+				GRAPH ?graph {
+					?subject a ?sourceType ; 
+						?predicate ?target . 
+					?target a owl:NamedIndividual .
+				}
+			} GROUP BY ?target
+			""";
 	public static final Logger log = LoggerFactory.getLogger(FindNamedIndividualObjectSubjectForPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
@@ -59,34 +70,40 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 	}
 
 	@Override
-	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
-		setQuery("SELECT DISTINCT ?target  WHERE { GRAPH <" + gd.getGraphName() + "> { ?subject a <"
-				+ cp.getClazz() + "> ; <" + predicatePartition.getPredicate() + "> ?target . ?target a <" + OWL.NAMEDINDIVIDUAL + ">}}");
-		try (final TupleQueryResult tr = Helper.runTupleQuery(query, connection)) {
-			Set<IRI> namedObjects = new HashSet<>();
+	protected Set<ObjectPartition> run(RepositoryConnection connection) throws Exception {
+		TupleQuery tq = connection.prepareTupleQuery(QUERY);
+		tq.setBinding("graph", gd.getGraph());
+		tq.setBinding("sourceType", cp.getClazz());
+		tq.setBinding("predicate", predicatePartition.getPredicate());
+		setQuery(QUERY, tq.getBindings());
+		Set<ObjectPartition> namedObjects = new HashSet<>();
+		try (final TupleQueryResult tr = tq.evaluate()) {
 			while (tr.hasNext()) {
 				final BindingSet next = tr.next();
 				if (next.hasBinding("target")) {
 					Value v = next.getBinding("target").getValue();
-					if (v.isIRI()) {
-						namedObjects.add((IRI) v);
+					long c = ((Literal) next.getBinding("count").getValue()).longValue();
+					
+					if (v instanceof IRI i) {
+						ObjectPartition subTarget = new ObjectPartition(i);
+						subTarget.setTripleCount(c);
+						namedObjects.add(subTarget);
 					}
 				}
 			}
-			return namedObjects;
 		}
+		return namedObjects;
 	}
 
 	@Override
-	protected void set(Set<IRI> namedObjects) {
-		for (IRI namedObject : namedObjects) {
-			try {
-				writeLock.lock();
-				SubjectPartition subTarget = new SubjectPartition(namedObject);
-				predicatePartition.putSubjectPartition(subTarget);
-			} finally {
-				writeLock.unlock();
+	protected void set(Set<ObjectPartition> namedObjects) {
+		try {
+			writeLock.lock();
+			for (ObjectPartition namedObject : namedObjects) {
+				predicatePartition.putSubjectPartition(namedObject);
 			}
+		} finally {
+			writeLock.unlock();
 		}
 	}
 	

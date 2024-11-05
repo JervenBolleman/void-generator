@@ -19,7 +19,7 @@ public class PredicatePartition
 	private IRI predicate;
 	private final Map<IRI, ClassPartition> classPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private final Map<IRI, DataTypePartition> dataTypePartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
-	private final Map<Resource, SubjectPartition> subjectPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
+	private final Map<Resource, ObjectPartition> subjectPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private final List<LinkSetToOtherGraph> linkSets = Collections.synchronizedList(new ArrayList<>());
 	private long tripleCount;
 	private long subjectCount;
@@ -139,12 +139,12 @@ public class PredicatePartition
 		dataTypePartitions.put(resourceOf.getDatatype(), resourceOf);
 	}
 
-	public void putSubjectPartition(SubjectPartition subTarget)
+	public void putSubjectPartition(ObjectPartition subTarget)
 	{
-		subjectPartitions.put(subTarget.getSubject(), subTarget);
+		subjectPartitions.put(subTarget.getObject(), subTarget);
 	}
 
-	public Collection<SubjectPartition> getSubjectPartitions()
+	public Collection<ObjectPartition> getSubjectPartitions()
 	{
 		return subjectPartitions.values();
 	}
