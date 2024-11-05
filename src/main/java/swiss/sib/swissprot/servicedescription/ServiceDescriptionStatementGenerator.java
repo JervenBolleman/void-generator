@@ -29,8 +29,10 @@ public class ServiceDescriptionStatementGenerator {
 
 	public void generateStatements(IRI endpoint, IRI iriOfVoid, ServiceDescription item) {
 
-		Resource defaultDatasetId = vf.createIRI(endpoint.getNamespace(), endpoint.getLocalName()+"#sparql-default-dataset");
-		Resource defaultGraphId = vf.createIRI(iriOfVoid.getNamespace(), iriOfVoid.getLocalName()+"#sparql-default-graph");
+		Resource defaultDatasetId = vf.createIRI(endpoint.getNamespace(),
+				endpoint.getLocalName() + "#sparql-default-dataset");
+		Resource defaultGraphId = vf.createIRI(iriOfVoid.getNamespace(),
+				iriOfVoid.getLocalName() + "#sparql-default-graph");
 		statement(endpoint, RDF.TYPE, SD.SERVICE);
 		statement(endpoint, SD.DEFAULT_DATASET, defaultDatasetId);
 		statement(endpoint, SD.ENDPOINT, endpoint);
@@ -38,22 +40,20 @@ public class ServiceDescriptionStatementGenerator {
 		statement(endpoint, SD.SUPPORTED_LANGUAGE, SD.SPARQL_11_QUERY);
 		statement(endpoint, SD.FEATURE_PROPERTY, SD.UNION_DEFAULT_GRAPH);
 		statement(endpoint, SD.FEATURE_PROPERTY, SD.BASIC_FEDERATED_QUERY);
-		for (GraphDescription gd : item.getGraphs()) {
-			final String rawGraphName = gd.getGraphName();
-			IRI graphName = getIRI(rawGraphName);
-			IRI namedGraph = graphName;
-			statement(endpoint, SD.AVAILBLE_GRAPHS, namedGraph);
-		}
+
 		LocalDate calendar = describeDefaultDataset(item, defaultDatasetId, defaultGraphId);
-		
+
 		for (GraphDescription gd : item.getGraphs()) {
-			final String rawGraphName = gd.getGraphName();
-			IRI graphName = getIRI(rawGraphName);
-			IRI namedGraph = graphName;
-			statement(defaultDatasetId, SD.NAMED_GRAPH_PROPERTY, namedGraph);
+			statement(defaultDatasetId, SD.NAMED_GRAPH_PROPERTY, getIRI(gd.getGraphName()));
 		}
 
 		describeDefaultGraph(item, defaultGraphId, calendar);
+		Resource graphCollection = vf.createBNode();
+		statement(endpoint, SD.AVAILBLE_GRAPHS, graphCollection);
+		
+		for (GraphDescription gd : item.getGraphs()) {
+			statement(graphCollection, SD.NAMED_GRAPH_PROPERTY, getIRI(gd.getGraphName()));
+		}
 
 		for (GraphDescription gd : item.getGraphs())
 			statementsAboutGraph(defaultDatasetId, gd, item, iriOfVoid);
@@ -129,13 +129,12 @@ public class ServiceDescriptionStatementGenerator {
 		if (gd.getLicense() != null)
 			statement(namedGraph, SD.GRAPH_PROPERTY, gd.getLicense());
 
-		
 		statement(graph, RDF.TYPE, SD.GRAPH_CLASS);
 		statement(graph, VOID.TRIPLES, vf.createLiteral(gd.getTripleCount()));
 		long distinctClasses = gd.getDistinctClassesCount();
 		if (distinctClasses > 0)
 			statement(graph, VOID.CLASSES, vf.createLiteral(distinctClasses));
-		
+
 		for (ClassPartition cp : gd.getClasses()) {
 			final IRI iriOfType = getIRI(cp.getClazz().toString());
 			IRI dataSetClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
@@ -147,7 +146,7 @@ public class ServiceDescriptionStatementGenerator {
 					voidLocation);
 			statement(graph, VOID.PROPERTY_PARTITION, dataSetPropertyPartition);
 		}
-		
+
 		long distinctObjects = gd.getDistinctObjectCount();
 		if (distinctObjects > 0)
 			statement(graph, VOID.DISTINCT_OBJECTS, vf.createLiteral(distinctObjects));
@@ -170,14 +169,14 @@ public class ServiceDescriptionStatementGenerator {
 		if (gd.getDistinctBnodeSubjectCount() > 0)
 			statement(graph, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS,
 					vf.createLiteral(gd.getDistinctBnodeSubjectCount()));
-		
+
 		describeClassPartitions(gd, voidLocation, namedGraph);
 
 		describePredicatePartitions(gd, voidLocation, namedGraph);
 	}
 
 	public IRI getResourceForGraph(IRI graphName, String voidLocation) {
-		return vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName() +"!"+ hash(graphName.stringValue()));
+		return vf.createIRI(voidLocation, "#_graph_" + graphName.getLocalName() + "!" + hash(graphName.stringValue()));
 	}
 
 	private String hash(String graphName) {
@@ -205,9 +204,9 @@ public class ServiceDescriptionStatementGenerator {
 				if (ppcp.getTripleCount() > 0) {
 					statement(bNode, VOID.ENTITIES, vf.createLiteral(ppcp.getTripleCount()));
 				}
-				
+
 			}
-			for (LinkSetToOtherGraph ls: predicate.getLinkSets()) {
+			for (LinkSetToOtherGraph ls : predicate.getLinkSets()) {
 				generateLinkset(voidLocation, dataSetPropertyPartition, ls);
 			}
 			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
@@ -247,7 +246,7 @@ public class ServiceDescriptionStatementGenerator {
 					statement(ppr, VOID.DISTINCT_SUBJECTS, vf.createLiteral(pp.getDistinctSubjectCount()));
 				if (pp.getDistinctObjectCount() > 0L)
 					statement(ppr, VOID.DISTINCT_OBJECTS, vf.createLiteral(pp.getDistinctObjectCount()));
-				for (LinkSetToOtherGraph ls: pp.getLinkSets()) {
+				for (LinkSetToOtherGraph ls : pp.getLinkSets()) {
 
 					generateLinkset(voidLocation, classClassPartition, ls);
 				}
@@ -258,9 +257,10 @@ public class ServiceDescriptionStatementGenerator {
 
 	private void generateClassPartitionsAsLinkset(IRI namedGraph, ClassPartition cp, PredicatePartition pp, IRI ppr,
 			String voidLocation, IRI iriOfType, GraphDescription gp) {
-		for (ClassPartition cpp:pp.getClassPartitions()) {
-			Resource bNode = vf.createIRI(voidLocation, "#linkset_" + hash(pp.getPredicate().getLocalName() + "_"
-					+ cp.getClazz().getLocalName() + "_" + cpp.getClazz().getLocalName()+"_"+gp.getGraph().getLocalName()));
+		for (ClassPartition cpp : pp.getClassPartitions()) {
+			Resource bNode = vf.createIRI(voidLocation,
+					"#linkset_" + hash(pp.getPredicate().getLocalName() + "_" + cp.getClazz().getLocalName() + "_"
+							+ cpp.getClazz().getLocalName() + "_" + gp.getGraph().getLocalName()));
 			statement(bNode, RDF.TYPE, VOID.LINKSET);
 			statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
 			statement(bNode, VOID.SUBJECTS_TARGET, iriOfType);
@@ -270,16 +270,19 @@ public class ServiceDescriptionStatementGenerator {
 	}
 
 	public void generateLinkset(String voidLocation, IRI dataSetClassPartition, LinkSetToOtherGraph ls) {
-		Resource bNode = vf.createIRI(voidLocation, "#linkset_" + hash(ls.getPredicatePartition().getPredicate().stringValue() + "_"
-                + ls.getSourceType().stringValue() + "_" + ls.getTargetType().stringValue()+ ls.getOtherGraph().getGraph()) + ls.getPredicatePartition());
+		Resource bNode = vf.createIRI(voidLocation, "#linkset_"
+				+ hash(ls.getPredicatePartition().getPredicate().stringValue() + "_" + ls.getSourceType().stringValue()
+						+ "_" + ls.getTargetType().stringValue() + ls.getOtherGraph().getGraph())
+				+ ls.getPredicatePartition());
 		statement(bNode, RDF.TYPE, VOID.LINKSET);
 		statement(bNode, VOID.LINK_PREDICATE, ls.getPredicatePartition().getPredicate());
 		statement(bNode, VOID.SUBJECTS_TARGET, dataSetClassPartition);
 		if (ls.getTripleCount() > 0) {
 			statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
 		}
-		statement(bNode, VOID.OBJECTS_TARGET, getResourceForPartition(ls.getOtherGraph().getGraph(), ls.getTargetType(), voidLocation));
-		if(ls.getLinkingGraph() != null) {
+		statement(bNode, VOID.OBJECTS_TARGET,
+				getResourceForPartition(ls.getOtherGraph().getGraph(), ls.getTargetType(), voidLocation));
+		if (ls.getLinkingGraph() != null) {
 			statement(bNode, VOID.SUBSET, getResourceForGraph(ls.getLinkingGraph(), voidLocation));
 		}
 	}
