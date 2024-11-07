@@ -445,6 +445,11 @@ public class Generate implements Callable<Integer> {
 				graphNames = FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
+		//Ensure that the graph description exists so that we won't have an issue
+		// accessing them at any point.
+		for (var graphName:graphNames) {
+			getOrCreateGraphDescriptionObject(graphName, sd);
+		}
 
 		if (countDistinctObjects && countDistinctSubjects && isvirtuoso) {
 			for (String graphName : graphNames) {
