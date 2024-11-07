@@ -31,7 +31,8 @@ java -jar target/void-generator-*uber.jar --help
 java -jar target/void-generator-*uber.jar \
     --user dba \
     --password dba \
-    -r jdbc:virtuoso://localhost:1111/charset=UTF-8 \ # note the localhost and "isql-t" port
+    --virtuoso-jdbc=jdbc:virtuoso://localhost:1111/charset=UTF-8 \ # note the localhost and "isql-t" port
+    -r "https://YOUR_SPARQL_ENDPOINT/sparql" \
     -s void-file-locally-stored.ttl \
     -i "https://YOUR_SPARQL_ENDPOINT/.well-known/void"
 ```
