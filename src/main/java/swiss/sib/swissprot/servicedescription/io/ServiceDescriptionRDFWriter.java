@@ -11,6 +11,7 @@ import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
 
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescriptionStatementGenerator;
@@ -22,7 +23,7 @@ public class ServiceDescriptionRDFWriter {
 
 	public static void write(ServiceDescription sdg, IRI iriOfVoid, RDFFormat f, OutputStream os, IRI iriOfEndpoint) {
 		RDFWriter rh = Rio.createWriter(f, os);
-
+		rh.getWriterConfig().set(BasicWriterSettings.PRETTY_PRINT, true);
 		rh.startRDF();
 		rh.handleNamespace(RDF.PREFIX, RDF.NAMESPACE);
 		rh.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
