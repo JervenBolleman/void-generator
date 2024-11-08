@@ -264,7 +264,7 @@ public class ServiceDescriptionStatementGenerator {
 			statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
 			statement(bNode, VOID.SUBJECTS_TARGET, iriOfType);
 			statement(bNode, VOID.OBJECTS_TARGET, getResourceForPartition(namedGraph, cpp.getClazz(), voidLocation));
-			statement(bNode, VOID.SUBSET, namedGraph);
+			statement(namedGraph, VOID.SUBSET, bNode);
 		}
 	}
 
@@ -282,7 +282,7 @@ public class ServiceDescriptionStatementGenerator {
 		statement(bNode, VOID.OBJECTS_TARGET,
 				getResourceForPartition(ls.getOtherGraph().getGraph(), ls.getTargetType(), voidLocation));
 		if (ls.getLinkingGraph() != null) {
-			statement(bNode, VOID.SUBSET, getResourceForGraph(ls.getLinkingGraph(), voidLocation));
+			statement(getResourceForGraph(ls.getLinkingGraph(), voidLocation), VOID.SUBSET, bNode);
 		}
 	}
 
