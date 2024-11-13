@@ -412,7 +412,8 @@ public class Generate implements Callable<Integer> {
 						// This is ok we just try again in the loop.
 					}
 					if (loop == 60) {
-						tasks.stream().filter(QueryCallable::isRunning).forEach(t -> {
+						//We make a defensive copy of the tasks to avoid concurrent modification exceptions
+						new ArrayList<>(tasks).stream().filter(QueryCallable::isRunning).forEach(t -> {
 							log.info("Running: " + t.getClass() + " -> " + t.getQuery());
 						});
 						loop = 0;
