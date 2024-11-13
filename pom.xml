@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>swiss.sib.swiss-prot</groupId>
+  <groupId>io.github.jervenbolleman</groupId>
   <artifactId>void-generator</artifactId>
   <packaging>jar</packaging>
-  <version>0.6-SNAPSHOT</version>
+  <version>0.6</version>
+  <name>void-generator</name>
+  <description>Generate void descriptions for SPARQL endpoints.</description>
+  <url>https://github.com/jervenbolleman/void-generator</url>
+  <scm>
+    <url>https://github.com/jervenbolleman/void-generator</url>
+    <developerConnection>Jerven Bolleman</developerConnection>
+  </scm>
   <properties>
     <rdf4j.version>4.3.12</rdf4j.version>
     <virt.rdf4j.version>1.17</virt.rdf4j.version>
@@ -12,6 +19,25 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <picocli.version>4.7.6</picocli.version>
   </properties>
+  <licenses>
+    <license>
+      <name>MIT</name>
+      <url>https://github.com/JervenBolleman/void-generator/blob/main/LICENSE.md</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>jerven</id>
+      <name>Jerven Bolleman</name>
+      <email>jerven.bolleman@sib.swiss</email>
+      <organization>SIB Swiss Institute of Bioinformatics</organization>
+      <organizationUrl>https://www.sib.swiss</organizationUrl>
+      <roles>
+        <role>developer</role>
+      </roles>
+    </developer>
+  </developers>
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -196,6 +222,59 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>0.7.0</version>
+        <extensions>true</extensions>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.3.0</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <keyname>${gpg.keyname}</keyname>
+          <passphraseServerId>${gpg.keyname}</passphraseServerId>
+        </configuration>
       </plugin>
     </plugins>
     <resources>
