@@ -65,6 +65,8 @@ public class ServiceDescriptionRDFReader {
 			GraphDescription gd = new GraphDescription();
 			gd.setGraph(namedGraph);
 			sd.putGraphDescription(gd);
+			getAndSetOne(source, namedGraph, DCTERMS.LICENSE, null, Statement::getObject,
+					o -> gd.setLicense((IRI) o));
 			
 			IRI graphIri = (IRI) getOne(source, namedGraph, SD.GRAPH_PROPERTY, null, Statement::getObject);
 			getAndSetOne(source, namedGraph, SD.NAME, null, Statement::getObject,

@@ -48,11 +48,13 @@ public class ServiceDescriptionStatementGenerator {
 		}
 
 		describeDefaultGraph(item, defaultGraphId, calendar);
-		Resource graphCollection = vf.createBNode();
-		statement(endpoint, SD.AVAILBLE_GRAPHS, graphCollection);
+		Resource graphCollectionId = vf.createIRI(iriOfVoid.getNamespace(),
+				iriOfVoid.getLocalName() + "#sparql-graph-collection");
+		
+		statement(endpoint, SD.AVAILBLE_GRAPHS, graphCollectionId);
 
 		for (GraphDescription gd : item.getGraphs()) {
-			statement(graphCollection, SD.NAMED_GRAPH_PROPERTY, getIRI(gd.getGraphName()));
+			statement(graphCollectionId, SD.NAMED_GRAPH_PROPERTY, getIRI(gd.getGraphName()));
 		}
 
 		for (GraphDescription gd : item.getGraphs())
