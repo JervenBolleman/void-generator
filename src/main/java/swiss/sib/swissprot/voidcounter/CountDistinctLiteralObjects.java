@@ -69,7 +69,7 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private Long pureSparql(RepositoryConnection connection) {
 		setQuery("SELECT (count(distinct ?object) AS ?objects) WHERE { GRAPH <" + graphname
 				+ "> {?subject ?predicate ?object . FILTER (isLiteral(?object))}}");
-		return Helper.getSingleLongFromSparql(query, connection, "objects");
+		return Helper.getSingleLongFromSparql(getQuery(), connection, "objects");
 	}
 
 	private Long virtuosoOptimized(RepositoryConnection connection) {
@@ -78,7 +78,7 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 				+ gd.getGraphName() + "') AND RDF_IS_LITERAL(RDF_QUAD.O) = 1");
 		long countOfLiterals = 0;
 		try (java.sql.Statement stat = vrc.createStatement()) {
-			try (ResultSet res = stat.executeQuery(query)) {
+			try (ResultSet res = stat.executeQuery(getQuery())) {
 				log.debug("Counting literal objects for " + graphname);
 				while (res.next()) {
 					countOfLiterals = res.getLong(1);

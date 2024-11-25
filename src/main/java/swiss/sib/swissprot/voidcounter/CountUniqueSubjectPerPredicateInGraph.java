@@ -58,15 +58,15 @@ public class CountUniqueSubjectPerPredicateInGraph
 		    && predicatePartition.getTripleCount() > SWITCH_TO_OPTIMIZED_COUNT_AT)
 		{
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-			query = "SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-			    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicatePartition.getPredicate() + "')";
-			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, query);
+			setQuery("SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+			    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicatePartition.getPredicate() + "')");
+			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, getQuery());
 		}
 		else
 		{
-			query = "SELECT (count(distinct ?subject) AS ?subjects) WHERE { GRAPH <"
-			    + gd.getGraphName() + "> {?subject <" + predicatePartition.getPredicate() + "> ?object}}";
-			return Helper.getSingleLongFromSparql(query, connection, SUBJECTS);
+			setQuery("SELECT (count(distinct ?subject) AS ?subjects) WHERE { GRAPH <"
+			    + gd.getGraphName() + "> {?subject <" + predicatePartition.getPredicate() + "> ?object}}");
+			return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 		}
 	}
 

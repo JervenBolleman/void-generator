@@ -78,7 +78,7 @@ public class CountUniqueObjectsPerPredicateInGraph
 		{
 			setQuery("SELECT (count(distinct ?object) as ?objects) WHERE { GRAPH <"
 			    + gd.getGraphName() + "> {?subject <" + predicate + "> ?object}}");
-			return Helper.getSingleLongFromSparql(query, connection, OBJECTS);
+			return Helper.getSingleLongFromSparql(getQuery(), connection, OBJECTS);
 		}
 	}
 
@@ -92,7 +92,7 @@ public class CountUniqueObjectsPerPredicateInGraph
 		Connection vrc = virtuosoRepositoryConnection.getQuadStoreConnection();
 		try (java.sql.Statement stat = vrc.createStatement())
 		{
-			try (ResultSet res = stat.executeQuery(query))
+			try (ResultSet res = stat.executeQuery(getQuery()))
 			{
 				log.debug(
 				    "Counting literal objects for " + gd.getGraphName() + " and predicate " + predicate);
@@ -123,7 +123,7 @@ public class CountUniqueObjectsPerPredicateInGraph
 		setQuery("SELECT iri_id_num(RDF_QUAD.O) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
 		    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
 		    + "') AND isiri_id(RDF_QUAD.O) = 1");
-		return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, query);
+		return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, getQuery());
 	}
 
 	@Override

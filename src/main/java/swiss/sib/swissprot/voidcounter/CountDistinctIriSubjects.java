@@ -63,13 +63,13 @@ public final class CountDistinctIriSubjects
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 			setQuery("SELECT COUNT(DISTINCT(iri_id_num(RDF_QUAD.S))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
 			    + gd.getGraphName() + "') AND isiri_id(RDF_QUAD.S) > 0 AND is_bnode_iri_id(RDF_QUAD.S) = 0");
-			return VirtuosoFromSQL.getSingleLongFromSql(query, (VirtuosoRepositoryConnection) localConnection);
+			return VirtuosoFromSQL.getSingleLongFromSql(getQuery(), (VirtuosoRepositoryConnection) localConnection);
 		}
 		else
 		{
 			setQuery("SELECT (COUNT(DISTINCT(?subject)) AS ?subjects) WHERE {GRAPH <"
 			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isIri(?s))}}");
-			return Helper.getSingleLongFromSparql(query, localConnection, SUBJECTS);
+			return Helper.getSingleLongFromSparql(getQuery(), localConnection, SUBJECTS);
 		}
 	}
 	
@@ -80,7 +80,7 @@ public final class CountDistinctIriSubjects
 		{
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 			setQuery("SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.S) > 0 AND is_bnode_iri_id(RDF_QUAD.S) = 0");
-			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso((VirtuosoRepositoryConnection) localConnection, query);
+			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso((VirtuosoRepositoryConnection) localConnection, getQuery());
 		}
 		else
 		{

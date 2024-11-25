@@ -82,12 +82,12 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement, Roaring64NavigableMap roaringBitmap)
 			throws SQLException {
 
-		query = queryForGraph();
+		setQuery(queryForGraph());
 		int i = 0, j = 0;
 
 		long[] temp = new long[1024 * 16];
 		long previous = 0;
-		try (ResultSet rs = createStatement.executeQuery(query)) {
+		try (ResultSet rs = createStatement.executeQuery(getQuery())) {
 			if (rs.next()) {
 				previous = rs.getLong(1);
 				// roaringBitmap.add(previous);

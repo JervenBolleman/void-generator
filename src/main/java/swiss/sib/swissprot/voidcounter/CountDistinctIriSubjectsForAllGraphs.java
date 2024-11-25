@@ -40,7 +40,7 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 		this.sd = sd;
 		this.saver = saver;
 		this.writeLock = writeLock;
-		query = COUNT_DISTINCT_SUBJECT_IRI_QUERY;
+		setQuery(COUNT_DISTINCT_SUBJECT_IRI_QUERY);
 	}
 
 	@Override
@@ -62,7 +62,7 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {	
 		assert !(connection instanceof VirtuosoRepositoryConnection);
-		return Helper.getSingleLongFromSparql(COUNT_DISTINCT_SUBJECT_IRI_QUERY, connection, SUBJECTS);
+		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 	}
 
 	@Override

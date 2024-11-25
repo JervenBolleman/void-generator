@@ -44,9 +44,8 @@ public final class CountDistinctIriObjectsInAGraphVirtuoso extends CountDistinct
 
 	@Override
 	protected String queryForGraph() {
-		query = "SELECT iri_id_num(RDF_QUAD.O) from RDF_QUAD table option (index RDF_QUAD_POGS) where isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0 AND RDF_QUAD.G = iri_to_id('"
+		return "SELECT iri_id_num(RDF_QUAD.O) from RDF_QUAD table option (index RDF_QUAD_POGS) where isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0 AND RDF_QUAD.G = iri_to_id('"
 				+ graphIri + "')";
-		return query;
 	}
 	
 	@Override

@@ -89,22 +89,22 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 			RepositoryConnection connection) {
 		// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 		final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection).getQuadStoreConnection();
-		query = "SELECT DISTINCT t.dt FROM (SELECT TOP 100000 RDF_DATATYPE_OF_OBJ(PO.O) dt "
+		setQuery("SELECT DISTINCT t.dt FROM (SELECT TOP 100000 RDF_DATATYPE_OF_OBJ(PO.O) dt "
 				+ "FROM RDF_QUAD PO, RDF_QUAD ST WHERE  ST.S=PO.S AND "
 				+ " ST.P=iri_to_id('http://www.w3.org/1999/02/22-rdf-syntax-ns#type') AND ST.O=iri_to_id('" + sourceType
 				+ "') AND " + " PO.P=iri_to_id('" + predicate + "') AND " + " isiri_id(PO.O) = 0 AND "
 				+ " PO.G=iri_to_id('" + gd.getGraphName() + "') AND " + " ST.G=iri_to_id('" + gd.getGraphName()
-				+ "'))t";
+				+ "'))t");
 		try (final Statement createStatement = quadStoreConnection.createStatement()) {
 
-			try (ResultSet rs = createStatement.executeQuery(query)) {
+			try (ResultSet rs = createStatement.executeQuery(getQuery())) {
 				while (rs.next()) {
 					IRI datatype = SimpleValueFactory.getInstance().createIRI(rs.getString(1));
 					datatypes.add(datatype);
 				}
 			}
 		} catch (SQLException e) {
-			throw new RuntimeException(query, e);
+			throw new RuntimeException(getQuery(), e);
 		}
 	}
 

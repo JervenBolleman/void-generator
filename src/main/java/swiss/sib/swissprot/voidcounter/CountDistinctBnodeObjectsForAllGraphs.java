@@ -133,8 +133,8 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 	}
 
 	protected void extractUniqueIRIIdsPerGraph(final Statement createStatement) throws SQLException {
-		query = COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL;
-		try (ResultSet rs = createStatement.executeQuery(COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL)) {
+		setQuery(COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL);
+		try (ResultSet rs = createStatement.executeQuery(getQuery())) {
 			while (rs.next()) {
 				long iriId = rs.getLong(1);
 				long graphId = rs.getLong(2);

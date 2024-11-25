@@ -150,7 +150,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		final ReentrantLock objLock = new ReentrantLock();
 		AddedStatus subjectIdx = new AddedStatus(0, 0, new Roaring64NavigableMap(), subLock);
 		AddedStatus objectIdx = new AddedStatus(0, 0, new Roaring64NavigableMap(), objLock);
-		try (ResultSet rs = createStatement.executeQuery(query)) {
+		try (ResultSet rs = createStatement.executeQuery(getQuery())) {
 			while (rs.next()) {
 				subjectIdx = add(subjects, subjectIdx, rs.getLong(1));
 				objectIdx = add(objects, objectIdx, rs.getLong(2));

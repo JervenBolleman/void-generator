@@ -374,16 +374,14 @@ public class Generate implements Callable<Integer> {
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, boolean isVirtuoso, Semaphore limit) {
 		String voidGraphUri = voidGraph.toString();
-		if (!graphNames.contains(voidGraphUri)) {
-			scheduleBigCountsPerGraph(sd, voidGraphUri, saver, limit);
-			Lock writeLock = rwLock.writeLock();
-			if (isVirtuoso) {
-				CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
-						sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, finishedQueries);
-				schedule(cdso);
-			}
-			countSpecificThingsPerGraph(sd, knownPredicates, voidGraphUri, limit, saver);
+		scheduleBigCountsPerGraph(sd, voidGraphUri, saver, limit);
+		Lock writeLock = rwLock.writeLock();
+		if (isVirtuoso) {
+			CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
+					sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, finishedQueries);
+			schedule(cdso);
 		}
+		countSpecificThingsPerGraph(sd, knownPredicates, voidGraphUri, limit, saver);
 	}
 
 	private void waitForCountToFinish(List<Future<Exception>> futures) {

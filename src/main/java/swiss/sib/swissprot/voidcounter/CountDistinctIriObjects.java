@@ -74,21 +74,20 @@ public final class CountDistinctIriObjects
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 			
 			if (gd != null)
-				query = "SELECT (COUNT(DISTINCT(iri_id_num(RDF_QUAD.O)))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-				    + gd.getGraphName() + "') AND isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0";
+				setQuery("SELECT (COUNT(DISTINCT(iri_id_num(RDF_QUAD.O)))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
+				    + gd.getGraphName() + "') AND isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0");
 			else
-				query = "SELECT (COUNT(DISTINCT(iri_id_num(RDF_QUAD.O)))) FROM RDF_QUAD AND isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0";
-			return VirtuosoFromSQL.getSingleLongFromSql(query, (VirtuosoRepositoryConnection) connection);
+				setQuery("SELECT (COUNT(DISTINCT(iri_id_num(RDF_QUAD.O)))) FROM RDF_QUAD AND isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0");
+			return VirtuosoFromSQL.getSingleLongFromSql(getQuery(), (VirtuosoRepositoryConnection) connection);
 		}
 		else if (gd != null)
 		{
-			query = "SELECT (count(distinct(?object)) as ?objects) { GRAPH <"
-			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER (isIri(?object))}}";
-			return Helper.getSingleLongFromSparql(query, connection, "objects");
+			setQuery("SELECT (count(distinct(?object)) as ?objects) { GRAPH <"
+			    + gd.getGraphName() + "> {?subject ?predicate ?object . FILTER (isIri(?object))}}");
 		} else {
-			query = COUNT_DISTINCT_SUBJECT_QUERY;
-			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_SUBJECT_QUERY, connection, "objects");
+			setQuery(COUNT_DISTINCT_SUBJECT_QUERY);
 		}
+		return Helper.getSingleLongFromSparql(getQuery(), connection, "objects");
 	}
 
 	@Override

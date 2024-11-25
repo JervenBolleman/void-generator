@@ -40,7 +40,9 @@ public class ServiceDescriptionStatementGenerator {
 		statement(endpoint, SD.SUPPORTED_LANGUAGE, SD.SPARQL_11_QUERY);
 		statement(endpoint, SD.FEATURE_PROPERTY, SD.UNION_DEFAULT_GRAPH);
 		statement(endpoint, SD.FEATURE_PROPERTY, SD.BASIC_FEDERATED_QUERY);
-
+		if (item.getTitle() != null) {
+			statement(endpoint, DCTERMS.TITLE, vf.createLiteral(item.getTitle()));	
+		}
 		LocalDate calendar = describeDefaultDataset(item, defaultDatasetId, defaultGraphId);
 
 		for (GraphDescription gd : item.getGraphs()) {
@@ -172,9 +174,9 @@ public class ServiceDescriptionStatementGenerator {
 			statement(graph, VOID_EXT.DISTINCT_BLANK_NODE_SUBJECTS,
 					vf.createLiteral(gd.getDistinctBnodeSubjectCount()));
 
-		describeClassPartitions(gd, voidLocation, namedGraph);
+		describeClassPartitions(gd, voidLocation, namedGraph, graph);
 
-		describePredicatePartitions(gd, voidLocation, namedGraph);
+		describePredicatePartitions(gd, voidLocation, namedGraph, graph);
 	}
 
 	public IRI getResourceForGraph(IRI graphName, String voidLocation) {
@@ -185,7 +187,7 @@ public class ServiceDescriptionStatementGenerator {
 		return new MD5().evaluate(vf, vf.createLiteral(graphName)).stringValue().substring(0, 8);
 	}
 
-	protected void describePredicatePartitions(GraphDescription gd, String voidLocation, IRI namedGraph) {
+	protected void describePredicatePartitions(GraphDescription gd, String voidLocation, IRI namedGraph, IRI graph) {
 		for (PredicatePartition predicate : gd.getPredicates()) {
 			IRI dataSetPropertyPartition = getResourceForPartition(namedGraph, getIRI(predicate.getPredicate()),
 					voidLocation);
@@ -209,7 +211,7 @@ public class ServiceDescriptionStatementGenerator {
 
 			}
 			for (LinkSetToOtherGraph ls : predicate.getLinkSets()) {
-				generateLinkset(voidLocation, dataSetPropertyPartition, ls);
+				generateLinkset(voidLocation, dataSetPropertyPartition, ls, graph);
 			}
 			generateDatatypePartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
 			generateObjectPartitions(namedGraph, predicate, dataSetPropertyPartition, voidLocation);
@@ -224,7 +226,7 @@ public class ServiceDescriptionStatementGenerator {
 		}
 	}
 
-	protected void describeClassPartitions(GraphDescription gd, String voidLocation, IRI namedGraph) {
+	protected void describeClassPartitions(GraphDescription gd, String voidLocation, IRI namedGraph, IRI graph) {
 		for (ClassPartition cp : gd.getClasses()) {
 			final IRI iriOfType = getIRI(cp.getClazz().toString());
 			IRI classClassPartition = getResourceForPartition(namedGraph, iriOfType, voidLocation);
@@ -249,15 +251,15 @@ public class ServiceDescriptionStatementGenerator {
 					statement(ppr, VOID.DISTINCT_OBJECTS, vf.createLiteral(pp.getDistinctObjectCount()));
 				for (LinkSetToOtherGraph ls : pp.getLinkSets()) {
 
-					generateLinkset(voidLocation, classClassPartition, ls);
+					generateLinkset(voidLocation, classClassPartition, ls, graph);
 				}
-				generateClassPartitionsAsLinkset(namedGraph, cp, pp, ppr, voidLocation, classClassPartition, gd);
+				generateClassPartitionsAsLinkset(namedGraph, cp, pp, ppr, voidLocation, classClassPartition, gd, graph);
 			}
 		}
 	}
 
 	private void generateClassPartitionsAsLinkset(IRI namedGraph, ClassPartition cp, PredicatePartition pp, IRI ppr,
-			String voidLocation, IRI iriOfType, GraphDescription gp) {
+			String voidLocation, IRI iriOfType, GraphDescription gp, IRI graph) {
 		for (ClassPartition cpp : pp.getClassPartitions()) {
 			Resource bNode = vf.createIRI(voidLocation,
 					"#linkset_" + hash(pp.getPredicate().getLocalName() + "_" + cp.getClazz().getLocalName() + "_"
@@ -266,11 +268,11 @@ public class ServiceDescriptionStatementGenerator {
 			statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
 			statement(bNode, VOID.SUBJECTS_TARGET, iriOfType);
 			statement(bNode, VOID.OBJECTS_TARGET, getResourceForPartition(namedGraph, cpp.getClazz(), voidLocation));
-			statement(namedGraph, VOID.SUBSET, bNode);
+			statement(graph, VOID.SUBSET, bNode);
 		}
 	}
 
-	public void generateLinkset(String voidLocation, IRI dataSetClassPartition, LinkSetToOtherGraph ls) {
+	public void generateLinkset(String voidLocation, IRI dataSetClassPartition, LinkSetToOtherGraph ls, IRI graph) {
 		Resource bNode = vf.createIRI(voidLocation, "#linkset_"
 				+ hash(ls.getPredicatePartition().getPredicate().stringValue() + "_" + ls.getSourceType().stringValue()
 						+ "_" + ls.getTargetType().stringValue() + ls.getOtherGraph().getGraph())
@@ -284,7 +286,7 @@ public class ServiceDescriptionStatementGenerator {
 		statement(bNode, VOID.OBJECTS_TARGET,
 				getResourceForPartition(ls.getOtherGraph().getGraph(), ls.getTargetType(), voidLocation));
 		if (ls.getLinkingGraph() != null) {
-			statement(getResourceForGraph(ls.getLinkingGraph(), voidLocation), VOID.SUBSET, bNode);
+			statement(graph, VOID.SUBSET, bNode);
 		}
 	}
 

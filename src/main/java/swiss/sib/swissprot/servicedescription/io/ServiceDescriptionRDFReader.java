@@ -1,9 +1,7 @@
 package swiss.sib.swissprot.servicedescription.io;
 
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -40,24 +38,26 @@ public class ServiceDescriptionRDFReader {
 
 		Resource serviceIri = getOne(source, null, RDF.TYPE, SD.SERVICE, Statement::getSubject);
 
-		IRI endpoint = (IRI) getOne(source, serviceIri, SD.ENDPOINT, null, Statement::getObject);
+		getAndSetOne(source, serviceIri, SD.ENDPOINT, null, Statement::getObject, e-> sd.setEndpoint((IRI) e));
 		
-		sd.setEndpoint(endpoint);
+		getAndSetOne(source, serviceIri, DCTERMS.TITLE, null, Statement::getObject,
+				o -> sd.setTitle(o.stringValue()));
 		
 		Resource defaultDataset = (Resource) getOne(source, serviceIri, SD.DEFAULT_DATASET, null, Statement::getObject);
 
 		Resource defaultGraph = (Resource) getOne(source, defaultDataset, SD.DEFAULT_GRAPH, null, Statement::getObject);
 
-		getAndSetOne(source, defaultDataset, DCTERMS.ISSUED, null, Statement::getObject, (o) -> {
+		getAndSetOne(source, defaultDataset, DCTERMS.ISSUED, null, Statement::getObject, o -> {
 			XMLGregorianCalendar defaultDatasetIssue = ((Literal) o).calendarValue();
 			sd.setReleaseDate(LocalDate.of(defaultDatasetIssue.getYear(), defaultDatasetIssue.getMonth(),
 					defaultDatasetIssue.getDay()));
 		});
 		getAndSetOne(source, defaultDataset, PAV.VERSION, null, Statement::getObject,
-				(o) -> sd.setVersion(o.stringValue()));
+				o -> sd.setVersion(o.stringValue()));
 		getAndSetOne(source, defaultGraph, DCTERMS.TITLE, null, Statement::getObject,
-				(o) -> sd.setTitle(o.stringValue()));
+				o -> sd.setTitle(o.stringValue()));
 
+		
 		Iterator<Statement> namedGraphs = source.getStatements(defaultDataset, SD.NAMED_GRAPH_PROPERTY, null)
 				.iterator();
 		while (namedGraphs.hasNext()) {
@@ -67,6 +67,8 @@ public class ServiceDescriptionRDFReader {
 			sd.putGraphDescription(gd);
 			getAndSetOne(source, namedGraph, DCTERMS.LICENSE, null, Statement::getObject,
 					o -> gd.setLicense((IRI) o));
+			getAndSetOne(source, namedGraph, DCTERMS.TITLE, null, Statement::getObject,
+					o -> gd.setTitle(o.stringValue()));
 			
 			IRI graphIri = (IRI) getOne(source, namedGraph, SD.GRAPH_PROPERTY, null, Statement::getObject);
 			getAndSetOne(source, namedGraph, SD.NAME, null, Statement::getObject,
@@ -87,8 +89,7 @@ public class ServiceDescriptionRDFReader {
 					o -> gd.setDistinctIriSubjectCount(asLong(o)));
 	
 			Iterator<Statement> predicates = source.getStatements(graphIri, VOID.PROPERTY_PARTITION, null).iterator();
-			Set<PredicatePartition> predicates2 = gd.getPredicates();
-			handlePredicatePartition(source, predicates, predicates2, gd.getPredicates()::add);
+			handlePredicatePartition(source, predicates, gd.getPredicates()::add);
 
 			Iterator<Statement> classPartitions = source.getStatements(graphIri, VOID.CLASS_PARTITION, null)
 					.iterator();
@@ -99,14 +100,14 @@ public class ServiceDescriptionRDFReader {
 				gd.getClasses().add(cp);
 				Iterator<Statement> cpPredicates = source.getStatements(graphIri, VOID.PROPERTY_PARTITION, null)
 						.iterator();
-				handlePredicatePartition(source, cpPredicates, cp.getPredicatePartitions(), cp::putPredicatePartition);
+				handlePredicatePartition(source, cpPredicates, cp::putPredicatePartition);
 			}
 		}
 		return sd;
 	}
 
 	private static void handlePredicatePartition(Model source, Iterator<Statement> predicates,
-			Collection<PredicatePartition> predicates2, Consumer<PredicatePartition> cp) {
+			Consumer<PredicatePartition> cp) {
 		while (predicates.hasNext()) {
 			Statement next = predicates.next();
 			IRI predicate = (IRI) next.getObject();

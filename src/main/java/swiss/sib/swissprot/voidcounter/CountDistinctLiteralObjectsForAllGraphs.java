@@ -78,7 +78,7 @@ public final class CountDistinctLiteralObjectsForAllGraphs extends QueryCallable
 	private Long getCount(Connection vrc, String countOfInlineQuery) {
 		try (java.sql.Statement stat = vrc.createStatement()) {
 			setQuery(countOfInlineQuery);
-			try (ResultSet res = stat.executeQuery(query)) {
+			try (ResultSet res = stat.executeQuery(getQuery())) {
 				log.debug("Counting literal objects for all graphs");
 				long countOfLiterals = 0;
 				while (res.next()) {
