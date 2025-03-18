@@ -13,8 +13,8 @@
     <developerConnection>Jerven Bolleman</developerConnection>
   </scm>
   <properties>
-    <rdf4j.version>4.3.12</rdf4j.version>
-    <virt.rdf4j.version>1.17</virt.rdf4j.version>
+    <rdf4j.version>5.1.2</rdf4j.version>
+    <virt.rdf4j.version>1.19</virt.rdf4j.version>
     <virt.jdbc.version>3.123</virt.jdbc.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <picocli.version>4.7.6</picocli.version>
@@ -116,7 +116,7 @@
     </dependency>
     <dependency>
       <groupId>com.openlinksw</groupId>
-      <artifactId>virt_rdf4j_v4_0</artifactId>
+      <artifactId>virt_rdf4j_v5_1</artifactId>
       <version>${virt.rdf4j.version}</version>
     </dependency>
     <dependency>
