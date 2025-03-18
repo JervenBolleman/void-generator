@@ -132,3 +132,12 @@ WHERE {
   }
 }
 ```
+
+###
+
+Development local install without signing the jar, usefull if working on a machine where
+the gpg toolchain is not configured for public deployment to maven central.
+
+```
+mvn install -Dgpg.skip
+``
