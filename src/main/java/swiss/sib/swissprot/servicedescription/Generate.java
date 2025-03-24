@@ -151,17 +151,18 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--from-test-file" }, description = "generate a void/service description for a test file")
 	private File fromTestFile;
 
-	@Option(names = { "--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be '?clazz'")
+	@Option(names = {
+			"--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be '?clazz'")
 	private String classExclusion;
-	
-	@Option(names = { "--data-release-version" }, description = "Set a 'version' for the sparql-endpoint data and the datasets")
-	private String dataVersion;
-	
 
-	@Option(names = { "--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
+	@Option(names = {
+			"--data-release-version" }, description = "Set a 'version' for the sparql-endpoint data and the datasets")
+	private String dataVersion;
+
+	@Option(names = {
+			"--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
 	private String dataReleaseDate;
 
-	
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -181,9 +182,11 @@ public class Generate implements Callable<Integer> {
 		else
 			this.graphNames = new HashSet<>();
 
-		log.debug("Void listener for " + graphNames.stream().collect(Collectors.joining(", ")));
+		if (log.isDebugEnabled()) {
+			log.debug("Void listener for {}", graphNames.stream().collect(Collectors.joining(", ")));
+		}
 		if (commaSeperatedKnownPredicates != null) {
-			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
+			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(VF::createIRI)
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
@@ -206,14 +209,12 @@ public class Generate implements Callable<Integer> {
 			sr.enableQuadMode(true);
 			sr.setAdditionalHttpHeaders(Map.of("User-Agent", "void-generator"));
 			HttpClientBuilder hcb = HttpClientBuilder.create();
-			hcb.setMaxConnPerRoute(maxConcurrency)
-							.setMaxConnTotal(maxConcurrency)
-							.setUserAgent("void-generator-robot");
+			hcb.setMaxConnPerRoute(maxConcurrency).setMaxConnTotal(maxConcurrency).setUserAgent("void-generator-robot");
 			sr.setHttpClient(hcb.build());
 			repository = sr;
 		}
 		update();
-		//Virtuoso was not started by us so we should not send it a shutdown command
+		// Virtuoso was not started by us so we should not send it a shutdown command
 		if (virtuosoJdcb == null) {
 			repository.shutDown();
 		}
@@ -237,50 +238,50 @@ public class Generate implements Callable<Integer> {
 	private final ExecutorService executors;
 
 	private final Semaphore limit;
-	
+
 	public final CompletableFuture<Exception> schedule(QueryCallable<?> task) {
 		scheduledQueries.incrementAndGet();
 		tasks.add(task);
-		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(()->{return task.call();}, executors);
-		
+		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(task::call, executors);
+
 		futures.add(cf);
 		return cf;
 	}
 
 	public void update() {
-		log.debug("Void listener for " + graphNames.stream().collect(Collectors.joining(", ")));
+		if (log.isDebugEnabled())
+			log.debug("Void listener for {}", graphNames.stream().collect(Collectors.joining(", ")));
 		if (dataReleaseDate != null) {
 			sd.setReleaseDate(LocalDate.from(DateTimeFormatter.ISO_DATE.parse(dataReleaseDate)));
 		}
 		sd.setVersion(dataVersion);
 		if (commaSeperatedKnownPredicates != null) {
-			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(s -> VF.createIRI(s))
+			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(VF::createIRI)
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
 		this.iriOfVoid = SimpleValueFactory.getInstance().createIRI(iriOfVoidAsString);
 		this.distinctSubjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "subject-bitsets-per-graph");
 		this.distinctObjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "object-bitsets-per-graph");
-		
 
 		ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris = readGraphsWithSerializedBitMaps(
 				this.distinctSubjectIrisFile);
 		ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris = readGraphsWithSerializedBitMaps(
 				this.distinctObjectIrisFile);
-		Consumer<ServiceDescription> saver = (sdg) -> writeServiceDescriptionAndGraphs(distinctSubjectIris,
+		Consumer<ServiceDescription> saver = sdg -> writeServiceDescriptionAndGraphs(distinctSubjectIris,
 				distinctObjectIris, sdg, iriOfVoid);
 
 		scheduleCounters(sd, saver, distinctSubjectIris, distinctObjectIris);
 
 		waitForCountToFinish(futures);
 		if (add) {
-			log.debug("Starting the count of the void data itself using " + maxConcurrency);
+			log.debug("Starting the count of the void data itself using {}", maxConcurrency);
 			countTheVoidDataItself(iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
 					repository instanceof VirtuosoRepository, limit);
 			waitForCountToFinish(futures);
 			saveResults(iriOfVoid, saver);
 
-			log.debug("Starting the count of the void data itself a second time using " + maxConcurrency);
+			log.debug("Starting the count of the void data itself a second time using {}", maxConcurrency);
 
 			countTheVoidDataItself(iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
 					repository instanceof VirtuosoRepository, limit);
@@ -304,7 +305,7 @@ public class Generate implements Callable<Integer> {
 			} catch (IOException e) {
 				log.error("", e);
 			} catch (ClassNotFoundException e) {
-				log.error("", e);
+				log.error("Class can't be found code out of sync", e);
 			}
 		}
 		return map;
@@ -336,7 +337,9 @@ public class Generate implements Callable<Integer> {
 			ConcurrentHashMap<String, Roaring64NavigableMap> map) {
 		if (!targetFile.exists()) {
 			try {
-				targetFile.createNewFile();
+				if (!targetFile.createNewFile()) {
+					throw new RuntimeException("Can't create file we need later");
+				}
 			} catch (IOException e) {
 				throw new RuntimeException("Can't create file we need later:", e);
 			}
@@ -378,7 +381,8 @@ public class Generate implements Callable<Integer> {
 		Lock writeLock = rwLock.writeLock();
 		if (isVirtuoso) {
 			CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
-					sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, finishedQueries);
+					sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit,
+					finishedQueries);
 			schedule(cdso);
 		}
 		countSpecificThingsPerGraph(sd, knownPredicates, voidGraphUri, limit, saver);
@@ -393,30 +397,12 @@ public class Generate implements Callable<Integer> {
 				final int last = futures.size() - 1;
 				final Future<Exception> next = futures.get(last);
 				if (next.isCancelled())
-					log.error("" + next + " was cancelled");
+					log.error("{} was cancelled", next);
 				else if (next.isDone())
 					futures.remove(last);
 				else {
 					log.info("Queries " + finishedQueries.get() + "/" + scheduledQueries.get());
-					try {
-						Exception exception = next.get(1, TimeUnit.MINUTES);
-						futures.remove(last);
-						if (exception != null) {
-							log.error("Something failed", exception);
-						}
-					} catch (CancellationException | ExecutionException e) {
-						log.error("Counting subjects or objects failed", e);
-					} catch (TimeoutException e) {
-						// This is ok we just try again in the loop.
-					}
-					if (loop == 60) {
-						//We make a defensive copy of the tasks to avoid concurrent modification exceptions
-						new ArrayList<>(tasks).stream().filter(QueryCallable::isRunning).forEach(t -> {
-							log.info("Running: " + t.getClass() + " -> " + t.getQuery());
-						});
-						loop = 0;
-					}
-					loop++;
+					loop = checkProgress(futures, loop, last, next);
 				}
 			}
 		} catch (InterruptedException e) {
@@ -434,6 +420,30 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
+	private int checkProgress(List<Future<Exception>> futures, int loop, final int last, final Future<Exception> next)
+			throws InterruptedException {
+		try {
+			Exception exception = next.get(1, TimeUnit.MINUTES);
+			futures.remove(last);
+			if (exception != null) {
+				log.error("Something failed", exception);
+			}
+		} catch (CancellationException | ExecutionException e) {
+			log.error("Counting subjects or objects failed", e);
+		} catch (TimeoutException e) {
+			// This is ok we just try again in the loop.
+		}
+		if (loop == 60) {
+			// We make a defensive copy of the tasks to avoid concurrent modification
+			// exceptions
+			new ArrayList<>(tasks).stream().filter(QueryCallable::isRunning)
+					.forEach(t -> log.info("Running: " + t.getClass() + " -> " + t.getQuery()));
+			loop = 0;
+		}
+		loop++;
+		return loop;
+	}
+
 	private void scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver,
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris) {
@@ -444,9 +454,9 @@ public class Generate implements Callable<Integer> {
 				graphNames = FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
-		//Ensure that the graph description exists so that we won't have an issue
+		// Ensure that the graph description exists so that we won't have an issue
 		// accessing them at any point.
-		for (var graphName:graphNames) {
+		for (var graphName : graphNames) {
 			getOrCreateGraphDescriptionObject(graphName, sd);
 		}
 
@@ -457,13 +467,11 @@ public class Generate implements Callable<Integer> {
 			}
 		} else {
 			if (countDistinctObjects) {
-				countDistinctObjects(sd, saver, distinctObjectIris, writeLock, isvirtuoso, graphNames,
-						limit);
+				countDistinctObjects(sd, saver, writeLock, isvirtuoso, limit);
 			}
 
 			if (countDistinctSubjects) {
-				countDistinctSubjects(sd, saver, distinctSubjectIris, writeLock, isvirtuoso, graphNames,
-						limit);
+				countDistinctSubjects(sd, saver, distinctSubjectIris, writeLock, isvirtuoso, graphNames, limit);
 			}
 		}
 		for (String graphName : graphNames) {
@@ -477,28 +485,22 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private void countDistinctObjects(ServiceDescription sd,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris,
-			Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs, Semaphore limit) {
-		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit,
-				finishedQueries));
-		if (!isvirtuoso) {
-			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock,
-					limit, finishedQueries));
-		} else if (!countDistinctSubjects) {
+	private void countDistinctObjects(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock,
+			boolean isvirtuoso, Semaphore limit) {
+		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
+		if (!isvirtuoso || !countDistinctSubjects) {
 			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock, limit,
-					 finishedQueries));
+					finishedQueries));
 		}
-		schedule(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit, 
-				finishedQueries));
+		schedule(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
 	}
 
-	private void countDistinctSubjects(ServiceDescription sd,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
-			Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs, Semaphore limit) {
+	private void countDistinctSubjects(ServiceDescription sd, Consumer<ServiceDescription> saver,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris, Lock writeLock, boolean isvirtuoso,
+			Collection<String> allGraphs, Semaphore limit) {
 		if (!isvirtuoso) {
-			schedule(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit,
-					finishedQueries));
+			schedule(
+					new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
 		} else if (!countDistinctObjects) {
 			for (String graphName : allGraphs) {
 				schedule(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver, writeLock,
@@ -508,8 +510,8 @@ public class Generate implements Callable<Integer> {
 		schedule(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, finishedQueries, saver));
 	}
 
-	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates,
-			String graphName, Semaphore limit, Consumer<ServiceDescription> saver) {
+	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, String graphName,
+			Semaphore limit, Consumer<ServiceDescription> saver) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (findDistinctClasses && findPredicates && detailedCount) {
 			schedule(new FindPredicatesAndClasses(gd, repository, this::schedule, knownPredicates, rwLock, limit,
@@ -521,24 +523,22 @@ public class Generate implements Callable<Integer> {
 						finishedQueries, saver, sd, null));
 			}
 			if (findDistinctClasses) {
-				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries,
-						saver, this::schedule, sd, classExclusion, null));
+				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries, saver,
+						this::schedule, sd, classExclusion, null));
 			}
 		}
 	}
 
-	private void scheduleBigCountsPerGraph(ServiceDescription sd, String graphName,
-			Consumer<ServiceDescription> saver, Semaphore limit) {
+	private void scheduleBigCountsPerGraph(ServiceDescription sd, String graphName, Consumer<ServiceDescription> saver,
+			Semaphore limit) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		Lock writeLock = rwLock.writeLock();
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			schedule(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit,
-					finishedQueries));
+			schedule(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit, finishedQueries));
 		}
 		if (countDistinctSubjects) {
-			schedule(new CountDistinctBnodeSubjects(gd, sd, repository, writeLock, limit,
-					finishedQueries, saver));
+			schedule(new CountDistinctBnodeSubjects(gd, sd, repository, writeLock, limit, finishedQueries, saver));
 		}
 		schedule(new TripleCount(gd, repository, writeLock, limit, finishedQueries, saver, sd));
 	}
@@ -561,7 +561,7 @@ public class Generate implements Callable<Integer> {
 
 	private void updateGraph(RepositoryConnection connection, IRI voidGraphUri)
 			throws RepositoryException, RDFParseException, IOException {
-		log.debug("Updating " + voidGraphUri);
+		log.debug("Updating {}", voidGraphUri);
 
 		try (InputStream in = new FileInputStream(sdFile)) {
 			RDFXMLParser p = new RDFXMLParser();
@@ -586,8 +586,7 @@ public class Generate implements Callable<Integer> {
 
 				@Override
 				public void handleComment(String comment) throws RDFHandlerException {
-					// TODO Auto-generated method stub
-
+					//Ignore comments
 				}
 
 				@Override
@@ -598,7 +597,7 @@ public class Generate implements Callable<Integer> {
 			p.parse(in);
 		}
 
-		log.debug("Updating " + voidGraphUri + " done");
+		log.debug("Updating {} done", voidGraphUri);
 	}
 
 	private void clearGraph(RepositoryConnection connection, IRI voidGraphUri)
@@ -692,11 +691,21 @@ public class Generate implements Callable<Integer> {
 	public void setAddResultsToStore(boolean add) {
 		this.add = add;
 	}
+
 	/**
 	 * The IRI of the endpoint
+	 * 
 	 * @param rl
 	 */
 	public void setRepositoryLocator(String rl) {
 		this.repositoryLocator = rl;
+	}
+
+	public void setDataVersion(String dataVersion) {
+		this.dataVersion = dataVersion;
+	}
+
+	public void setDataReleaseDate(String dataReleaseDate) {
+		this.dataReleaseDate = dataReleaseDate;
 	}
 }
