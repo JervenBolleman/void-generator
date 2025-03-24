@@ -27,7 +27,7 @@ public class ServiceDescription
 
 	public ServiceDescription()
 	{
-
+		super();
 	}
 	
 	public void reset() {

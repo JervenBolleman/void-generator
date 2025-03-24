@@ -1,5 +1,8 @@
 package swiss.sib.swissprot.servicedescription.io;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -20,7 +23,11 @@ import swiss.sib.swissprot.vocabulary.PAV;
 import swiss.sib.swissprot.vocabulary.VOID_EXT;
 
 public class ServiceDescriptionRDFWriter {
-
+	
+	private ServiceDescriptionRDFWriter() {
+		//Only static methods
+	}
+	
 	public static void write(ServiceDescription sdg, IRI iriOfVoid, RDFFormat f, OutputStream os, IRI iriOfEndpoint) {
 		RDFWriter rh = Rio.createWriter(f, os);
 		rh.getWriterConfig().set(BasicWriterSettings.PRETTY_PRINT, true);
@@ -37,6 +44,14 @@ public class ServiceDescriptionRDFWriter {
 
 		new ServiceDescriptionStatementGenerator(rh).generateStatements(iriOfEndpoint, iriOfVoid, sdg);
 		rh.endRDF();
+	}
+
+	public static void write(ServiceDescription sdg, IRI iriOfVoid, RDFFormat f, File file) {
+		try (FileOutputStream os = new FileOutputStream(file)) {
+			write(sdg, iriOfVoid, f, os, sdg.getEndpoint());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 }

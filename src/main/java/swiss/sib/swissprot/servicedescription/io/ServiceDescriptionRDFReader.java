@@ -56,7 +56,8 @@ public class ServiceDescriptionRDFReader {
 				o -> sd.setVersion(o.stringValue()));
 		getAndSetOne(source, defaultGraph, DCTERMS.TITLE, null, Statement::getObject,
 				o -> sd.setTitle(o.stringValue()));
-
+		getAndSetOne(source, defaultGraph, VOID.TRIPLES, null, Statement::getObject,
+				o -> sd.setTotalTripleCount(asLong(o)));
 		
 		Iterator<Statement> namedGraphs = source.getStatements(defaultDataset, SD.NAMED_GRAPH_PROPERTY, null)
 				.iterator();
