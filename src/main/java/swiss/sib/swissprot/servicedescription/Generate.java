@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -38,9 +40,14 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.commons.rdf.api.BlankNodeOrIRI;
+import org.apache.commons.rdf.api.Quad;
+import org.apache.commons.rdf.api.RDFTerm;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -62,6 +69,10 @@ import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.inrupt.client.spi.RdfService;
+import com.inrupt.client.solid.SolidRDFSource;
+import com.inrupt.client.solid.SolidSyncClient;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -115,7 +126,7 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--virtuoso-jdbc" }, description = "A virtuoso jdbc connection string")
 	private String virtuosoJdcb;
 
-	@Option(names = { "-r", "--repository" }, description = "A SPARQL http/https endpoint location")
+	@Option(names = { "-r", "--repository" }, description = "A SPARQL http/https endpoint location", required = true)
 	private String repositoryLocator;
 
 	@Option(names = { "-f",
@@ -151,17 +162,21 @@ public class Generate implements Callable<Integer> {
 	@Option(names = { "--from-test-file" }, description = "generate a void/service description for a test file")
 	private File fromTestFile;
 
-	@Option(names = { "--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be '?clazz'")
-	private String classExclusion;
-	
-	@Option(names = { "--data-release-version" }, description = "Set a 'version' for the sparql-endpoint data and the datasets")
-	private String dataVersion;
-	
+	@Option(names = { "--from-solid-pod" }, description = "generate a void/service description for a solid pod")
+	private String solidPodIri;
 
-	@Option(names = { "--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
+	@Option(names = {
+			"--filter-expression-to-exclude-classes-from-void" }, description = "Some classes are not interesting for the void file, as they are to rare. Can occur if many classes have instances but the classes do not represent a schema as such. Variable should be '?clazz'")
+	private String classExclusion;
+
+	@Option(names = {
+			"--data-release-version" }, description = "Set a 'version' for the sparql-endpoint data and the datasets")
+	private String dataVersion;
+
+	@Option(names = {
+			"--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
 	private String dataReleaseDate;
 
-	
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -187,37 +202,104 @@ public class Generate implements Callable<Integer> {
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
-		if (virtuosoJdcb != null) {
-			repository = new VirtuosoRepository(virtuosoJdcb, user, password);
-		} else if (fromTestFile != null) {
+		if (repository == null) {
+			if (virtuosoJdcb != null) {
+				repository = new VirtuosoRepository(virtuosoJdcb, user, password);
+			} else if (fromTestFile != null) {
+				MemoryStore ms = new MemoryStore();
+				ms.init();
+
+				repository = new SailRepository(ms);
+				repository.init();
+				try (RepositoryConnection conn = repository.getConnection()) {
+					IRI graph = conn.getValueFactory().createIRI(fromTestFile.toURI().toString());
+					conn.begin();
+					conn.add(fromTestFile, graph);
+					conn.commit();
+				}
+			} else if (solidPodIri != null) {
+//		    RdfService service = ServiceProvider.getRdfService();
+//		    service.toDataset(null, null, classExclusion);
+				loadFromSolidPod();
+
+			} else if (repositoryLocator.startsWith("http")) {
+				SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
+				sr.enableQuadMode(true);
+				sr.setAdditionalHttpHeaders(Map.of("User-Agent", "void-generator"));
+				HttpClientBuilder hcb = HttpClientBuilder.create();
+				hcb.setMaxConnPerRoute(maxConcurrency).setMaxConnTotal(maxConcurrency)
+						.setUserAgent("void-generator-robot");
+				sr.setHttpClient(hcb.build());
+				repository = sr;
+			}
+		}
+		update();
+		// Virtuoso was not started by us so we should not send it a shutdown command
+		if (virtuosoJdcb == null) {
+			repository.shutDown();
+		}
+		return 0;
+	}
+
+	private void loadFromSolidPod() throws URISyntaxException {
+		SolidSyncClient client = SolidSyncClient.getClient();
+		
+		try (SolidRDFSource s = client.read(new URI(solidPodIri), SolidRDFSource.class)) {
+			
 			MemoryStore ms = new MemoryStore();
 			ms.init();
 
 			repository = new SailRepository(ms);
 			repository.init();
 			try (RepositoryConnection conn = repository.getConnection()) {
-				IRI graph = conn.getValueFactory().createIRI(fromTestFile.toURI().toString());
 				conn.begin();
-				conn.add(fromTestFile, graph);
+				Iterable<Quad> iter = s.iterate();
+				int i = 0;
+				for (Quad q : iter) {
+					i++;
+					Resource subj = toResource(q.getSubject());
+					IRI pred = (IRI) toResource(q.getPredicate());
+					Value object = toValue(q.getObject());
+					if (q.getGraphName().isPresent()) {
+						IRI graph = (IRI) toResource(q.getGraphName().get());
+						conn.add(VF.createStatement(subj, pred, object), graph);
+					} else {
+						conn.add(VF.createStatement(subj, pred, object));
+					}
+				}
 				conn.commit();
+				log.info("Added {} triples from the SolidPod:{}",i , solidPodIri);
 			}
-		} else if (repositoryLocator.startsWith("http")) {
-			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
-			sr.enableQuadMode(true);
-			sr.setAdditionalHttpHeaders(Map.of("User-Agent", "void-generator"));
-			HttpClientBuilder hcb = HttpClientBuilder.create();
-			hcb.setMaxConnPerRoute(maxConcurrency)
-							.setMaxConnTotal(maxConcurrency)
-							.setUserAgent("void-generator-robot");
-			sr.setHttpClient(hcb.build());
-			repository = sr;
 		}
-		update();
-		//Virtuoso was not started by us so we should not send it a shutdown command
-		if (virtuosoJdcb == null) {
-			repository.shutDown();
+	}
+
+	private Value toValue(RDFTerm object) {
+		if (object instanceof org.apache.commons.rdf.api.IRI si) {
+			String st = si.getIRIString();
+			return VF.createIRI(st);
+		} else if (object instanceof org.apache.commons.rdf.api.BlankNode bn) {
+			return VF.createBNode(bn.uniqueReference());
+		} else if (object instanceof org.apache.commons.rdf.api.Literal l) {
+			String ls = l.getLexicalForm();
+			if (l.getDatatype() != null) {
+				return VF.createLiteral(ls, VF.createIRI(l.getDatatype().getIRIString()));
+			} else if (l.getLanguageTag().isPresent()) {
+				return VF.createLiteral(ls, l.getLanguageTag().get());
+			} else {
+				return VF.createLiteral(ls);
+			}
 		}
-		return 0;
+		throw new IllegalStateException("Conversion between commons api and rdf4j api failed");
+	}
+
+	private Resource toResource(BlankNodeOrIRI subject) {
+		if (subject instanceof org.apache.commons.rdf.api.IRI si) {
+			String st = si.getIRIString();
+			return VF.createIRI(st);
+		} else if (subject instanceof org.apache.commons.rdf.api.BlankNode bn) {
+			return VF.createBNode(bn.uniqueReference());
+		}
+		throw new RuntimeException("resource neither IRI nor BlankNode");
 	}
 
 	public Generate() {
@@ -231,18 +313,24 @@ public class Generate implements Callable<Integer> {
 		executors = Executors.newFixedThreadPool(maxConcurrency);
 	}
 
+	void setSolidPodIri(String solidPodIri) {
+		this.solidPodIri = solidPodIri;
+	}
+
 	private final List<Future<Exception>> futures = Collections.synchronizedList(new ArrayList<>());
 	private final List<QueryCallable<?>> tasks = Collections.synchronizedList(new ArrayList<>());
 
 	private final ExecutorService executors;
 
 	private final Semaphore limit;
-	
+
 	public final CompletableFuture<Exception> schedule(QueryCallable<?> task) {
 		scheduledQueries.incrementAndGet();
 		tasks.add(task);
-		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(()->{return task.call();}, executors);
-		
+		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(() -> {
+			return task.call();
+		}, executors);
+
 		futures.add(cf);
 		return cf;
 	}
@@ -261,7 +349,6 @@ public class Generate implements Callable<Integer> {
 		this.iriOfVoid = SimpleValueFactory.getInstance().createIRI(iriOfVoidAsString);
 		this.distinctSubjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "subject-bitsets-per-graph");
 		this.distinctObjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "object-bitsets-per-graph");
-		
 
 		ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris = readGraphsWithSerializedBitMaps(
 				this.distinctSubjectIrisFile);
@@ -379,7 +466,8 @@ public class Generate implements Callable<Integer> {
 			Lock writeLock = rwLock.writeLock();
 			if (isVirtuoso) {
 				CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
-						sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit, finishedQueries);
+						sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit,
+						finishedQueries);
 				schedule(cdso);
 			}
 			countSpecificThingsPerGraph(sd, knownPredicates, voidGraphUri, limit, saver);
@@ -412,7 +500,8 @@ public class Generate implements Callable<Integer> {
 						// This is ok we just try again in the loop.
 					}
 					if (loop == 60) {
-						//We make a defensive copy of the tasks to avoid concurrent modification exceptions
+						// We make a defensive copy of the tasks to avoid concurrent modification
+						// exceptions
 						new ArrayList<>(tasks).stream().filter(QueryCallable::isRunning).forEach(t -> {
 							log.info("Running: " + t.getClass() + " -> " + t.getQuery());
 						});
@@ -446,9 +535,9 @@ public class Generate implements Callable<Integer> {
 				graphNames = FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
-		//Ensure that the graph description exists so that we won't have an issue
+		// Ensure that the graph description exists so that we won't have an issue
 		// accessing them at any point.
-		for (var graphName:graphNames) {
+		for (var graphName : graphNames) {
 			getOrCreateGraphDescriptionObject(graphName, sd);
 		}
 
@@ -459,13 +548,11 @@ public class Generate implements Callable<Integer> {
 			}
 		} else {
 			if (countDistinctObjects) {
-				countDistinctObjects(sd, saver, distinctObjectIris, writeLock, isvirtuoso, graphNames,
-						limit);
+				countDistinctObjects(sd, saver, distinctObjectIris, writeLock, isvirtuoso, graphNames, limit);
 			}
 
 			if (countDistinctSubjects) {
-				countDistinctSubjects(sd, saver, distinctSubjectIris, writeLock, isvirtuoso, graphNames,
-						limit);
+				countDistinctSubjects(sd, saver, distinctSubjectIris, writeLock, isvirtuoso, graphNames, limit);
 			}
 		}
 		for (String graphName : graphNames) {
@@ -479,28 +566,26 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private void countDistinctObjects(ServiceDescription sd,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris,
-			Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs, Semaphore limit) {
-		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit,
-				finishedQueries));
+	private void countDistinctObjects(ServiceDescription sd, Consumer<ServiceDescription> saver,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, Lock writeLock, boolean isvirtuoso,
+			Collection<String> allGraphs, Semaphore limit) {
+		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
 		if (!isvirtuoso) {
-			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock,
-					limit, finishedQueries));
+			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock, limit,
+					finishedQueries));
 		} else if (!countDistinctSubjects) {
 			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock, limit,
-					 finishedQueries));
+					finishedQueries));
 		}
-		schedule(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit, 
-				finishedQueries));
+		schedule(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
 	}
 
-	private void countDistinctSubjects(ServiceDescription sd,
-			Consumer<ServiceDescription> saver, ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
-			Lock writeLock, boolean isvirtuoso, Collection<String> allGraphs, Semaphore limit) {
+	private void countDistinctSubjects(ServiceDescription sd, Consumer<ServiceDescription> saver,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris, Lock writeLock, boolean isvirtuoso,
+			Collection<String> allGraphs, Semaphore limit) {
 		if (!isvirtuoso) {
-			schedule(new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit,
-					finishedQueries));
+			schedule(
+					new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
 		} else if (!countDistinctObjects) {
 			for (String graphName : allGraphs) {
 				schedule(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver, writeLock,
@@ -510,8 +595,8 @@ public class Generate implements Callable<Integer> {
 		schedule(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, finishedQueries, saver));
 	}
 
-	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates,
-			String graphName, Semaphore limit, Consumer<ServiceDescription> saver) {
+	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, String graphName,
+			Semaphore limit, Consumer<ServiceDescription> saver) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (findDistinctClasses && findPredicates && detailedCount) {
 			schedule(new FindPredicatesAndClasses(gd, repository, this::schedule, knownPredicates, rwLock, limit,
@@ -523,24 +608,22 @@ public class Generate implements Callable<Integer> {
 						finishedQueries, saver, sd, null));
 			}
 			if (findDistinctClasses) {
-				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries,
-						saver, this::schedule, sd, classExclusion, null));
+				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries, saver,
+						this::schedule, sd, classExclusion, null));
 			}
 		}
 	}
 
-	private void scheduleBigCountsPerGraph(ServiceDescription sd, String graphName,
-			Consumer<ServiceDescription> saver, Semaphore limit) {
+	private void scheduleBigCountsPerGraph(ServiceDescription sd, String graphName, Consumer<ServiceDescription> saver,
+			Semaphore limit) {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		Lock writeLock = rwLock.writeLock();
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			schedule(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit,
-					finishedQueries));
+			schedule(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit, finishedQueries));
 		}
 		if (countDistinctSubjects) {
-			schedule(new CountDistinctBnodeSubjects(gd, sd, repository, writeLock, limit,
-					finishedQueries, saver));
+			schedule(new CountDistinctBnodeSubjects(gd, sd, repository, writeLock, limit, finishedQueries, saver));
 		}
 		schedule(new TripleCount(gd, repository, writeLock, limit, finishedQueries, saver, sd));
 	}
@@ -694,8 +777,10 @@ public class Generate implements Callable<Integer> {
 	public void setAddResultsToStore(boolean add) {
 		this.add = add;
 	}
+
 	/**
 	 * The IRI of the endpoint
+	 * 
 	 * @param rl
 	 */
 	public void setRepositoryLocator(String rl) {

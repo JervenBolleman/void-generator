@@ -47,9 +47,28 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>com.inrupt.client</groupId>
+        <artifactId>inrupt-client-bom</artifactId>
+        <version>1.3.1</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
+    <dependency>
+      <groupId>com.inrupt.client</groupId>
+      <artifactId>inrupt-client-solid</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.inrupt.client</groupId>
+      <artifactId>inrupt-client-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.inrupt.client</groupId>
+      <artifactId>inrupt-client-runtime</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>

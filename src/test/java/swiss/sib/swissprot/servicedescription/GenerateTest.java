@@ -16,6 +16,7 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -63,6 +64,20 @@ public class GenerateTest {
 		g.setRepository(sr);
 		g.setRepositoryLocator("https://example.org/sparql");
 		g.update();
+		assertEquals(g.finishedQueries.get(), g.scheduledQueries.get());
+	}
+	
+	@Disabled(value = "Requires network source to be up.")
+	@Test
+	public void generateFromSolid() throws Exception {
+		Generate g = new Generate();
+		assertTrue(tempDir.isDirectory());
+		g.setGraphNames(new HashSet<>());
+		g.setSdFile(new File(tempDir, "void.ttl"));
+		g.setIriOfVoidAsString("https://example.org/.well-known/void");
+		g.setSolidPodIri("https://triple.ilabt.imec.be/chist-era-32022r0643-annex-1-chemicals/profile/card#me");
+		g.setRepositoryLocator("https://example.org/sparql");
+		assertEquals(0, g.call());
 		assertEquals(g.finishedQueries.get(), g.scheduledQueries.get());
 	}
 }
