@@ -260,12 +260,15 @@ public class Generate implements Callable<Integer> {
 					Resource subj = toResource(q.getSubject());
 					IRI pred = (IRI) toResource(q.getPredicate());
 					Value object = toValue(q.getObject());
+					Statement stat = VF.createStatement(subj, pred, object);
 					if (q.getGraphName().isPresent()) {
 						IRI graph = (IRI) toResource(q.getGraphName().get());
-						conn.add(VF.createStatement(subj, pred, object), graph);
+						conn.add(stat, graph);
 					} else {
-						conn.add(VF.createStatement(subj, pred, object));
+						IRI graph = VF.createIRI(solidPodIri);
+						conn.add(stat, graph);
 					}
+					log.info("added {}", stat);
 				}
 				conn.commit();
 				log.info("Added {} triples from the SolidPod:{}",i , solidPodIri);
