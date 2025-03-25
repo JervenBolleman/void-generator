@@ -218,10 +218,7 @@ public class Generate implements Callable<Integer> {
 					conn.commit();
 				}
 			} else if (solidPodIri != null) {
-//		    RdfService service = ServiceProvider.getRdfService();
-//		    service.toDataset(null, null, classExclusion);
 				loadFromSolidPod();
-
 			} else if (repositoryLocator.startsWith("http")) {
 				SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
 				sr.enableQuadMode(true);
@@ -265,6 +262,7 @@ public class Generate implements Callable<Integer> {
 						IRI graph = (IRI) toResource(q.getGraphName().get());
 						conn.add(stat, graph);
 					} else {
+						//TODO: issue 28.
 						IRI graph = VF.createIRI(solidPodIri);
 						conn.add(stat, graph);
 					}
