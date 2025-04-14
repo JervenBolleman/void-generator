@@ -11,6 +11,7 @@ import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.TupleQuery;
+import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -94,8 +95,13 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		tupleQuery.setBinding("linkingGraphName", ls.getLinkingGraph());
 		setQuery(COUNT_TRIPLES_LINKING, tupleQuery.getBindings());
 		
-		BindingSet next = tupleQuery.evaluate().next();
-		return ((Literal) next.getBinding("lsc").getValue()).longValue();
+		TupleQueryResult tq = tupleQuery.evaluate();
+		if (tq.hasNext()) {
+			BindingSet next = tq.next();
+			return ((Literal) next.getBinding("lsc").getValue()).longValue();
+		} else {
+			return 0L;
+		}
 	}
 
 	@Override
