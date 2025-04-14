@@ -14,4 +14,4 @@ ex:rotton_apple a ex:Fruit, ex:Apple ;
 
 ex:green_pear a ex:Fruit, ex:Pear ;
     ex:color "green" ;
-    ex:growns_on ex:pear_tree .
+    ex:grows_on ex:pear_tree .

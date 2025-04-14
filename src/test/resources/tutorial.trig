@@ -25,5 +25,5 @@ fruit:fruits {
 
 	fruit:green_pear a ex:Fruit, ex:Pear ;
 		ex:color "green" ;
-		ex:growns_on tree:pear_tree .
+		ex:grows_on tree:pear_tree .
 }
