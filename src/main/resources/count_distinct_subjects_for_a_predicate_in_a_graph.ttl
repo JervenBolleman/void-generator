@@ -1,0 +1,27 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:count_distinct_subjects_for_a_predicate_in_a_graph a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Count the number of distinct subjects for a predicate in a graph (assumes graph and predicate prebound)."^^rdf:HTML ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """SELECT 
+  (count(distinct ?subject) AS ?subjects) 
+WHERE { 
+  GRAPH ?graph {
+    ?subject ?predicate ?object
+  }
+}""" ;
+    schema:keywords "void" , "predicate", "count", "graph" ;
+    schema:target [
+        a owl:Class ;
+        rdfs:subClassOf [
+            a owl:Restriction ;
+            owl:onProperty rdf:type ;
+            owl:someValuesFrom sd:Service
+        ]
+    ] .

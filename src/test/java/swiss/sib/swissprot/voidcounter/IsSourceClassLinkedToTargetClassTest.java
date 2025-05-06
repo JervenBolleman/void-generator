@@ -42,7 +42,7 @@ class IsSourceClassLinkedToTargetClassTest {
 		repository.shutDown();
 		executors.shutdown();
 	}
-	
+
 	@Test
 	void one() throws IOException {
 

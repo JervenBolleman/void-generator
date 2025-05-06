@@ -1,7 +1,9 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
@@ -31,7 +33,7 @@ import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
 public final class FindPredicates extends QueryCallable<List<PredicatePartition>> {
 	private final GraphDescription gd;
-	private final Set<IRI> knownPredicates;
+	private final Map<IRI, IRI> knownPredicates;
 	private static final Logger log = LoggerFactory.getLogger(FindPredicates.class);
 	private final Lock writeLock;
 	private final Consumer<ServiceDescription> saver;
@@ -51,7 +53,8 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver, ServiceDescription sd, Supplier<QueryCallable<?>> onSuccess) {
 		super(repository, limiter, finishedQueries);
 		this.gd = gd;
-		this.knownPredicates = knownPredicates;
+		this.knownPredicates = new HashMap<>();
+		knownPredicates.stream().forEach(p -> this.knownPredicates.put(p, p));
 		this.schedule = schedule;
 
 		this.writeLock = writeLock;
@@ -74,7 +77,13 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 				Binding predicateCount = next.getBinding("count");
 				if (predicateCount != null && predicate != null) {
 					IRI valueOf = (IRI) predicate.getValue();
-					PredicatePartition pp = new PredicatePartition(valueOf);
+					PredicatePartition pp;
+					//Normalize in memory
+					if (knownPredicates.containsKey(valueOf)) {
+						pp = new PredicatePartition(knownPredicates.get(valueOf));
+					} else {
+						pp = new PredicatePartition(valueOf);
+					}
 					final long count = ((Literal) predicateCount.getValue()).longValue();
 					if (count > 0 ) {
 						pp.setTripleCount(count);
@@ -113,14 +122,7 @@ public final class FindPredicates extends QueryCallable<List<PredicatePartition>
 			writeLock.lock();
 			Set<PredicatePartition> predicates2 = gd.getPredicates();
 			predicates2.clear();
-			for (PredicatePartition predicate : predicates)
-				if (knownPredicates.contains(predicate.getPredicate())) {
-					knownPredicates.stream().filter(p -> p.equals(predicate.getPredicate()))
-							.forEach(p -> predicate.setPredicate(p));
-					predicates2.add(predicate);
-				} else {
-					predicates2.add(predicate);
-				}
+			predicates2.addAll(predicates);
 		} finally {
 			writeLock.unlock();
 		}

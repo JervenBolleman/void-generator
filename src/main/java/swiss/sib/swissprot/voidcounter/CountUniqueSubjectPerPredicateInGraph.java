@@ -4,6 +4,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ public class CountUniqueSubjectPerPredicateInGraph
 {
 
 	private static final String SUBJECTS = "subjects";
+	private static final String QUERY = Helper.loadSparqlQuery("count_distinct_subjects_for_a_predicate_in_a_graph");
 	private final PredicatePartition predicatePartition;
 	private final GraphDescription gd;
 	public static final Logger log = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraph.class);
@@ -37,17 +39,14 @@ public class CountUniqueSubjectPerPredicateInGraph
 	@Override
 	protected void logStart()
 	{
-		log.debug("Counting distinct subjects for " + gd.getGraphName() + " and predicate "
-		    + predicatePartition.getPredicate());
+		log.debug("Counting distinct subjects in {} for predicate {}", gd.getGraphName(), predicatePartition.getPredicate());
 
 	}
 
 	@Override
 	protected void logEnd()
 	{
-		log.debug(
-		    "Counted distinct " + predicatePartition.getDistinctSubjectCount() + " subjects for "
-		        + gd.getGraphName() + " and predicate " + predicatePartition.getPredicate());
+		log.debug("Counted distinct subjects in {} for predicate {}", gd.getGraphName(), predicatePartition.getPredicate());
 	}
 
 	@Override
@@ -64,8 +63,10 @@ public class CountUniqueSubjectPerPredicateInGraph
 		}
 		else
 		{
-			setQuery("SELECT (count(distinct ?subject) AS ?subjects) WHERE { GRAPH <"
-			    + gd.getGraphName() + "> {?subject <" + predicatePartition.getPredicate() + "> ?object}}");
+			MapBindingSet bs = new MapBindingSet();
+			bs.setBinding("graph", gd.getGraph() );
+			bs.setBinding("predicate", predicatePartition.getPredicate());
+			setQuery(QUERY, bs);
 			return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 		}
 	}

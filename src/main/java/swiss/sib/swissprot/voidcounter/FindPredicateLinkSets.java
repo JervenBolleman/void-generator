@@ -8,7 +8,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -69,7 +68,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
 			ClassPartition source, Repository repository, Lock writeLock) {
-		final IRI predicate = predicatePartition.getPredicate();
+
 		schedule.apply(new FindNamedIndividualObjectSubjectForPredicateInGraph(sd, gd, predicatePartition, source,
 				repository, saver, writeLock, limiter, finishedQueries));
 

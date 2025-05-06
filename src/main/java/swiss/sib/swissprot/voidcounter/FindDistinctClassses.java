@@ -12,12 +12,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.Binding;
+import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -30,8 +31,12 @@ import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class FindDistinctClassses extends QueryCallable<List<ClassPartition>> {
-	private final GraphDescription gd;
+	private static final String REPLACE = "###REPLACE###";
+	private static final String NESTED_LOOP_QUERY = Helper.loadSparqlQuery("distinct_types_in_a_graph");
+	private static final String GROUP_BY_QUERY = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph");
 	private static final Logger log = LoggerFactory.getLogger(FindDistinctClassses.class);
+
+	private final GraphDescription gd;
 	private final Lock writeLock;
 	private final AtomicInteger finishedQueries;
 	private final Consumer<ServiceDescription> saver;
@@ -39,11 +44,12 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
 	private final String classExclusion;
 	private final Supplier<QueryCallable<?>> onSuccess;
+	private final boolean nested;
 
 	public FindDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, ServiceDescription sd,
-			String classExclusion, Supplier<QueryCallable<?>> onSuccess) {
+			String classExclusion, Supplier<QueryCallable<?>> onSuccess, boolean preferGroupBy) {
 		super(repository, limiter, finishedQueries);
 		this.gd = gd;
 		this.writeLock = writeLock;
@@ -53,11 +59,12 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		this.sd = sd;
 		this.classExclusion = classExclusion;
 		this.onSuccess = onSuccess;
+		this.nested = !preferGroupBy;
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Find distinct classes for " + gd.getGraphName());
+		log.debug("Find distinct classes for {}", gd.getGraphName());
 	}
 
 	@Override
@@ -67,23 +74,53 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 	@Override
 	protected void logEnd() {
-		log.debug("Found distinct classes:" + gd.getDistinctClassesCount() + " for " + gd.getGraphName());
+		log.debug("Found distinct classes:{} for {}", gd.getDistinctClassesCount(), gd.getGraphName());
 	}
 
 	@Override
 	protected List<ClassPartition> run(RepositoryConnection connection)
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
 		List<ClassPartition> classesList = new ArrayList<>();
-		String rq = makeQuery();
-		TupleQuery tq = connection.prepareTupleQuery(rq);
+		MapBindingSet tq = new MapBindingSet();
 		tq.setBinding("graph", gd.getGraph());
-		setQuery(rq, tq.getBindings());
-		try (TupleQueryResult classes = tq.evaluate()) {
+		if (nested)
+			nested(connection, classesList, tq);
+		else
+			groupBy(connection, classesList, tq);
+		if (onSuccess != null) {
+			scheduler.apply(onSuccess.get());
+		}
+		return classesList;
+	}
+
+	private void groupBy(RepositoryConnection connection, List<ClassPartition> classesList, MapBindingSet tq) {
+		String rq = makeGroupByQuery();
+		setQuery(rq, tq);
+		try (TupleQueryResult classes = Helper.runTupleQuery(getQuery(), connection)) {
 			while (classes.hasNext()) {
-				Binding classesCount = classes.next().getBinding("clazz");
-				Value value = classesCount.getValue();
-				if (value.isIRI()) {
-					final IRI clazz = (IRI) value;
+				BindingSet next = classes.next();
+				
+				Value classesCount = next.getBinding("subjects").getValue();
+				Value value = next.getBinding("clazz").getValue();
+				//Could be a blank node which we ignore
+				if (value instanceof IRI clazz && classesCount instanceof Literal count) {
+					ClassPartition cp = new ClassPartition(clazz);
+					cp.setTripleCount(count.longValue());
+					classesList.add(cp);
+				}
+			}
+		}
+	}
+
+	private void nested(RepositoryConnection connection, List<ClassPartition> classesList, MapBindingSet tq) {
+		String rq = makeNestedQuery();
+		setQuery(rq, tq);
+		try (TupleQueryResult classes = Helper.runTupleQuery(getQuery(), connection)) {
+			while (classes.hasNext()) {
+				BindingSet next = classes.next();
+				Value value = next.getBinding("clazz").getValue();
+				//Could be a blank node which we ignore
+				if (value instanceof IRI clazz) {
 					classesList.add(new ClassPartition(clazz));
 				}
 			}
@@ -91,17 +128,21 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		for (ClassPartition cp : classesList) {
 			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries));
 		}
-		if (onSuccess != null) {
-			scheduler.apply(onSuccess.get());
-		}
-		return classesList;
 	}
 
-	private String makeQuery() {
-		if (classExclusion == null) {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz }}";
+	private String makeNestedQuery() {
+		if (classExclusion == null || classExclusion.isBlank()) {
+			return NESTED_LOOP_QUERY;
 		} else {
-			return "SELECT DISTINCT ?clazz WHERE { GRAPH ?graph {?thing a ?clazz . FILTER (" + classExclusion + ")}}";
+			return NESTED_LOOP_QUERY.replaceAll(REPLACE, "FILTER (" + classExclusion + ")");
+		}
+	}
+	
+	private String makeGroupByQuery() {
+		if (classExclusion == null || classExclusion.isBlank()) {
+			return GROUP_BY_QUERY;
+		} else {
+			return GROUP_BY_QUERY.replaceAll(REPLACE, "FILTER (" + classExclusion + ")");
 		}
 	}
 
@@ -153,16 +194,16 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		@Override
 		protected Long run(RepositoryConnection connection) throws Exception {
 
-			TupleQuery tq = connection.prepareTupleQuery(COUNT_TYPE_ARCS);
+			MapBindingSet tq = new MapBindingSet();
 			tq.setBinding("graph", gd.getGraph());
 			tq.setBinding("class", cp.getClazz());
-			setQuery(COUNT_TYPE_ARCS, tq.getBindings());
-			return Helper.getSingleLongFromSparql(tq, connection, "count");
+			setQuery(COUNT_TYPE_ARCS, tq);
+			return Helper.getSingleLongFromSparql(getQuery(), connection, "count");
 		}
 
 		@Override
 		protected void set(Long t) {
-			
+
 			if (t > 0) {
 				cp.setTripleCount(t);
 			} else {

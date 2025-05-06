@@ -16,7 +16,7 @@ public class PredicatePartition
     implements Comparable<PredicatePartition>
 {
 
-	private IRI predicate;
+	private final IRI predicate;
 	private final Map<IRI, ClassPartition> classPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private final Map<IRI, DataTypePartition> dataTypePartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
 	private final Map<Resource, ObjectPartition> subjectPartitions = Collections.synchronizedMap(new TreeMap<>(new ValueComparator()));
@@ -24,11 +24,6 @@ public class PredicatePartition
 	private long tripleCount;
 	private long subjectCount;
 	private long objectCount;
-
-	public PredicatePartition()
-	{
-		super();
-	}
 
 	public PredicatePartition(IRI predicate)
 	{
@@ -39,11 +34,6 @@ public class PredicatePartition
 	public IRI getPredicate()
 	{
 		return predicate;
-	}
-
-	public void setPredicate(IRI predicate)
-	{
-		this.predicate = predicate;
 	}
 
 	public void putClassPartition(ClassPartition classPartition)

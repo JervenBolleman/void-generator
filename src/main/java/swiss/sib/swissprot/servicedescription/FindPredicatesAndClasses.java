@@ -33,11 +33,12 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	private final Consumer<ServiceDescription> saver;
 	private final ServiceDescription sd;
 	private final String classExclusion;
+	private final boolean preferGroupBy;
 
 	FindPredicatesAndClasses(GraphDescription gd, Repository repository,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
 			ReadWriteLock rwLock, Semaphore limit, AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
-			ServiceDescription sd, String classExclusion) {
+			ServiceDescription sd, String classExclusion, boolean preferGroupBy) {
 		super(repository, limit, finishedQueries);
 		this.gd = gd;
 		this.schedule = schedule;
@@ -47,6 +48,7 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		this.saver = saver;
 		this.sd = sd;
 		this.classExclusion = classExclusion;
+		this.preferGroupBy = preferGroupBy;
 	}
 
 	@Override
@@ -68,7 +70,7 @@ final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 				finishedQueries, rwLock, saver, gd, classExclusion, schedule, sd);
 		Supplier<QueryCallable<?>> onFoundPredicates = () -> {
 			return new FindDistinctClassses(gd, repository, writeLock, limiter, finishedQueries, saver, schedule, sd,
-					classExclusion, onFoundClasses);
+					classExclusion, onFoundClasses, preferGroupBy);
 		};
 		schedule.apply(new FindPredicates(gd, repository, knownPredicates, schedule, writeLock, limiter,
 				finishedQueries, saver, sd, onFoundPredicates));

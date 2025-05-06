@@ -112,8 +112,7 @@ public class ServiceDescriptionRDFReader {
 		while (predicates.hasNext()) {
 			Statement next = predicates.next();
 			IRI predicate = (IRI) next.getObject();
-			PredicatePartition pp = new PredicatePartition();
-			pp.setPredicate(predicate);
+			PredicatePartition pp = new PredicatePartition(predicate);
 			cp.accept(pp);
 			getAndSetOne(source, predicate, VOID.TRIPLES, null, Statement::getObject,
 					o -> pp.setTripleCount(asLong(o)));

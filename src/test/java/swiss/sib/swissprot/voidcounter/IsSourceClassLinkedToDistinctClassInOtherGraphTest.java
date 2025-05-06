@@ -46,7 +46,8 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		repository = new SailRepository(new MemoryStore());
 		repository.init();
 		predicate = SimpleValueFactory.getInstance().createIRI("http://example.com/predicate");
-		predicatePartition = new PredicatePartition();
+		predicatePartition = new PredicatePartition(predicate);
+		
 		gd = new GraphDescription();
 		gd.setGraphName("http://example.com/graph");
 		ogd = new GraphDescription();

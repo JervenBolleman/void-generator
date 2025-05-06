@@ -13,6 +13,7 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
@@ -70,22 +71,22 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 
 	@Override
 	protected Set<ObjectPartition> run(RepositoryConnection connection) throws Exception {
-		TupleQuery tq = connection.prepareTupleQuery(QUERY);
+		MapBindingSet tq = new MapBindingSet();
 		tq.setBinding("graph", gd.getGraph());
 		tq.setBinding("sourceType", cp.getClazz());
 		tq.setBinding("predicate", predicatePartition.getPredicate());
-		setQuery(QUERY, tq.getBindings());
+		setQuery(QUERY, tq);
 		Set<ObjectPartition> namedObjects = new HashSet<>();
-		try (final TupleQueryResult tr = tq.evaluate()) {
+		try (final TupleQueryResult tr = Helper.runTupleQuery(getQuery(), connection)) {
 			while (tr.hasNext()) {
 				final BindingSet next = tr.next();
 				if (next.hasBinding("target")) {
 					Value v = next.getBinding("target").getValue();
-					long c = ((Literal) next.getBinding("count").getValue()).longValue();
-
-					if (v instanceof IRI i) {
+					Value count = next.getBinding("count").getValue();
+					
+					if (v instanceof IRI i && count instanceof  Literal c) {
 						ObjectPartition subTarget = new ObjectPartition(i);
-						subTarget.setTripleCount(c);
+						subTarget.setTripleCount(c.longValue());
 						namedObjects.add(subTarget);
 					}
 				}

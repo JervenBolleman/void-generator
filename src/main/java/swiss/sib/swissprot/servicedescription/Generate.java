@@ -163,6 +163,10 @@ public class Generate implements Callable<Integer> {
 			"--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
 	private String dataReleaseDate;
 
+	@Option(names = {
+	"--prefer-group-by" }, description = "Sends fewer queries, server side group by instead of client side nested loop", defaultValue = "false")
+	private boolean preferGroupBy;
+	
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -238,6 +242,8 @@ public class Generate implements Callable<Integer> {
 	private final ExecutorService executors;
 
 	private final Semaphore limit;
+
+
 
 	public final CompletableFuture<Exception> schedule(QueryCallable<?> task) {
 		scheduledQueries.incrementAndGet();
@@ -510,7 +516,7 @@ public class Generate implements Callable<Integer> {
 		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
 		if (findDistinctClasses && findPredicates && detailedCount) {
 			schedule(new FindPredicatesAndClasses(gd, repository, this::schedule, knownPredicates, rwLock, limit,
-					finishedQueries, saver, sd, classExclusion));
+					finishedQueries, saver, sd, classExclusion, preferGroupBy));
 		} else {
 			Lock writeLock = rwLock.writeLock();
 			if (findPredicates) {
@@ -519,7 +525,7 @@ public class Generate implements Callable<Integer> {
 			}
 			if (findDistinctClasses) {
 				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries, saver,
-						this::schedule, sd, classExclusion, null));
+						this::schedule, sd, classExclusion, null, preferGroupBy));
 			}
 		}
 	}
