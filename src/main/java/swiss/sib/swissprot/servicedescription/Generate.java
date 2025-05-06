@@ -389,8 +389,6 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void waitForCountToFinish(List<Future<Exception>> futures) {
-		INTERRUPTED: // We want to wait for all threads to finish even if interrupted waiting for the
-						// results.
 		try {
 			int loop = 0;
 			while (!futures.isEmpty()) {
@@ -406,10 +404,7 @@ public class Generate implements Callable<Integer> {
 				}
 			}
 		} catch (InterruptedException e) {
-			// Clear interrupted flag
-			Thread.interrupted();
-			// Try again to get all of the results.
-			break INTERRUPTED;
+			Thread.currentThread().interrupt();
 		}
 		if (finishedQueries.get() == scheduledQueries.get()) {
 			log.info("Ran " + finishedQueries.get() + " queries");
