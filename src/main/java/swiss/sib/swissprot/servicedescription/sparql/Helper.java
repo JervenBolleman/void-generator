@@ -16,12 +16,6 @@ public class Helper {
 		
 	}
 	
-	@Deprecated
-	public static long getSingleLongFromSparql(String sq, RepositoryConnection connection)
-			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		return Helper.getSingleLongFromSparql(sq, connection, "types");
-	}
-
 	public static long getSingleLongFromSparql(TupleQuery tq, RepositoryConnection connection, String variable)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		try (TupleQueryResult res = tq.evaluate()) {
