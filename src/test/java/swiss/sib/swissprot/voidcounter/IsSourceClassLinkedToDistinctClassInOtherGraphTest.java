@@ -59,7 +59,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 
 	@Test
 	public void testRun() throws Exception {
-		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
 				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, null);
 		try (RepositoryConnection connection = repository.getConnection()) {
 			SimpleValueFactory vf = SimpleValueFactory.getInstance();
@@ -76,7 +76,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	
 	@Test
 	public void testRunExclude() throws Exception {
-		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
 				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
@@ -86,7 +86,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	@Test
 	public void testWithOtherKnown() throws Exception {
 		ogd.getClasses().add(new ClassPartition(targetClass.getClazz()));
-		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate,
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
 				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");		
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
