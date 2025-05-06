@@ -4,7 +4,7 @@
   <groupId>io.github.jervenbolleman</groupId>
   <artifactId>void-generator</artifactId>
   <packaging>jar</packaging>
-  <version>0.7-SNAPSHOT</version>
+  <version>0.9-SNAPSHOT</version>
   <name>void-generator</name>
   <description>Generate void descriptions for SPARQL endpoints.</description>
   <url>https://github.com/jervenbolleman/void-generator</url>
@@ -277,11 +277,6 @@
         </configuration>
       </plugin>
     </plugins>
-    <resources>
-      <resource>
-        <directory>resources</directory>
-      </resource>
-    </resources>
     <testResources>
       <testResource>
         <directory>test</directory>
