@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -21,51 +22,49 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ObjectPartition;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<ObjectPartition>> {
-	private static final String QUERY = """
-			PREFIX owl: <http://www.w3.org/2002/07/owl#>
-			SELECT 
-				?target (COUNT(?subject) as ?count)
-			WHERE {
-				GRAPH ?graph {
-					?subject a ?sourceType ; 
-						?predicate ?target . 
-					?target a owl:NamedIndividual .
-				}
-			} GROUP BY ?target
-			""";
-	public static final Logger log = LoggerFactory.getLogger(FindNamedIndividualObjectSubjectForPredicateInGraph.class);
+	private static final String QUERY = Helper
+			.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_named_individual");
+	private static final Logger log = LoggerFactory
+			.getLogger(FindNamedIndividualObjectSubjectForPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
 	private final GraphDescription gd;
 	private final ClassPartition cp;
 	private final Lock writeLock;
+	private final Consumer<ServiceDescription> saver;
+	private final ServiceDescription sd;
 
-	public FindNamedIndividualObjectSubjectForPredicateInGraph(GraphDescription gd,
-			PredicatePartition predicatePartition, ClassPartition cp, Repository repository, Lock writeLock,
-			Semaphore limiter, AtomicInteger finishedQueries) {
+	public FindNamedIndividualObjectSubjectForPredicateInGraph(ServiceDescription sd, GraphDescription gd,
+			PredicatePartition predicatePartition, ClassPartition cp, Repository repository,
+			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) {
 		super(repository, limiter, finishedQueries);
+		this.sd = sd;
 		this.gd = gd;
 		this.predicatePartition = predicatePartition;
 		this.cp = cp;
+		this.saver = saver;
 		this.writeLock = writeLock;
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Finding if " + cp.getClazz() + " with predicate partition " + predicatePartition.getPredicate()
-				+ " has subject partitions in " + gd.getGraphName());
+		log.debug("Finding if {} with predicate partition {} has subject partitions in {}", cp.getClazz(),
+				predicatePartition.getPredicate(), gd.getGraphName());
 	}
 
 	@Override
 	protected void logEnd() {
 		if (!predicatePartition.getSubjectPartitions().isEmpty()) {
-			log.debug(cp.getClazz() + " has predicate partition " + predicatePartition.getPredicate() + " with "
-					+ predicatePartition.getSubjectPartitions().size() + "subject partition in " + gd.getGraphName());
+			log.debug("{} has predicate partition {} with {} subject partition in {}", cp.getClazz(),
+					predicatePartition.getPredicate(), predicatePartition.getSubjectPartitions().size(),
+					gd.getGraphName());
 		} else {
-			log.debug("Found no " + cp.getClazz() + " with predicate partition " + predicatePartition.getPredicate()
-					+ " has subject partitions in " + gd.getGraphName());
+			log.debug("Found no {} with predicate partition {} has subject partitions in {}", cp.getClazz(),
+					predicatePartition.getPredicate(), gd.getGraphName());
 		}
 	}
 
@@ -83,7 +82,7 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 				if (next.hasBinding("target")) {
 					Value v = next.getBinding("target").getValue();
 					long c = ((Literal) next.getBinding("count").getValue()).longValue();
-					
+
 					if (v instanceof IRI i) {
 						ObjectPartition subTarget = new ObjectPartition(i);
 						subTarget.setTripleCount(c);
@@ -105,8 +104,10 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 		} finally {
 			writeLock.unlock();
 		}
+		if (!namedObjects.isEmpty())
+			saver.accept(sd);
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;

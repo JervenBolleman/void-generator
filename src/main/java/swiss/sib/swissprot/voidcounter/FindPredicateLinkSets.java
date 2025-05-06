@@ -24,17 +24,11 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	public static final Logger log = LoggerFactory.getLogger(FindPredicateLinkSets.class);
-	private static final String QUERY ="""
-			SELECT (COUNT(?subject) AS ?count) 
-			WHERE {GRAPH ?graph {
-				?subject a ?sourceClass ; 
-					?predicate ?target. 
-				}
-			}
-			""";
+	private static final String QUERY = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate");
 	private final Set<ClassPartition> classes;
 	private final PredicatePartition pp;
 	private final ClassPartition source;
@@ -76,19 +70,19 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
 			ClassPartition source, Repository repository, Lock writeLock) {
 		final IRI predicate = predicatePartition.getPredicate();
-		schedule.apply(new FindNamedIndividualObjectSubjectForPredicateInGraph(gd, predicatePartition, source,
-				repository, writeLock, limiter, finishedQueries));
+		schedule.apply(new FindNamedIndividualObjectSubjectForPredicateInGraph(sd, gd, predicatePartition, source,
+				repository, saver, writeLock, limiter, finishedQueries));
 
 		for (ClassPartition target : targetClasses) {
 
-			schedule.apply(new IsSourceClassLinkedToTargetClass(repository, predicate, target,
-					predicatePartition, source, gd, writeLock, limiter, finishedQueries));
+			schedule.apply(new IsSourceClassLinkedToTargetClass(sd, repository, target,
+					predicatePartition, source, gd, saver, writeLock, limiter, finishedQueries));
 		}
 
 		for (GraphDescription og : sd.getGraphs()) {
 			if (!og.getGraphName().equals(gd.getGraphName())) {
 				schedule.apply(
-						new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicate, predicatePartition,
+						new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, predicatePartition,
 								source, gd, writeLock, limiter, finishedQueries, og, schedule, classExclusion));
 			}
 		}
