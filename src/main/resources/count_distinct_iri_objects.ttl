@@ -1,0 +1,27 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:count_distinct_iri_objects a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Count the number of distinct IRIs used in the object position of triples in the default graph"^^rdf:HTML ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """
+SELECT
+    (COUNT(DISTINCT ?object) AS ?objects)
+WHERE {
+    ?subject ?predicate ?object .
+    FILTER(isIRI(?object))
+}""" ;
+    schema:keywords "void" , "iri", "count" ;
+    schema:target [
+        a owl:Class ;
+        rdfs:subClassOf [
+            a owl:Restriction ;
+            owl:onProperty rdf:type ;
+            owl:someValuesFrom sd:Service
+            ]
+        ] .
