@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
-class CountDistinctIriSubjectsForAllGraphsTest {
+class CountDistinctIriSubjectsForDefaultGraphTest {
 	private Repository repository;
 
 	@BeforeEach
@@ -42,10 +42,10 @@ class CountDistinctIriSubjectsForAllGraphsTest {
 		final ServiceDescription sd = new ServiceDescription();
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		final CountDistinctIriSubjectsForAllGraphs countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsForAllGraphs(
+		final var counter = new CountDistinctIriSubjectsForDefaultGraph(
 				sd, repository, (s) -> {
 				}, writeLock, new Semaphore(1), finishedQueries);
-		countDistinctIriObjectsForAllGraphs.call();
+		counter.call();
 		assertEquals(0, sd.getDistinctIriSubjectCount());
 		assertEquals(1, finishedQueries.get());
 	}
@@ -66,7 +66,7 @@ class CountDistinctIriSubjectsForAllGraphsTest {
 		bag.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(bag);
 		Lock writeLock = new ReentrantLock();
-		final CountDistinctIriSubjectsForAllGraphs countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsForAllGraphs(
+		final var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsForDefaultGraph(
 				sd, repository, (s) -> {
 				}, writeLock, new Semaphore(1), finishedQueries);
 		countDistinctIriObjectsForAllGraphs.call();

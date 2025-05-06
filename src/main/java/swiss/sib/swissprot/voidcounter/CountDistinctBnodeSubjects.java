@@ -22,12 +22,15 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 	private static final String SUBJECTS = "subjects";
 	private static final String COUNT_DISTINCT_SUBJECT_QUERY = """
-			SELECT 
-				(count(distinct ?subject) AS ?subjects) 
-			WHERE {
-				?subject ?predicate ?object . 
-				FILTER(isBlank(?subject))
-			}""";
+SELECT (COUNT(?subject) AS ?subjects) WHERE {
+	  {
+	    SELECT DISTINCT ?subject 
+	    WHERE {
+	      ?subject ?predicate ?object .
+	      FILTER (isBlank(?subject))
+	    }
+	  }
+	}""";
 	private final GraphDescription gd;
 	private final ServiceDescription sd;
 	private final String graphname;

@@ -17,24 +17,18 @@ import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.jdbc4.VirtuosoConnection;
 
-public final class CountDistinctIriObjectsForAllGraphsAtOnce extends QueryCallable<Long> {
+public final class CountDistinctIriObjectsForDefaultGraph extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
 
-	private static final String COUNT_DISTINCT_OBJECT_IRI_QUERY = """
-			SELECT 
-				(count(distinct(?object)) as ?objects) 
-			WHERE {
-				?subject ?predicate ?object . 
-				FILTER (isIri(?object))
-			}""";
+	private static final String COUNT_DISTINCT_OBJECT_IRI_QUERY = Helper.loadSparqlQuery("count_distinct_iri_objects");
 
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsForAllGraphsAtOnce.class);
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsForDefaultGraph.class);
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 
 	private final Lock writeLock;
 
-	public CountDistinctIriObjectsForAllGraphsAtOnce(ServiceDescription sd, Repository repository,
+	public CountDistinctIriObjectsForDefaultGraph(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) {
 		super(repository, limiter, finishedQueries);
 		this.sd = sd;

@@ -14,6 +14,10 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindGraphs {
 	
+	private FindGraphs() {
+		// Prevent instantiation
+	}
+
 	private static final String PREFFERED_QUERY = "SELECT DISTINCT ?g WHERE {GRAPH ?g {} }";
 	
 	private static final String FALLBACK_QUERY = "SELECT DISTINCT ?g WHERE {GRAPH ?g { ?s ?p ?o}}";

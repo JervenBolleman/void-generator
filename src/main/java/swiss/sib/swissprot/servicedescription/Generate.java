@@ -70,10 +70,10 @@ import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFWriter;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
 import swiss.sib.swissprot.voidcounter.FindDistinctClassses;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForAllGraphsAtOnce;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForAllGraphs;
+import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForDefaultGraph;
+import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForDefaultGraph;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjects;
-import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjectsForAllGraphs;
+import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjectsForDefaultGraph;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import swiss.sib.swissprot.voidcounter.TripleCount;
@@ -484,10 +484,10 @@ public class Generate implements Callable<Integer> {
 			boolean isvirtuoso, Semaphore limit) {
 		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
 		if (!isvirtuoso || !countDistinctSubjects) {
-			schedule(new CountDistinctIriObjectsForAllGraphsAtOnce(sd, repository, saver, writeLock, limit,
+			schedule(new CountDistinctIriObjectsForDefaultGraph(sd, repository, saver, writeLock, limit,
 					finishedQueries));
 		}
-		schedule(new CountDistinctLiteralObjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
+		schedule(new CountDistinctLiteralObjectsForDefaultGraph(sd, repository, saver, writeLock, limit, finishedQueries));
 	}
 
 	private void countDistinctSubjects(ServiceDescription sd, Consumer<ServiceDescription> saver,
@@ -495,7 +495,7 @@ public class Generate implements Callable<Integer> {
 			Collection<String> allGraphs, Semaphore limit) {
 		if (!isvirtuoso) {
 			schedule(
-					new CountDistinctIriSubjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
+					new CountDistinctIriSubjectsForDefaultGraph(sd, repository, saver, writeLock, limit, finishedQueries));
 		} else if (!countDistinctObjects) {
 			for (String graphName : allGraphs) {
 				schedule(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver, writeLock,

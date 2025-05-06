@@ -23,7 +23,7 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private final GraphDescription gd;
-	private final static Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 	private final String graphname;
@@ -42,18 +42,18 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct literal objects for " + graphname);
+		log.debug("Counting distinct literal objects for {}",  graphname);
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
-		log.error("failed counting distinct literal objects for " + graphname, e);
+		log.error("failed counting distinct literal objects for {}", graphname, e);
 
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct literal " + gd.getDistinctLiteralObjectCount() + " objects for " + graphname);
+		log.debug("Counted distinct literal {} objects for {}", gd.getDistinctLiteralObjectCount(), graphname);
 	}
 
 	@Override
@@ -67,8 +67,8 @@ public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	}
 
 	private Long pureSparql(RepositoryConnection connection) {
-		setQuery("SELECT (count(distinct ?object) AS ?objects) WHERE { GRAPH <" + graphname
-				+ "> {?subject ?predicate ?object . FILTER (isLiteral(?object))}}");
+		setQuery("SELECT (count(?object) AS ?objects) WHERE { {SELECT DISTINCT ?object { GRAPH <" + graphname
+				+ "> {?subject ?predicate ?object . FILTER (!(isIRI(?object))|| !isBlank(?object)))}}} }");
 		return Helper.getSingleLongFromSparql(getQuery(), connection, "objects");
 	}
 

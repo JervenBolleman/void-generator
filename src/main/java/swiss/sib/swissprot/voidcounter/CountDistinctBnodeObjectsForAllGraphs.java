@@ -30,18 +30,9 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
 
-	private static final String COUNT_DISTINCT_OBJECT_IRI_QUERY = """
-		SELECT 
-		  ?graph (count(distinct(?object)) as ?objects) 
-		WHERE {
-			GRAPH ?graph 
-			{  
-			   ?subject ?predicate ?object . 
-			   FILTER (isBlank(?object))
-			}
-		} GROUP BY ?graph""";
+	private static final String COUNT_DISTINCT_BNODE_OBJECTS_IN_ALL_GRAPHS = Helper.loadSparqlQuery("count_distinct_bnode_objects_in_all_graphs");
 
-	private final static String COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL = "SELECT iri_id_num(RDF_QUAD.O), iri_id_num(RDF_QUAD.G) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) > 0";
+	private static final String COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL = "SELECT iri_id_num(RDF_QUAD.O), iri_id_num(RDF_QUAD.G) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) > 0";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsForAllGraphs.class);
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
@@ -77,17 +68,16 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		if (connection instanceof VirtuosoRepositoryConnection) {
+		if (connection instanceof VirtuosoRepositoryConnection vrc) {
 			// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-			final Connection quadStoreConnection = ((VirtuosoRepositoryConnection) connection)
-					.getQuadStoreConnection();
+			final Connection quadStoreConnection = vrc.getQuadStoreConnection();
 			findUniqueBnodeIds(quadStoreConnection);
 			setGraphUniqueIriCounts(quadStoreConnection);
 			final long iricounts = setAll();
 			graphIriIds.clear();
 			return iricounts;
 		} else {
-			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_OBJECT_IRI_QUERY, connection, OBJECTS);
+			return Helper.getSingleLongFromSparql(COUNT_DISTINCT_BNODE_OBJECTS_IN_ALL_GRAPHS, connection, OBJECTS);
 		}	
 	}
 
@@ -107,6 +97,7 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 		} finally {
 			writeLock.unlock();
 		}
+		saver.accept(sd);
 	}
 
 	protected long setAll() {
@@ -121,6 +112,7 @@ public final class CountDistinctBnodeObjectsForAllGraphs extends QueryCallable<L
 		} finally {
 			writeLock.unlock();
 		}
+		saver.accept(sd);
 		return iricounts;
 	}
 

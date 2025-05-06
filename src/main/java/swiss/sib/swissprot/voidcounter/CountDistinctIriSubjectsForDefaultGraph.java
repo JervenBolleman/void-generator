@@ -17,23 +17,17 @@ import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Long> {
+public final class CountDistinctIriSubjectsForDefaultGraph extends QueryCallable<Long> {
 	private static final String SUBJECTS = "subjects";
 
-	private static final String COUNT_DISTINCT_SUBJECT_IRI_QUERY = """
-				SELECT 
-					(count(distinct(?subject)) as ?subjects) 
-				WHERE {
-					?subject ?predicate ?object .
-					FILTER (isIri(?subject))
-				}""";
+	private static final String COUNT_DISTINCT_SUBJECT_IRI_QUERY = Helper.loadSparqlQuery("count_distinct_iri_subjects");
 
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsForAllGraphs.class);
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsForDefaultGraph.class);
 	private final ServiceDescription sd;
 	private final Consumer<ServiceDescription> saver;
 	private final Lock writeLock;
 
-	public CountDistinctIriSubjectsForAllGraphs(ServiceDescription sd, Repository repository,
+	public CountDistinctIriSubjectsForDefaultGraph(ServiceDescription sd, Repository repository,
 			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
 			AtomicInteger finishedQueries) {
 		super(repository, limiter, finishedQueries);
@@ -45,17 +39,17 @@ public final class CountDistinctIriSubjectsForAllGraphs extends QueryCallable<Lo
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct iri subject for all graphs");
+		log.debug("Counting distinct iri subject for in the Default graph");
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
-		log.error("failed counting distinct iri subject ", e);
+		log.error("failed counting distinct iri subjects in the Default graph ", e);
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct subject iri");
+		log.debug("Counted distinct iri subjects in the Default graph");
 	}
 
 	@Override
