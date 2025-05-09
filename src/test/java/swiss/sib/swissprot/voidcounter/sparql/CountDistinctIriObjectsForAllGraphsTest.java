@@ -45,7 +45,7 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
-		final CountDistinctIriObjectsForDefaultGraph countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsForDefaultGraph(
+		final CountDistinctIriObjectsInDefaultGraph countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(
 				cv);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(0, sd.getDistinctIriObjectCount());
@@ -70,7 +70,7 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
-		final CountDistinctIriObjectsForDefaultGraph countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsForDefaultGraph(
+		final var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(
 				cv);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriObjectCount());

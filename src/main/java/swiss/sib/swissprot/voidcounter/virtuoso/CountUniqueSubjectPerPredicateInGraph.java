@@ -11,13 +11,13 @@ import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-public class CountUniqueSubjectPerPredicateInGraph
+class CountUniqueSubjectPerPredicateInGraph
     extends QueryCallable<Long>
 {
 
 	private static final String SUBJECTS = "subjects";
 	private static final String QUERY = Helper.loadSparqlQuery("count_distinct_subjects_for_a_predicate_in_a_graph");
-	public static final Logger log = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraph.class);
+	private static final Logger log = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraph.class);
 
 	private final CommonVariables cv;
 	private final PredicatePartition predicatePartition;

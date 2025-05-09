@@ -3,7 +3,7 @@ package swiss.sib.swissprot.voidcounter.virtuoso;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringBitmapWriter;
 
-public class DistinctIntegerCounter {
+class DistinctIntegerCounter {
 	public static final int CACHE_SIZE = 4096; // Max size of an ArrayContainer
 	private RoaringBitmapWriter<RoaringBitmap> bitmap = RoaringBitmapWriter.writer().initialCapacity(CACHE_SIZE)
 			.optimiseForRuns().get();

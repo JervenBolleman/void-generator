@@ -15,7 +15,7 @@ import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-public final class CountDistinctLiteralObjects extends QueryCallable<Long> {
+final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
 	private final CommonVariables cv;
 

@@ -29,7 +29,7 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
  * @author jbollema
  *
  */
-public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
+final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 	private static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;

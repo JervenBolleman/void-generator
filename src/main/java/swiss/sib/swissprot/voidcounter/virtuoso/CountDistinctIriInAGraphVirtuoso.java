@@ -20,7 +20,7 @@ import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Long> {
+abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Long> {
 
 	private final Consumer<Long> allSetter;
 	private final BiConsumer<GraphDescription, Long> graphSetter;

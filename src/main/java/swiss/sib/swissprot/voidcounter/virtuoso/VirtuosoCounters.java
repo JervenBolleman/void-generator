@@ -1,5 +1,6 @@
 package swiss.sib.swissprot.voidcounter.virtuoso;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
@@ -11,20 +12,29 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
+import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.FindGraphs;
+import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.ObjectPartition;
+import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import swiss.sib.swissprot.voidcounter.sparql.FindDistinctClassses;
-import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndCountObjects;
+import swiss.sib.swissprot.voidcounter.sparql.FindPredicateLinkSets;
 import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndClasses;
+import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndCountObjects;
+import swiss.sib.swissprot.voidcounter.sparql.FindNamedIndividualObjectSubjectForPredicateInGraph;
+import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraph;
+import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToTargetClass;
 import swiss.sib.swissprot.voidcounter.sparql.TripleCount;
 
 public class VirtuosoCounters implements Counters {
-	
+
 	private final ConcurrentMap<String, Roaring64NavigableMap> distinctSubjectIris;
 	private final ConcurrentMap<String, Roaring64NavigableMap> distinctObjectIris;
-	
+
 	public VirtuosoCounters(ConcurrentMap<String, Roaring64NavigableMap> distinctSubjectIris,
 			ConcurrentMap<String, Roaring64NavigableMap> distinctObjectIris) {
 		super();
@@ -80,7 +90,7 @@ public class VirtuosoCounters implements Counters {
 	public QueryCallable<Exception> findPredicatesAndClasses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
 			ReadWriteLock rwLock, String classExclusion) {
-		return new FindPredicatesAndClasses(cv, schedule, knownPredicates, rwLock, classExclusion);
+		return new FindPredicatesAndClasses(cv, schedule, knownPredicates, rwLock, classExclusion, this);
 	}
 
 	@Override
@@ -106,7 +116,40 @@ public class VirtuosoCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<?> triples(CommonVariables cv) {
+	public QueryCallable<Long> triples(CommonVariables cv) {
 		return new TripleCount(cv);
+	}
+
+	@Override
+	public QueryCallable<Long> isSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
+			PredicatePartition predicatePartition, ClassPartition source) {
+		return new IsSourceClassLinkedToTargetClass(cv, target, predicatePartition, source);
+	}
+
+	@Override
+	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
+		return new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, predicatePartition, source, og, schedule,
+				classExclusion);
+	}
+
+	@Override
+	public QueryCallable<Set<IRI>> findDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition,
+			ClassPartition source) {
+		return new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source);
+	}
+
+	@Override
+	public QueryCallable<Exception> findPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes,
+			PredicatePartition predicate, ClassPartition source,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
+		return new FindPredicateLinkSets(cv, classes, predicate, source, schedule, classExclusion, this);
+	}
+
+	@Override
+	public QueryCallable<Set<ObjectPartition>> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source) {
+		return new FindNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source);
 	}
 }

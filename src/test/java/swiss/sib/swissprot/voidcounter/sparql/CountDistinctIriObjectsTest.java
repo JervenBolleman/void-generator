@@ -77,7 +77,7 @@ class CountDistinctIriObjectsTest {
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
 
-		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsForDefaultGraph(cv);
+		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(cv);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriObjectCount());
 		assertEquals(1, finishedQueries.get());

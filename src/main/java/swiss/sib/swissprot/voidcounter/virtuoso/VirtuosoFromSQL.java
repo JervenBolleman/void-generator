@@ -14,7 +14,12 @@ import org.slf4j.LoggerFactory;
 
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-public class VirtuosoFromSQL {
+class VirtuosoFromSQL {
+
+	private VirtuosoFromSQL() {
+		// Prevent instantiation
+	}
+
 	private static final Logger logger = LoggerFactory.getLogger(VirtuosoFromSQL.class);
 
 	public static long countDistinctLongResultsFromVirtuoso(RepositoryConnection localConnection, String sql)
@@ -36,8 +41,8 @@ public class VirtuosoFromSQL {
 	}
 
 	private static void loopOverResultSetWithLongColumnToCountDistinct(String sql,
-			Map<Integer, swiss.sib.swissprot.voidcounter.virtuoso.DistinctIntegerCounter> intCounters, java.sql.Statement stat)
-			throws QueryEvaluationException {
+			Map<Integer, swiss.sib.swissprot.voidcounter.virtuoso.DistinctIntegerCounter> intCounters,
+			java.sql.Statement stat) throws QueryEvaluationException {
 
 		try (ResultSet res = stat.executeQuery(sql)) {
 			res.setFetchDirection(ResultSet.FETCH_FORWARD);
@@ -64,7 +69,7 @@ public class VirtuosoFromSQL {
 				bitSet.add(rightMost);
 			}
 		} catch (SQLException e) {
-			logger.debug("FAILED:" + e.getMessage());
+			logger.debug("FAILED: {}", e.getMessage());
 			throw new QueryEvaluationException(e);
 		}
 	}
@@ -77,7 +82,7 @@ public class VirtuosoFromSQL {
 				if (rs.next())
 					return rs.getLong(1);
 				else {
-					logger.debug("FAILED to get result for:" + sql);
+					logger.debug("FAILED to get result for: {}", sql);
 					throw new RepositoryException("FAILED to get result for:" + sql);
 				}
 			}

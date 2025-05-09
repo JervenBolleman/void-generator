@@ -7,7 +7,7 @@ import java.sql.SQLException;
 
 import org.slf4j.LoggerFactory;
 
-public class IriIdToIri {
+class IriIdToIri {
 	
 	private IriIdToIri() {
 

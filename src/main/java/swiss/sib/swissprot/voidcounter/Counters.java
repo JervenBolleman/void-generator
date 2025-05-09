@@ -1,5 +1,6 @@
 package swiss.sib.swissprot.voidcounter;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -8,6 +9,11 @@ import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
+
+import swiss.sib.swissprot.servicedescription.ClassPartition;
+import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public interface Counters {
 
@@ -42,8 +48,25 @@ public interface Counters {
 
 	QueryCallable<?> countDistinctBnodeSubjects(CommonVariables cv);
 
-	QueryCallable<?> triples(CommonVariables cv);
+	QueryCallable<Long> triples(CommonVariables cv);
 
 	QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv);
+
+	QueryCallable<Long> isSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
+			PredicatePartition predicatePartition, ClassPartition source);
+
+	QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion);
+
+	QueryCallable<Set<IRI>> findDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition,
+			ClassPartition source);
+
+	QueryCallable<Exception> findPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes,
+			PredicatePartition predicate, ClassPartition source,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion);
+
+	QueryCallable<?> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source);
 
 }

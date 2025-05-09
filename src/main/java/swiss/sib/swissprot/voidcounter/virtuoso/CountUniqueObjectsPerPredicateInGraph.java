@@ -18,7 +18,7 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-public class CountUniqueObjectsPerPredicateInGraph
+class CountUniqueObjectsPerPredicateInGraph
     extends QueryCallable<Long>
 {
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueObjectsPerPredicateInGraph.class);

@@ -28,7 +28,7 @@ import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
+final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		QueryCallable<swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.SubObj> {
 
 	private static final int MAX_IN_PROCESS = 16;

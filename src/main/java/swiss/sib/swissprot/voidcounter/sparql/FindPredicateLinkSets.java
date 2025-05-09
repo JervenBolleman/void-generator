@@ -2,7 +2,6 @@ package swiss.sib.swissprot.voidcounter.sparql;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.Literal;
@@ -21,6 +20,7 @@ import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public class FindPredicateLinkSets extends QueryCallable<Exception> {
@@ -36,10 +36,11 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	
 	private final String classExclusion;
 	private final CommonVariables cv;
+	private final Counters counters;
 
 	public FindPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes, PredicatePartition predicate,
 			ClassPartition source, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
-			String classExclusion) {
+			String classExclusion, Counters counters) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.classes = classes;
@@ -47,10 +48,11 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		this.source = source;
 		this.schedule = schedule;
 		this.classExclusion = classExclusion;
+		this.counters = counters;
 	}
 
-	private void findDatatypeOrSubclassPartitions(final Repository repository, Set<ClassPartition> targetClasses,
-			ClassPartition source, PredicatePartition subpredicatePartition, Lock writeLock) {
+	private void findDatatypeOrSubclassPartitions(Set<ClassPartition> targetClasses,
+			ClassPartition source, PredicatePartition subpredicatePartition) {
 		if (subpredicatePartition.getDataTypePartitions().isEmpty()) {
 			findSubClassParititions(targetClasses, subpredicatePartition, source);
 		}
@@ -59,22 +61,22 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
 			ClassPartition source) {
 
-		schedule.apply(new FindNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source));
+		schedule.apply(counters.findNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source));
 
 		for (ClassPartition target : targetClasses) {
 
-			schedule.apply(new IsSourceClassLinkedToTargetClass(cv,target,
+			schedule.apply(counters.isSourceClassLinkedToTargetClass(cv,target,
 					predicatePartition, source));
 		}
 
 		for (GraphDescription og : cv.sd().getGraphs()) {
 			if (!og.getGraphName().equals(cv.gd().getGraphName())) {
 				schedule.apply(
-						new IsSourceClassLinkedToDistinctClassInOtherGraph(cv,predicatePartition,
+						counters.isSourceClassLinkedToDistinctClassInOtherGraph(cv,predicatePartition,
 								source, og, schedule, classExclusion));
 			}
 		}
-		schedule.apply(new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source));
+		schedule.apply(counters.findDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source));
 	}
 
 	private long countTriplesInPredicateClassPartition(final Repository repository,
@@ -134,7 +136,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 				cv.writeLock().unlock();
 			}
 			if (subpredicatePartition.getTripleCount() != 0) {
-				findDatatypeOrSubclassPartitions(repository, classes, source, subpredicatePartition, cv.writeLock());
+				findDatatypeOrSubclassPartitions(classes, source, subpredicatePartition);
 			}
 			cv.save();
 		}

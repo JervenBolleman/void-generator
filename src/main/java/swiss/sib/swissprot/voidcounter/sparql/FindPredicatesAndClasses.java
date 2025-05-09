@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
@@ -26,16 +27,18 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	private final ReadWriteLock rwLock;
 	private final String classExclusion;
 	private final CommonVariables cv;
+	private final Counters counters;
 
 	public FindPredicatesAndClasses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
-			ReadWriteLock rwLock,  String classExclusion) {
+			ReadWriteLock rwLock,  String classExclusion, Counters counters) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.schedule = schedule;
 		this.knownPredicates = knownPredicates;
 		this.rwLock = rwLock;
 		this.classExclusion = classExclusion;
+		this.counters = counters;
 	}
 
 	@Override
@@ -52,7 +55,7 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 
 	@Override
 	protected Exception run(RepositoryConnection connection) throws Exception {
-		Supplier<QueryCallable<?>> onFoundClasses = () -> new FindClassPredicatePairs(cv, rwLock, classExclusion, schedule);
+		Supplier<QueryCallable<?>> onFoundClasses = () -> new FindClassPredicatePairs(cv, rwLock, classExclusion, schedule, counters);
 		Supplier<QueryCallable<?>> onFoundPredicates = () -> new FindDistinctClassses(cv, schedule,
 				classExclusion, onFoundClasses);
 		schedule.apply(new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, onFoundPredicates));
@@ -71,15 +74,17 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		private final String classExclusion;
 		private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 		private final CommonVariables cv;
+		private final Counters counters;
 
 		public FindClassPredicatePairs(CommonVariables cv,
 				ReadWriteLock rwLock, String classExclusion,
-				Function<QueryCallable<?>, CompletableFuture<Exception>> schedule) {
+				Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Counters counters) {
 			super(cv.repository(), cv.limiter(), cv.finishedQueries());
 			this.cv = cv;
 			this.rwLock = rwLock;
 			this.classExclusion = classExclusion;
 			this.schedule = schedule;
+			this.counters = counters;
 		}
 
 		@Override
@@ -110,7 +115,7 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 			for (PredicatePartition predicate : predicates) {
 				for (ClassPartition source : classes) {
 					if (!RDF.TYPE.equals(predicate.getPredicate()))
-						schedule.apply(new FindPredicateLinkSets(cv, classes, predicate, source,
+						schedule.apply(counters.findPredicateLinkSets(cv, classes, predicate, source,
 								schedule, classExclusion));
 				}
 			}

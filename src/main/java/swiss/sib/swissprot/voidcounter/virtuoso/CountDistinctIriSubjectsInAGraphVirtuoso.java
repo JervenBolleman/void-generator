@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 
-public final class CountDistinctIriSubjectsInAGraphVirtuoso extends CountDistinctIriInAGraphVirtuoso {
+final class CountDistinctIriSubjectsInAGraphVirtuoso extends CountDistinctIriInAGraphVirtuoso {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsInAGraphVirtuoso.class);
 
