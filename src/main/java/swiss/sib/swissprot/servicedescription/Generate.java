@@ -275,7 +275,9 @@ public class Generate implements Callable<Integer> {
 			this.counters = new VirtuosoCounters(distinctSubjectIris, distinctObjectIris);
 			saver = sdg -> writeServiceDescriptionAndGraphs(distinctSubjectIris, distinctObjectIris, sdg, iriOfVoid);
 		} else {
-			this.counters = new SparqlCounters(OptimizeFor.fromString(optimizeFor));
+			OptimizeFor fromString = OptimizeFor.fromString(optimizeFor);
+			log.info("Optimizing for backing store: {}", fromString);
+			this.counters = new SparqlCounters(fromString);
 			saver = sdg -> writeServiceDescription(sdg, iriOfVoid);
 		}
 
