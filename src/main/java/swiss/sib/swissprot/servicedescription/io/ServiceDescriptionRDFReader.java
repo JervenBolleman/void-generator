@@ -111,14 +111,15 @@ public class ServiceDescriptionRDFReader {
 			Consumer<PredicatePartition> cp) {
 		while (predicates.hasNext()) {
 			Statement next = predicates.next();
-			IRI predicate = (IRI) next.getObject();
+			IRI ppiri = (IRI) next.getObject();
+			IRI predicate = (IRI) getOne(source, ppiri, VOID.PROPERTY, null, Statement::getObject);
 			PredicatePartition pp = new PredicatePartition(predicate);
 			cp.accept(pp);
-			getAndSetOne(source, predicate, VOID.TRIPLES, null, Statement::getObject,
+			getAndSetOne(source, ppiri, VOID.TRIPLES, null, Statement::getObject,
 					o -> pp.setTripleCount(asLong(o)));
-			getAndSetOne(source, predicate, VOID.DISTINCT_OBJECTS, null, Statement::getObject,
+			getAndSetOne(source, ppiri, VOID.DISTINCT_OBJECTS, null, Statement::getObject,
 					o -> pp.setDistinctObjectCount(asLong(o)));
-			getAndSetOne(source, predicate, VOID.DISTINCT_SUBJECTS, null, Statement::getObject,
+			getAndSetOne(source, ppiri, VOID.DISTINCT_SUBJECTS, null, Statement::getObject,
 					o -> pp.setDistinctSubjectCount(asLong(o)));
 		}
 	}
