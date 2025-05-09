@@ -29,20 +29,20 @@ final class CountDistinctIriObjectsInDefaultGraph
 	@Override
 	protected void logStart()
 	{
-		log.debug("Counting distinct iri or bnode objects for default graph");
+		log.debug("Counting distinct iri objects for default graph");
 	}
 	
 	@Override
 	protected void logFailed(Exception e)
 	{
 		if (log.isErrorEnabled())
-			log.error("failed counting distinct iri or bnode objects for default graph", e);
+			log.error("failed counting distinct iri objects for default graph", e);
 	}
 
 	@Override
 	protected void logEnd()
 	{
-		log.debug("Counted distinct iri or bnode {} objects for default graph", getCount());
+		log.debug("Counted distinct iri {} objects for default graph", getCount());
 	}
 
 	private long getCount() {

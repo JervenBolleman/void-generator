@@ -37,12 +37,12 @@ public class SparqlCounters implements Counters {
 
 	@Override
 	public QueryCallable<Long> countDistinctIriObjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctIriObjectsForDefaultGraph(cv);
+		return new CountDistinctIriObjectsInDefaultGraph(cv);
 	}
 
 	@Override
 	public QueryCallable<Long> countDistinctLiteralObjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctLiteralObjectsForDefaultGraph(cv);
+		return new CountDistinctLiteralObjectsInDefaultGraph(cv);
 	}
 
 	@Override

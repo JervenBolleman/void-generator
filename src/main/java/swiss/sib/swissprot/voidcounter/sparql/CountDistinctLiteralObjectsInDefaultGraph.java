@@ -10,52 +10,47 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
-import virtuoso.jdbc4.VirtuosoConnection;
 
-final class CountDistinctIriObjectsForDefaultGraph extends QueryCallable<Long> {
+final class CountDistinctLiteralObjectsInDefaultGraph extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
-
-	private static final String COUNT_DISTINCT_OBJECT_IRI_QUERY = Helper.loadSparqlQuery("count_distinct_iri_objects");
-
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsForDefaultGraph.class);
-
+	private static final String COUNT_OBJECTS_WITH_SPARQL = Helper.loadSparqlQuery("count_distinct_literal_objects");
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjectsInDefaultGraph.class);
 	private final CommonVariables cv;
 
-	public CountDistinctIriObjectsForDefaultGraph(CommonVariables cv) {
+	public CountDistinctLiteralObjectsInDefaultGraph(CommonVariables cv) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct iri objects for all graphs");
+		log.debug("Counting distinct literal objects for all graphs");
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
-		log.error("failed counting distinct iri objects", e);
+		log.error("failed counting distinct literal objects for all graphs", e);
+
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct iri");
+		log.debug("Counted distinct literal {} objects for all", cv.sd().getDistinctLiteralObjectCount() );
 	}
 
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-
-		assert !(connection instanceof VirtuosoConnection);
 	
-		setQuery(COUNT_DISTINCT_OBJECT_IRI_QUERY);
-		return Helper.getSingleLongFromSparql(getQuery(), connection, OBJECTS);
+		setQuery(COUNT_OBJECTS_WITH_SPARQL);
+		return Helper.getSingleLongFromSparql(COUNT_OBJECTS_WITH_SPARQL, connection, OBJECTS);
 	}
 
 	@Override
 	protected void set(Long count) {
 		try {
 			cv.writeLock().lock();
-			cv.sd().setDistinctIriObjectCount(count);
+			cv.sd().setDistinctLiteralObjectCount(count);
 		} finally {
 			cv.writeLock().unlock();
 		}

@@ -48,7 +48,7 @@ public class VirtuosoCounters implements Counters {
 
 	@Override
 	public QueryCallable<Long> countDistinctBnodeObjectsInDefaultGraph(CommonVariables cv) {
-		return new CountDistinctBnodeObjectsForAllGraphs(cv);
+		return new CountDistinctBnodeObjectsInAllGraphs(cv);
 	}
 
 	@Override
@@ -58,7 +58,7 @@ public class VirtuosoCounters implements Counters {
 
 	@Override
 	public QueryCallable<Long> countDistinctLiteralObjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctLiteralObjectsForDefaultGraph(cv);
+		return new CountDistinctLiteralObjectsInDefaultGraph(cv);
 	}
 
 	@Override
