@@ -12,7 +12,7 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.voidcounter.DistinctIntegerCounter;
+import swiss.sib.swissprot.voidcounter.virtuoso.DistinctIntegerCounter;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public class VirtuosoFromSQL {
@@ -37,7 +37,7 @@ public class VirtuosoFromSQL {
 	}
 
 	private static void loopOverResultSetWithLongColumnToCountDistinct(String sql,
-			Map<Integer, swiss.sib.swissprot.voidcounter.DistinctIntegerCounter> intCounters, java.sql.Statement stat)
+			Map<Integer, swiss.sib.swissprot.voidcounter.virtuoso.DistinctIntegerCounter> intCounters, java.sql.Statement stat)
 			throws QueryEvaluationException {
 
 		try (ResultSet res = stat.executeQuery(sql)) {

@@ -1,4 +1,4 @@
-package swiss.sib.swissprot.voidcounter;
+package swiss.sib.swissprot.voidcounter.virtuoso;
 
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringBitmapWriter;

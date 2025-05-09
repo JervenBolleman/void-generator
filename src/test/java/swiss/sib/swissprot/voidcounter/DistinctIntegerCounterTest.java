@@ -3,6 +3,8 @@ package swiss.sib.swissprot.voidcounter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import swiss.sib.swissprot.voidcounter.virtuoso.DistinctIntegerCounter;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DistinctIntegerCounterTest {
