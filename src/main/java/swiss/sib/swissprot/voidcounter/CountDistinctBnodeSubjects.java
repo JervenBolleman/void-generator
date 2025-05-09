@@ -1,74 +1,37 @@
 package swiss.sib.swissprot.voidcounter;
 
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
-
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.repository.Repository;
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public final class CountDistinctBnodeSubjects extends QueryCallable<Long> {
 	private static final String SUBJECTS = "subjects";
-	private static final String COUNT_DISTINCT_SUBJECT_QUERY = """
-SELECT (COUNT(?subject) AS ?subjects) WHERE {
-	  {
-	    SELECT DISTINCT ?subject 
-	    WHERE {
-	      ?subject ?predicate ?object .
-	      FILTER (isBlank(?subject))
-	    }
-	  }
-	}""";
-	private final GraphDescription gd;
-	private final ServiceDescription sd;
-	private final String graphname;
+	private static final String COUNT_DISTINCT_SUBJECT_QUERY_IN_A_GRAPH = Helper.loadSparqlQuery("count_distinct_bnode_subjects_in_all_graphs");
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjects.class);
-	private final Lock writeLock;
-	private final Consumer<ServiceDescription> saver;
-	private final boolean  defaultGraph;
+	
+	private final CommonVariables cv;
 
-	public CountDistinctBnodeSubjects(GraphDescription gd, ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver) {
-		super(repository, limiter, finishedQueries);
-		this.gd = gd;
-		this.writeLock = writeLock;
-		this.saver = saver;
-		this.sd = sd;
-		this.graphname = gd.getGraphName();
-		this.defaultGraph = false;
-	}
-
-	public CountDistinctBnodeSubjects(ServiceDescription sd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver) {
-		super(repository, limiter, finishedQueries);
-		this.writeLock = writeLock;
-		this.saver = saver;
-		this.gd = null;
-		this.sd = sd;
-		this.graphname = "all";
-		this.defaultGraph = true;
+	public CountDistinctBnodeSubjects(CommonVariables cv) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;		
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct bnode subjects for " + graphname);
+		log.debug("Counting distinct bnode subjects for {}", cv.gd().getGraphName());
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct bnode subjects for " + graphname);
+		log.debug("Counted distinct bnode subjects for {}", cv.gd().getGraphName());
 	}
 
 	@Override
@@ -76,13 +39,6 @@ SELECT (COUNT(?subject) AS ?subjects) WHERE {
 			throws QueryEvaluationException, RepositoryException, MalformedQueryException
 
 	{
-		if (!defaultGraph)
-			return countDistinctBnodeSubjectsInGraph(connection);
-		else
-			return countDistinctBnodeSubjects(connection);	
-	}
-
-	private Long countDistinctBnodeSubjectsInGraph(RepositoryConnection connection) {
 		if (connection instanceof VirtuosoRepositoryConnection) {
 			// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 			// Plus trick from sqlbif.c
@@ -93,27 +49,16 @@ SELECT (COUNT(?subject) AS ?subjects) WHERE {
 	}
 
 	protected Long pureSparqlCountDistinctBnodeSubjectsInGraph(RepositoryConnection connection) {
-		setQuery("SELECT (count(distinct ?subject) AS ?subjects) WHERE {"
-				+ "GRAPH <"+ gd.getGraphName() + "> {?subject ?predicate ?object . FILTER(isBlank(?subject))}}");
+		MapBindingSet bindings = new MapBindingSet();
+		bindings.addBinding("graph", cv.gd().getGraph());
+		setQuery(COUNT_DISTINCT_SUBJECT_QUERY_IN_A_GRAPH, bindings);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 	}
 
 	protected Long virtuosoCountDistinctBnodeSubjectsInGraph(RepositoryConnection connection) {
 		setQuery("SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-				+ gd.getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0");
+				+ cv.gd().getGraphName() + "') AND is_bnode_iri_id(RDF_QUAD.S) > 0");
 		return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, getQuery());
-	}
-
-	private Long countDistinctBnodeSubjects(RepositoryConnection connection) {
-		if (connection instanceof VirtuosoRepositoryConnection) {
-			// See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
-			// Plus trick from sqlbif.c
-			setQuery("SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE is_bnode_iri_id(RDF_QUAD.S) > 0");
-			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, getQuery());
-		} else {
-			setQuery(COUNT_DISTINCT_SUBJECT_QUERY);
-			return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
-		}
 	}
 
 	@Override
@@ -123,24 +68,13 @@ SELECT (COUNT(?subject) AS ?subjects) WHERE {
 
 	@Override
 	protected void set(Long count) {
-		if (!defaultGraph)
-			try {
-				writeLock.lock();
-				gd.setDistinctBnodeSubjectCount(count);
-			} finally {
-				writeLock.unlock();
-			}
-		else {
-			try {
-				writeLock.lock();
-				sd.setDistinctBnodeSubjectCount(count);
-			} finally {
-				writeLock.unlock();
-			}
+		try {
+			cv.writeLock().lock();
+			cv.gd().setDistinctBnodeSubjectCount(count);
+		} finally {
+			cv.writeLock().unlock();
 		}
-		if (sd != null) {
-			saver.accept(sd);
-		}
+		cv.save();
 	}
 	
 	@Override

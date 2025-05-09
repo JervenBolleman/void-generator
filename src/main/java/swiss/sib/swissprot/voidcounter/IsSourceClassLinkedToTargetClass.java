@@ -1,21 +1,13 @@
 package swiss.sib.swissprot.voidcounter;
 
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
-
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.query.impl.MapBindingSet;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
-import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> {
@@ -31,37 +23,29 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 	private final ClassPartition target;
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
-	private final GraphDescription gd;
-	private final Lock writeLock;
 
-	private final ServiceDescription sd;
+	private final CommonVariables cv;
 
-	private final Consumer<ServiceDescription> saver;
-
-	public IsSourceClassLinkedToTargetClass(ServiceDescription sd, Repository repository,
-			ClassPartition target, PredicatePartition predicatePartition, ClassPartition source, GraphDescription gd,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) {
-		super(repository, limiter, finishedQueries);
-		this.sd = sd;
+	public IsSourceClassLinkedToTargetClass(CommonVariables cv,
+			ClassPartition target, PredicatePartition predicatePartition, ClassPartition source) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.predicate = predicatePartition.getPredicate();
 		this.target = target;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
-		this.gd = gd;
-		this.saver = saver;
-		this.writeLock = writeLock;
 	}
 
 	@Override
 	protected void logStart() {
 		log.debug("Checking if {} connected to {} via {} in {}", source.getClazz(), target.getClass(), predicate,
-				gd.getGraphName());
+				cv.gd().getGraphName());
 	}
 
 	@Override
 	protected void logEnd() {
 		log.debug("Checked if {} connected to {} via {} in {}", source.getClazz(), target.getClass(), predicate,
-				gd.getGraphName());
+				cv.gd().getGraphName());
 	}
 
 	@Override
@@ -71,7 +55,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 		MapBindingSet tq = new MapBindingSet();
 		tq.setBinding("sourceType", sourceType);
 		tq.setBinding("targetType", targetType);
-		tq.setBinding("graph", gd.getGraph());
+		tq.setBinding("graph", cv.gd().getGraph());
 		tq.setBinding("predicate", predicate);
 		setQuery(COUNT_LINKS_IN_SAME_GRAPH, tq);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
@@ -81,15 +65,15 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 	protected void set(Long has) {
 		if (has > 0) {
 			try {
-				writeLock.lock();
+				cv.writeLock().lock();
 				final IRI targetType = target.getClazz();
 				ClassPartition subTarget = new ClassPartition(targetType);
 				subTarget.setTripleCount(has);
 				predicatePartition.putClassPartition(subTarget);
 			} finally {
-				writeLock.unlock();
+				cv.writeLock().unlock();
 			}
-			saver.accept(sd);
+			cv.saver().accept(cv.sd());
 		}
 	}
 

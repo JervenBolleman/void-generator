@@ -5,20 +5,21 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 
-ex:count_subjects_with_a_type_and_predicate_to_type a sh:SPARQLExecutable,
+ex:select_distinct_datatypes sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
-    rdfs:comment "Count the number of predicate linksets between types in one graph."^^rdf:HTML ;
+    rdfs:comment "Select the distinct datatypes."^^rdf:HTML ;
     sh:prefixes _:sparql_examples_prefixes ;
-    sh:select """SELECT 
-  (COUNT (?subject) AS ?subjects) 
-WHERE { 
-  GRAPH ?graph { 
-    ?subject a ?sourceType ; 
-      ?predicate ?target . 
-	?target a ?targetType .
+    sh:select """SELECT DISTINCT ?dt
+WHERE {
+  GRAPH ?graphName {
+    ?subject a ?sourceType .
+	?subject ?predicate ?target .
+    FILTER(isLiteral(?target)) .
+    BIND(datatype(?target) as ?dt)
   }
-}""" ;
-    schema:keywords "void" , "predicate", "count", "type" ;
+}
+""" ;
+    schema:keywords "void" , "predicate", "distinct", "type", "datatype" ;
     schema:target [
-        a sd:Service
+        rdfs:subClassOf sd:Service
     ] .

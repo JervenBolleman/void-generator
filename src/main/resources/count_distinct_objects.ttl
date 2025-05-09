@@ -5,20 +5,19 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 
-ex:count_distinct_iri_subjects_in_all_graphs a sh:SPARQLExecutable,
+ex:count_distinct_objects a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
-    rdfs:comment "Count the number of distinct IRI used in the subject position of triples in the all graphs (or one if graph is pre-bound)" ;
+    rdfs:comment "Count the number of distinct IRIs used in the object position of triples in graphs"^^rdf:HTML ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """
 SELECT
-    (COUNT(DISTINCT ?subject) AS ?subjects)
+  (COUNT(DISTINCT ?object) AS ?objects)
 WHERE {
-    GRAPH ?graph {
-        ?subject ?predicate ?object .
-        FILTER(isIRI(?subject))
-    }
+  GRAPH ?graph {
+    ?subject ?predicate ?object .
+  }
 }""" ;
-    schema:keywords "void" , "iri", "count" ;
+    schema:keywords "void" , "object", "count", "distinct" ;
     schema:target [
         a sd:Service
     ] .

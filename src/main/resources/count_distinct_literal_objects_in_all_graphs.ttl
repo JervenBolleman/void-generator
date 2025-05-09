@@ -5,20 +5,22 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 
-ex:count_subjects_with_a_type_and_predicate_to_type a sh:SPARQLExecutable,
+ex:count_distinct_literal_objects_in_all_graphs a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
-    rdfs:comment "Count the number of predicate linksets between types in one graph."^^rdf:HTML ;
+    rdfs:comment "Count the number of distinct literals used in the object position of triples (in a pre bound graph) (qlever optimized form)"^^rdf:HTML ;
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """SELECT 
-  (COUNT (?subject) AS ?subjects) 
-WHERE { 
-  GRAPH ?graph { 
-    ?subject a ?sourceType ; 
-      ?predicate ?target . 
-	?target a ?targetType .
-  }
+  (COUNT(?object) AS ?objects) 
+  WHERE { 
+  {
+	SELECT DISTINCT ?object { 
+	GRAPH ?graph {
+	  ?subject ?predicate ?object . 
+	  FILTER (!(isIRI(?object))|| !isBlank(?object)))
+    }
+  } 
 }""" ;
-    schema:keywords "void" , "predicate", "count", "type" ;
+    schema:keywords "void" , "literal", "count" ;
     schema:target [
         a sd:Service
     ] .

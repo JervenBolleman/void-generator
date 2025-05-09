@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
 public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 
@@ -60,8 +61,10 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 
 	@Test
 	public void testRun() throws Exception {
-		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
-				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, null);
+		ServiceDescription sd = new ServiceDescription();
+		CommonVariables cv = new CommonVariables(sd , gd, repository, s->{}, writeLock, limiter, finishedQueries, false);
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
+				predicatePartition, sourceClass, ogd, (s) -> null, null);
 		try (RepositoryConnection connection = repository.getConnection()) {
 			SimpleValueFactory vf = SimpleValueFactory.getInstance();
 			connection.begin();
@@ -77,8 +80,10 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	
 	@Test
 	public void testRunExclude() throws Exception {
-		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
-				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");
+		ServiceDescription sd = new ServiceDescription();
+		CommonVariables cv = new CommonVariables(sd , gd, repository, s->{}, writeLock, limiter, finishedQueries, false);
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv,  
+				predicatePartition, sourceClass, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
 		assertEquals(1, predicatePartition.getLinkSets().size());
@@ -86,9 +91,11 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	
 	@Test
 	public void testWithOtherKnown() throws Exception {
+		ServiceDescription sd = new ServiceDescription();
+		CommonVariables cv = new CommonVariables(sd , gd, repository, s->{}, writeLock, limiter, finishedQueries, false);
 		ogd.getClasses().add(new ClassPartition(targetClass.getClazz()));
-		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, 
-				predicatePartition, sourceClass, gd, writeLock, limiter, finishedQueries, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");		
+		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
+				predicatePartition, sourceClass, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')");		
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
 		assertEquals(1, predicatePartition.getLinkSets().size());

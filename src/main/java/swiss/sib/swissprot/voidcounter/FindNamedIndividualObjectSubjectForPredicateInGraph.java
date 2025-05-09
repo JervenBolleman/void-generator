@@ -2,28 +2,20 @@ package swiss.sib.swissprot.voidcounter;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.query.impl.MapBindingSet;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
-import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ObjectPartition;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<ObjectPartition>> {
@@ -33,28 +25,27 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 			.getLogger(FindNamedIndividualObjectSubjectForPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
-	private final GraphDescription gd;
+	
 	private final ClassPartition cp;
-	private final Lock writeLock;
-	private final Consumer<ServiceDescription> saver;
-	private final ServiceDescription sd;
+	
+	
+	
+	private final CommonVariables cv;
 
-	public FindNamedIndividualObjectSubjectForPredicateInGraph(ServiceDescription sd, GraphDescription gd,
-			PredicatePartition predicatePartition, ClassPartition cp, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) {
-		super(repository, limiter, finishedQueries);
-		this.sd = sd;
-		this.gd = gd;
+	
+
+	public FindNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition cp) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.predicatePartition = predicatePartition;
 		this.cp = cp;
-		this.saver = saver;
-		this.writeLock = writeLock;
 	}
 
 	@Override
 	protected void logStart() {
 		log.debug("Finding if {} with predicate partition {} has subject partitions in {}", cp.getClazz(),
-				predicatePartition.getPredicate(), gd.getGraphName());
+				predicatePartition.getPredicate(), cv.gd().getGraphName());
 	}
 
 	@Override
@@ -62,17 +53,17 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 		if (!predicatePartition.getSubjectPartitions().isEmpty()) {
 			log.debug("{} has predicate partition {} with {} subject partition in {}", cp.getClazz(),
 					predicatePartition.getPredicate(), predicatePartition.getSubjectPartitions().size(),
-					gd.getGraphName());
+					cv.gd().getGraphName());
 		} else {
 			log.debug("Found no {} with predicate partition {} has subject partitions in {}", cp.getClazz(),
-					predicatePartition.getPredicate(), gd.getGraphName());
+					predicatePartition.getPredicate(), cv.gd().getGraphName());
 		}
 	}
 
 	@Override
 	protected Set<ObjectPartition> run(RepositoryConnection connection) throws Exception {
 		MapBindingSet tq = new MapBindingSet();
-		tq.setBinding("graph", gd.getGraph());
+		tq.setBinding("graph", cv.gd().getGraph());
 		tq.setBinding("sourceType", cp.getClazz());
 		tq.setBinding("predicate", predicatePartition.getPredicate());
 		setQuery(QUERY, tq);
@@ -98,15 +89,15 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 	@Override
 	protected void set(Set<ObjectPartition> namedObjects) {
 		try {
-			writeLock.lock();
+			cv.writeLock().lock();
 			for (ObjectPartition namedObject : namedObjects) {
 				predicatePartition.putSubjectPartition(namedObject);
 			}
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
 		if (!namedObjects.isEmpty())
-			saver.accept(sd);
+			cv.saver().accept(cv.sd());
 	}
 
 	@Override

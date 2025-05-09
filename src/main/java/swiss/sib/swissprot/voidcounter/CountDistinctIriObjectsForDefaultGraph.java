@@ -1,19 +1,12 @@
 package swiss.sib.swissprot.voidcounter;
 
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
-
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.jdbc4.VirtuosoConnection;
 
@@ -23,17 +16,12 @@ public final class CountDistinctIriObjectsForDefaultGraph extends QueryCallable<
 	private static final String COUNT_DISTINCT_OBJECT_IRI_QUERY = Helper.loadSparqlQuery("count_distinct_iri_objects");
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsForDefaultGraph.class);
-	private final ServiceDescription sd;
-	private final Consumer<ServiceDescription> saver;
 
-	private final Lock writeLock;
+	private final CommonVariables cv;
 
-	public CountDistinctIriObjectsForDefaultGraph(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) {
-		super(repository, limiter, finishedQueries);
-		this.sd = sd;
-		this.saver = saver;
-		this.writeLock = writeLock;
+	public CountDistinctIriObjectsForDefaultGraph(CommonVariables cv) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 	}
 
 	@Override
@@ -64,12 +52,12 @@ public final class CountDistinctIriObjectsForDefaultGraph extends QueryCallable<
 	@Override
 	protected void set(Long count) {
 		try {
-			writeLock.lock();
-			sd.setDistinctIriObjectCount(count);
+			cv.writeLock().lock();
+			cv.sd().setDistinctIriObjectCount(count);
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
-		saver.accept(sd);
+		cv.save();
 	}
 	
 	@Override

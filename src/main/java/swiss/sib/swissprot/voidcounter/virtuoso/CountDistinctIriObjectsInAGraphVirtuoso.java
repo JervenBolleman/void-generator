@@ -1,53 +1,46 @@
 package swiss.sib.swissprot.voidcounter.virtuoso;
 
 import java.util.Map;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
 
-import org.eclipse.rdf4j.repository.Repository;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.voidcounter.CommonVariables;
 
 public final class CountDistinctIriObjectsInAGraphVirtuoso extends CountDistinctIriInAGraphVirtuoso {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInAGraphVirtuoso.class);
-	
-	public CountDistinctIriObjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64NavigableMap> graphIriIds,
-			String graphIri, Semaphore limit, AtomicInteger finishedQueries) {
-		super(repository, sd, saver, graphIri, writeLock, sd::setDistinctIriObjectCount, GraphDescription::setDistinctIriObjectCount,
-		 graphIriIds,
-		  limit, finishedQueries);
+
+	public CountDistinctIriObjectsInAGraphVirtuoso(CommonVariables cv, Map<String, Roaring64NavigableMap> graphIriIds) {
+		super(cv, l -> cv.sd().setDistinctIriObjectCount(l), GraphDescription::setDistinctIriObjectCount,
+				graphIriIds);
 
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct iri objects for " + graphIri);
+		log.debug("Counting distinct iri objects for {}", cv.gd().getGraphName());
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
-		log.error("failed counting distinct iri objects " + graphIri, e);
+		if (log.isErrorEnabled())
+			log.error("failed counting distinct iri objects " + cv.gd().getGraphName(), e);
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct objects iri for graph " + graphIri);
+		log.debug("Counted distinct objects iri for graph {}", cv.gd().getGraphName());
 	}
 
 	@Override
 	protected String queryForGraph() {
 		return "SELECT iri_id_num(RDF_QUAD.O) from RDF_QUAD table option (index RDF_QUAD_POGS) where isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) = 0 AND RDF_QUAD.G = iri_to_id('"
-				+ graphIri + "')";
+				+ cv.gd().getGraphName() + "')";
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;

@@ -6,9 +6,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
@@ -19,15 +16,14 @@ import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
-import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 /**
@@ -38,30 +34,16 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
  */
 public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 	private static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
-	private static final String DATA_TYPE_QUERY = """
-			SELECT DISTINCT ?dt
-			WHERE {
-				GRAPH ?graphName {
-					?subject a ?sourceType .
-					?subject ?predicate ?target .
-					FILTER(isLiteral(?target)) .
-					BIND(datatype(?target) as ?dt)
-				}
-			}
-			""";
+	private static final String DATA_TYPE_QUERY = Helper.loadSparqlQuery("select_distinct_datatypes");
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
-	private final GraphDescription gd;
-	private final Lock writeLock;
+	private final CommonVariables cv;
 
-	public FindDataTypeIfNoClassOrDtKnown(PredicatePartition predicatePartition, ClassPartition source,
-			Repository repository, GraphDescription gd, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries) {
-		super(repository, limiter, finishedQueries);
+	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition, ClassPartition source) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
-		this.gd = gd;
-		this.writeLock = writeLock;
 	}
 
 	@Override
@@ -79,7 +61,7 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 			if (connection instanceof VirtuosoRepositoryConnection) {
 				virtuosoOptimized(sourceType, predicate, datatypes, connection);
 			} else {
-				pureSparql(predicate, predicatePartition, sourceType, connection, datatypes);
+				pureSparql(predicate, sourceType, connection, datatypes);
 			}
 		}
 		return datatypes;
@@ -93,7 +75,7 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 				+ "FROM RDF_QUAD PO, RDF_QUAD ST WHERE  ST.S=PO.S AND "
 				+ " ST.P=iri_to_id('http://www.w3.org/1999/02/22-rdf-syntax-ns#type') AND ST.O=iri_to_id('" + sourceType
 				+ "') AND " + " PO.P=iri_to_id('" + predicate + "') AND " + " isiri_id(PO.O) = 0 AND "
-				+ " PO.G=iri_to_id('" + gd.getGraphName() + "') AND " + " ST.G=iri_to_id('" + gd.getGraphName()
+				+ " PO.G=iri_to_id('" + cv.gd().getGraphName() + "') AND " + " ST.G=iri_to_id('" + cv.gd().getGraphName()
 				+ "'))t");
 		try (final Statement createStatement = quadStoreConnection.createStatement()) {
 
@@ -108,12 +90,12 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 		}
 	}
 
-	private void pureSparql(Resource predicate, PredicatePartition predicatePartition, final Resource sourceType,
+	private void pureSparql(Resource predicate, Resource sourceType,
 			RepositoryConnection localConnection, Set<IRI> datatypes) {
 
 
 		TupleQuery tq = localConnection.prepareTupleQuery(DATA_TYPE_QUERY);
-		tq.setBinding("graphName", gd.getGraph());
+		tq.setBinding("graphName", cv.gd().getGraph());
 		tq.setBinding("sourceType", sourceType);
 		tq.setBinding("predicate", predicate);
 		setQuery(DATA_TYPE_QUERY, tq.getBindings());
@@ -132,15 +114,13 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 
 	@Override
 	protected void logStart() {
-		log.debug("Finding distinct datatypes for " + gd.getGraphName() + " and predicate "
-				+ predicatePartition.getPredicate());
+		log.debug("Finding distinct datatypes for {} and predicate {}", cv.gd().getGraphName(), predicatePartition.getPredicate());
 
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Found distinct datatypes for " + gd.getGraphName() + " and predicate "
-				+ predicatePartition.getPredicate());
+		log.debug("Found distinct datatypes for {} and predicate ", cv.gd().getGraphName(), predicatePartition.getPredicate());
 
 	}
 
@@ -148,12 +128,12 @@ public final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>
 	protected void set(Set<IRI> t) {
 
 		try {
-			writeLock.lock();
+			cv.writeLock().lock();
 			for (IRI datatype : t) {
 				predicatePartition.putDatatypeParition(datatype);
 			}
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
 	}
 	

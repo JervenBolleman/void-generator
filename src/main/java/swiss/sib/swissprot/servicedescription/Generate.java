@@ -67,13 +67,15 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFWriter;
+import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
 import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
-import swiss.sib.swissprot.voidcounter.FindDistinctClassses;
+import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjectsInDefaultGraph;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForDefaultGraph;
 import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForDefaultGraph;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjects;
 import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjectsForDefaultGraph;
+import swiss.sib.swissprot.voidcounter.FindDistinctClassses;
 import swiss.sib.swissprot.voidcounter.FindPredicates;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import swiss.sib.swissprot.voidcounter.TripleCount;
@@ -164,9 +166,9 @@ public class Generate implements Callable<Integer> {
 	private String dataReleaseDate;
 
 	@Option(names = {
-	"--prefer-group-by" }, description = "Sends fewer queries, server side group by instead of client side nested loop", defaultValue = "false")
+			"--prefer-group-by" }, description = "Sends fewer queries, server side group by instead of client side nested loop", defaultValue = "false")
 	private boolean preferGroupBy;
-	
+
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -242,8 +244,6 @@ public class Generate implements Callable<Integer> {
 	private final ExecutorService executors;
 
 	private final Semaphore limit;
-
-
 
 	public final CompletableFuture<Exception> schedule(QueryCallable<?> task) {
 		scheduledQueries.incrementAndGet();
@@ -383,7 +383,8 @@ public class Generate implements Callable<Integer> {
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, boolean isVirtuoso, Semaphore limit) {
 		String voidGraphUri = voidGraph.toString();
-		scheduleBigCountsPerGraph(sd, voidGraphUri, saver, limit);
+		GraphDescription voidGraphDescription = getOrCreateGraphDescriptionObject(voidGraphUri, sd);
+		scheduleBigCountsPerGraph(sd, voidGraphDescription, saver, limit);
 		Lock writeLock = rwLock.writeLock();
 		if (isVirtuoso) {
 			CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
@@ -391,7 +392,7 @@ public class Generate implements Callable<Integer> {
 					finishedQueries);
 			schedule(cdso);
 		}
-		countSpecificThingsPerGraph(sd, knownPredicates, voidGraphUri, limit, saver);
+		countSpecificThingsPerGraph(sd, knownPredicates, voidGraphDescription, limit, saver);
 	}
 
 	private void waitForCountToFinish(List<Future<Exception>> futures) {
@@ -460,6 +461,7 @@ public class Generate implements Callable<Integer> {
 		for (var graphName : graphNames) {
 			getOrCreateGraphDescriptionObject(graphName, sd);
 		}
+		Collection<GraphDescription> graphs = sd.getGraphs();
 
 		if (countDistinctObjects && countDistinctSubjects && isvirtuoso) {
 			for (String graphName : graphNames) {
@@ -467,81 +469,82 @@ public class Generate implements Callable<Integer> {
 						distinctSubjectIris, distinctObjectIris, graphName, limit, finishedQueries));
 			}
 		} else {
+			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries,
+					preferGroupBy);
 			if (countDistinctObjects) {
 				countDistinctObjects(sd, saver, writeLock, isvirtuoso, limit);
 			}
 
 			if (countDistinctSubjects) {
-				countDistinctSubjects(sd, saver, distinctSubjectIris, writeLock, isvirtuoso, graphNames, limit);
+				countDistinctSubjects(cv, distinctSubjectIris, isvirtuoso, graphs);
 			}
 		}
-		for (String graphName : graphNames) {
-			scheduleBigCountsPerGraph(sd, graphName, saver, limit);
+		for (GraphDescription gd : graphs) {
+			scheduleBigCountsPerGraph(sd, gd, saver, limit);
 		}
 
 		// Ensure that we first do the big counts before starting on counting the
 		// smaller sets.
-		for (String graphName : graphNames) {
-			countSpecificThingsPerGraph(sd, knownPredicates, graphName, limit, saver);
+		for (GraphDescription gd : graphs) {
+			countSpecificThingsPerGraph(sd, knownPredicates, gd, limit, saver);
 		}
 	}
 
 	private void countDistinctObjects(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock,
 			boolean isvirtuoso, Semaphore limit) {
-		schedule(new CountDistinctBnodeObjectsForAllGraphs(sd, repository, saver, writeLock, limit, finishedQueries));
+		CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries,
+				preferGroupBy);
+		schedule(new CountDistinctBnodeObjectsForAllGraphs(cv));
 		if (!isvirtuoso || !countDistinctSubjects) {
-			schedule(new CountDistinctIriObjectsForDefaultGraph(sd, repository, saver, writeLock, limit,
-					finishedQueries));
+			schedule(new CountDistinctIriObjectsForDefaultGraph(cv));
 		}
-		schedule(new CountDistinctLiteralObjectsForDefaultGraph(sd, repository, saver, writeLock, limit, finishedQueries));
+		schedule(new CountDistinctLiteralObjectsForDefaultGraph(cv));
 	}
 
-	private void countDistinctSubjects(ServiceDescription sd, Consumer<ServiceDescription> saver,
-			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris, Lock writeLock, boolean isvirtuoso,
-			Collection<String> allGraphs, Semaphore limit) {
+	private void countDistinctSubjects(CommonVariables cv,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris, boolean isvirtuoso,
+			Collection<GraphDescription> allGraphs) {
 		if (!isvirtuoso) {
-			schedule(
-					new CountDistinctIriSubjectsForDefaultGraph(sd, repository, saver, writeLock, limit, finishedQueries));
+			schedule(new CountDistinctIriSubjectsForDefaultGraph(cv));
 		} else if (!countDistinctObjects) {
-			for (String graphName : allGraphs) {
-				schedule(new CountDistinctIriSubjectsInAGraphVirtuoso(sd, repository, saver, writeLock,
-						distinctSubjectIris, graphName, limit, finishedQueries));
+			for (GraphDescription gd : allGraphs) {
+				CommonVariables cvgd = new CommonVariables(cv.sd(), gd, cv.repository(), cv.saver(), cv.writeLock(),
+						cv.limiter(), cv.finishedQueries(), preferGroupBy);
+				schedule(new CountDistinctIriSubjectsInAGraphVirtuoso(cvgd, distinctSubjectIris));
 			}
 		}
-		schedule(new CountDistinctBnodeSubjects(sd, repository, writeLock, limit, finishedQueries, saver));
+		schedule(new CountDistinctBnodeSubjectsInDefaultGraph(cv));
 	}
 
-	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, String graphName,
+	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, GraphDescription gd,
 			Semaphore limit, Consumer<ServiceDescription> saver) {
-		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, rwLock.writeLock(), limit, finishedQueries,
+				preferGroupBy);
 		if (findDistinctClasses && findPredicates && detailedCount) {
-			schedule(new FindPredicatesAndClasses(gd, repository, this::schedule, knownPredicates, rwLock, limit,
-					finishedQueries, saver, sd, classExclusion, preferGroupBy));
+			schedule(new FindPredicatesAndClasses(cv, this::schedule, knownPredicates, rwLock, classExclusion));
 		} else {
-			Lock writeLock = rwLock.writeLock();
 			if (findPredicates) {
-				schedule(new FindPredicates(gd, repository, knownPredicates, this::schedule, writeLock, limit,
-						finishedQueries, saver, sd, null));
+				schedule(new FindPredicates(cv, knownPredicates, this::schedule, null));
 			}
 			if (findDistinctClasses) {
-				schedule(new FindDistinctClassses(gd, repository, writeLock, limit, finishedQueries, saver,
-						this::schedule, sd, classExclusion, null, preferGroupBy));
+				schedule(new FindDistinctClassses(cv, this::schedule, classExclusion, null));
 			}
 		}
 	}
 
-	private void scheduleBigCountsPerGraph(ServiceDescription sd, String graphName, Consumer<ServiceDescription> saver,
-			Semaphore limit) {
-		final GraphDescription gd = getOrCreateGraphDescriptionObject(graphName, sd);
+	private void scheduleBigCountsPerGraph(ServiceDescription sd, GraphDescription gd,
+			Consumer<ServiceDescription> saver, Semaphore limit) {
 		Lock writeLock = rwLock.writeLock();
+		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries,
+				preferGroupBy);
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			schedule(new CountDistinctLiteralObjects(gd, sd, repository, saver, writeLock, limit, finishedQueries));
+			schedule(new CountDistinctLiteralObjects(cv));
 		}
 		if (countDistinctSubjects) {
-			schedule(new CountDistinctBnodeSubjects(gd, sd, repository, writeLock, limit, finishedQueries, saver));
+			schedule(new CountDistinctBnodeSubjects(cv));
 		}
-		schedule(new TripleCount(gd, repository, writeLock, limit, finishedQueries, saver, sd));
+		schedule(new TripleCount(cv));
 	}
 
 	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
@@ -587,7 +590,7 @@ public class Generate implements Callable<Integer> {
 
 				@Override
 				public void handleComment(String comment) throws RDFHandlerException {
-					//Ignore comments
+					// Ignore comments
 				}
 
 				@Override

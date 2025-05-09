@@ -6,8 +6,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -26,8 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
-import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public final class FindDistinctClassses extends QueryCallable<List<ClassPartition>> {
@@ -36,45 +32,36 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	private static final String GROUP_BY_QUERY = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph");
 	private static final Logger log = LoggerFactory.getLogger(FindDistinctClassses.class);
 
-	private final GraphDescription gd;
-	private final Lock writeLock;
-	private final AtomicInteger finishedQueries;
-	private final Consumer<ServiceDescription> saver;
-	private final ServiceDescription sd;
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
 	private final String classExclusion;
 	private final Supplier<QueryCallable<?>> onSuccess;
 	private final boolean nested;
+	private final CommonVariables cv;
 
-	public FindDistinctClassses(GraphDescription gd, Repository repository, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries, Consumer<ServiceDescription> saver,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, ServiceDescription sd,
-			String classExclusion, Supplier<QueryCallable<?>> onSuccess, boolean preferGroupBy) {
-		super(repository, limiter, finishedQueries);
-		this.gd = gd;
-		this.writeLock = writeLock;
-		this.finishedQueries = finishedQueries;
-		this.saver = saver;
+	public FindDistinctClassses(CommonVariables cv,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, 
+			String classExclusion, Supplier<QueryCallable<?>> onSuccess) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.scheduler = scheduler;
-		this.sd = sd;
 		this.classExclusion = classExclusion;
 		this.onSuccess = onSuccess;
-		this.nested = !preferGroupBy;
+		this.nested = !cv.preferGroupBy();
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Find distinct classes for {}", gd.getGraphName());
+		log.debug("Find distinct classes for {}", cv.gd().getGraphName());
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
-		log.error("failed finding distinct classses " + gd.getGraphName(), e);
+		log.error("failed finding distinct classses " + cv.gd().getGraphName(), e);
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Found distinct classes:{} for {}", gd.getDistinctClassesCount(), gd.getGraphName());
+		log.debug("Found distinct classes:{} for {}", cv.gd().getDistinctClassesCount(), cv.gd().getGraphName());
 	}
 
 	@Override
@@ -82,7 +69,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			throws MalformedQueryException, QueryEvaluationException, RepositoryException {
 		List<ClassPartition> classesList = new ArrayList<>();
 		MapBindingSet tq = new MapBindingSet();
-		tq.setBinding("graph", gd.getGraph());
+		tq.setBinding("graph", cv.gd().getGraph());
 		if (nested)
 			nested(connection, classesList, tq);
 		else
@@ -134,7 +121,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		if (classExclusion == null || classExclusion.isBlank()) {
 			return NESTED_LOOP_QUERY;
 		} else {
-			return NESTED_LOOP_QUERY.replaceAll(REPLACE, "FILTER (" + classExclusion + ")");
+			return NESTED_LOOP_QUERY.replace(REPLACE, "FILTER (" + classExclusion + ")");
 		}
 	}
 	
@@ -142,21 +129,21 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		if (classExclusion == null || classExclusion.isBlank()) {
 			return GROUP_BY_QUERY;
 		} else {
-			return GROUP_BY_QUERY.replaceAll(REPLACE, "FILTER (" + classExclusion + ")");
+			return GROUP_BY_QUERY.replace(REPLACE, "FILTER (" + classExclusion + ")");
 		}
 	}
 
 	@Override
 	protected void set(List<ClassPartition> count) {
 		try {
-			writeLock.lock();
-			Set<ClassPartition> classes = gd.getClasses();
+			cv.writeLock().lock();
+			Set<ClassPartition> classes = cv.gd().getClasses();
 			classes.clear();
 			classes.addAll(count);
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
-		saver.accept(sd);
+		cv.save();
 	}
 
 	@Override
@@ -177,25 +164,25 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 		@Override
 		protected void logStart() {
-			log.debug("Counting distinct triples for class " + cp.getClazz() + " for " + gd.getGraphName());
+			log.debug("Counting distinct triples for class " + cp.getClazz() + " for {}", cv.gd().getGraphName());
 
 		}
 
 		@Override
 		protected void logFailed(Exception e) {
-			log.error("failed counting distinct triples for class " + gd.getGraphName(), e);
+			log.error("failed counting distinct triples for class " + cv.gd().getGraphName(), e);
 		}
 
 		@Override
 		protected void logEnd() {
-			log.debug("Counted distinct triples for class " + cp.getClazz() + " for " + gd.getGraphName());
+			log.debug("Counted distinct triples for class " + cp.getClazz() + " for {} ", cv.gd().getGraphName());
 		}
 
 		@Override
 		protected Long run(RepositoryConnection connection) throws Exception {
 
 			MapBindingSet tq = new MapBindingSet();
-			tq.setBinding("graph", gd.getGraph());
+			tq.setBinding("graph", cv.gd().getGraph());
 			tq.setBinding("class", cp.getClazz());
 			setQuery(COUNT_TYPE_ARCS, tq);
 			return Helper.getSingleLongFromSparql(getQuery(), connection, "count");
@@ -207,7 +194,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			if (t > 0) {
 				cp.setTripleCount(t);
 			} else {
-				gd.getClasses().remove(cp);
+				cv.gd().getClasses().remove(cp);
 			}
 		}
 

@@ -1,16 +1,10 @@
 package swiss.sib.swissprot.voidcounter;
 
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-
 import org.eclipse.rdf4j.query.impl.MapBindingSet;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
@@ -22,31 +16,29 @@ public class CountUniqueSubjectPerPredicateInGraph
 
 	private static final String SUBJECTS = "subjects";
 	private static final String QUERY = Helper.loadSparqlQuery("count_distinct_subjects_for_a_predicate_in_a_graph");
-	private final PredicatePartition predicatePartition;
-	private final GraphDescription gd;
 	public static final Logger log = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraph.class);
-	private final Lock writeLock;
+
+	private final CommonVariables cv;
+	private final PredicatePartition predicatePartition;
 	
-	public CountUniqueSubjectPerPredicateInGraph(GraphDescription gd, PredicatePartition predicatePartition,
-	    Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries)
+	public CountUniqueSubjectPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition)
 	{
-		super(repository, limiter, finishedQueries);
-		this.gd = gd;
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.predicatePartition = predicatePartition;
-		this.writeLock = writeLock;
 	}
 
 	@Override
 	protected void logStart()
 	{
-		log.debug("Counting distinct subjects in {} for predicate {}", gd.getGraphName(), predicatePartition.getPredicate());
+		log.debug("Counting distinct subjects in {} for predicate {}", cv.gd().getGraphName(), predicatePartition.getPredicate());
 
 	}
 
 	@Override
 	protected void logEnd()
 	{
-		log.debug("Counted distinct subjects in {} for predicate {}", gd.getGraphName(), predicatePartition.getPredicate());
+		log.debug("Counted distinct subjects in {} for predicate {}", cv.gd().getGraphName(), predicatePartition.getPredicate());
 	}
 
 	@Override
@@ -58,13 +50,13 @@ public class CountUniqueSubjectPerPredicateInGraph
 		{
 			//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 			setQuery("SELECT iri_id_num(RDF_QUAD.S) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-			    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicatePartition.getPredicate() + "')");
+			    + cv.gd().getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicatePartition.getPredicate() + "')");
 			return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, getQuery());
 		}
 		else
 		{
 			MapBindingSet bs = new MapBindingSet();
-			bs.setBinding("graph", gd.getGraph() );
+			bs.setBinding("graph", cv.gd().getGraph() );
 			bs.setBinding("predicate", predicatePartition.getPredicate());
 			setQuery(QUERY, bs);
 			return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
@@ -75,10 +67,10 @@ public class CountUniqueSubjectPerPredicateInGraph
 	protected void set(Long subjects)
 	{
 		try	{
-			writeLock.lock();
+			cv.writeLock().lock();
 			predicatePartition.setDistinctSubjectCount(subjects);
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
 	}
 	

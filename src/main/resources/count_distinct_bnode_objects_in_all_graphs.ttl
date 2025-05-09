@@ -15,15 +15,10 @@ SELECT
 WHERE {
     GRAPH ?graph {
         ?subject ?predicate ?object .
-        FILTER(isIRI(?object))
+        FILTER(isBlank(?object))
     }
 } GROUP BY ?graph""" ;
     schema:keywords "void" , "blank node", "count" ;
     schema:target [
-        a owl:Class ;
-        rdfs:subClassOf [
-            a owl:Restriction ;
-            owl:onProperty rdf:type ;
-            owl:someValuesFrom sd:Service
-            ]
-        ] .
+        a sd:Service
+    ] .

@@ -67,9 +67,9 @@ public class CountUniqueSubjectPerPredicateInGraphTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		var counter = new CountUniqueSubjectPerPredicateInGraph(gd, pp, repository,
-				writeLock, new Semaphore(1),
-				finishedQueries);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
+				new Semaphore(1), finishedQueries, false);
+		var counter = new CountUniqueSubjectPerPredicateInGraph(cv, pp);
 		counter.call();
 		assertEquals(1, pp.getDistinctSubjectCount());
 		assertEquals(0, pp.getDistinctObjectCount());

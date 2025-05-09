@@ -42,9 +42,10 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 		Lock writeLock = new ReentrantLock();
 		final ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
+		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		}, writeLock, new Semaphore(1), finishedQueries, false);
 		final CountDistinctIriObjectsForDefaultGraph countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsForDefaultGraph(
-				sd, repository, (s) -> {
-				}, writeLock, new Semaphore(1), finishedQueries);
+				cv);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(0, sd.getDistinctIriObjectCount());
 		assertEquals(1, finishedQueries.get());
@@ -66,9 +67,10 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 		sd.putGraphDescription(bag);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
+		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		}, writeLock, new Semaphore(1), finishedQueries, false);
 		final CountDistinctIriObjectsForDefaultGraph countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsForDefaultGraph(
-				sd, repository, (s) -> {
-				}, writeLock, new Semaphore(1), finishedQueries);
+				cv);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriObjectCount());
 		assertEquals(1, finishedQueries.get());

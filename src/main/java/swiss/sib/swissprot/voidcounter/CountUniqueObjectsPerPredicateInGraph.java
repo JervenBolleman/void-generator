@@ -3,20 +3,16 @@ package swiss.sib.swissprot.voidcounter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.repository.Repository;
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.virtuoso.VirtuosoFromSQL;
@@ -27,34 +23,30 @@ public class CountUniqueObjectsPerPredicateInGraph
 {
 
 	private static final String OBJECTS = "objects";
-	private final PredicatePartition predicatePartition;
-	private final GraphDescription gd;
+	private static final String SC = Helper.loadSparqlQuery("count_distinct_objects");
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueObjectsPerPredicateInGraph.class);
-	private final Lock writeLock;
+
+	private final PredicatePartition predicatePartition;
+	private final CommonVariables cv;
 	
-	public CountUniqueObjectsPerPredicateInGraph(GraphDescription gd, PredicatePartition predicatePartition,
-	    Repository repository, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries)
+	public CountUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition)
 	{
-		super(repository, limiter, finishedQueries);
-		this.gd = gd;
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.predicatePartition = predicatePartition;
-		this.writeLock = writeLock;
 	}
 
 	@Override
 	protected void logStart()
 	{
-		log.debug("Counting distinct objects for " + gd.getGraphName() + " and predicate "
-		    + predicatePartition.getPredicate());
-
+		log.debug("Counting distinct objects for {} and predicate {}", cv.gd().getGraphName(), predicatePartition.getPredicate());
 	}
 
 	@Override
 	protected void logEnd()
 	{
-		log.debug(
-		    "Counted distinct " + predicatePartition.getDistinctObjectCount() + " objects for "
-		        + gd.getGraphName() + " and predicate " + predicatePartition.getPredicate());
+		log.debug("Counted distinct {} objects for {} and predicate {}", predicatePartition.getDistinctObjectCount(),
+				cv.gd().getGraphName(), predicatePartition.getPredicate());
 	}
 
 	@Override
@@ -76,8 +68,10 @@ public class CountUniqueObjectsPerPredicateInGraph
 		}
 		else
 		{
-			setQuery("SELECT (count(distinct ?object) as ?objects) WHERE { GRAPH <"
-			    + gd.getGraphName() + "> {?subject <" + predicate + "> ?object}}");
+			MapBindingSet bindingSet = new MapBindingSet();
+			bindingSet.setBinding("graph", cv.gd().getGraph());
+			bindingSet.setBinding("predicate", predicate);
+			setQuery(SC, bindingSet);
 			return Helper.getSingleLongFromSparql(getQuery(), connection, OBJECTS);
 		}
 	}
@@ -86,7 +80,7 @@ public class CountUniqueObjectsPerPredicateInGraph
 	    throws MalformedQueryException, RepositoryException
 	{
 		setQuery("SELECT (COUNT(DISTINCT(RDF_QUAD.O))) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-		    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
+		    + cv.gd().getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
 		    + "') AND isiri_id(RDF_QUAD.O) = 0");
 		VirtuosoRepositoryConnection virtuosoRepositoryConnection = (VirtuosoRepositoryConnection) connection;
 		Connection vrc = virtuosoRepositoryConnection.getQuadStoreConnection();
@@ -94,14 +88,12 @@ public class CountUniqueObjectsPerPredicateInGraph
 		{
 			try (ResultSet res = stat.executeQuery(getQuery()))
 			{
-				log.debug(
-				    "Counting literal objects for " + gd.getGraphName() + " and predicate " + predicate);
+				log.debug("Counting literal objects for {} and predicate {}", cv.gd().getGraphName(), predicate);
 				while (res.next())
 				{
 					countOfLiterals = res.getLong(1);
 				}
-				log.debug("Counted " + countOfLiterals + " literal objects for " + gd.getGraphName()
-				    + " and predicate " + predicate);
+				log.debug("Counted {} literal objects for {} and predicate {}", countOfLiterals, cv.gd().getGraphName(), predicate);
 			} catch (SQLException e)
 			{
 				log.debug("Failed to query error:" + e.getMessage());
@@ -109,7 +101,7 @@ public class CountUniqueObjectsPerPredicateInGraph
 			}
 		} catch (SQLException e)
 		{
-			log.debug("Failed to count" + e.getMessage() + " literal objects for " + gd.getGraphName()
+			log.debug("Failed to count" + e.getMessage() + " literal objects for " + cv.gd().getGraphName()
 			    + " and predicate " + predicate);
 			throw new RepositoryException(e);
 		}
@@ -121,7 +113,7 @@ public class CountUniqueObjectsPerPredicateInGraph
 	{
 		//See http://docs.openlinksw.com/virtuoso/rdfiriidtype/
 		setQuery("SELECT iri_id_num(RDF_QUAD.O) FROM RDF_QUAD WHERE RDF_QUAD.G = iri_to_id('"
-		    + gd.getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
+		    + cv.gd().getGraphName() + "') AND RDF_QUAD.P = iri_to_id('" + predicate
 		    + "') AND isiri_id(RDF_QUAD.O) = 1");
 		return VirtuosoFromSQL.countDistinctLongResultsFromVirtuoso(connection, getQuery());
 	}
@@ -131,10 +123,10 @@ public class CountUniqueObjectsPerPredicateInGraph
 	{
 		try
 		{
-			writeLock.lock();
+			cv.writeLock().lock();
 			predicatePartition.setDistinctObjectCount(subjects);
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
 	}
 	

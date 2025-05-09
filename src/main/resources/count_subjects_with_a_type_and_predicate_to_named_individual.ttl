@@ -21,10 +21,5 @@ WHERE {
 } GROUP BY ?target""" ;
     schema:keywords "void" , "predicate", "count", "type", "named individual", "owl" ;
     schema:target [
-        a owl:Class ;
-        rdfs:subClassOf [
-            a owl:Restriction ;
-            owl:onProperty rdf:type ;
-            owl:someValuesFrom sd:Service
-        ]
+        a sd:Service
     ] .

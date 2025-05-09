@@ -6,43 +6,31 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Long> {
 
-	protected final ServiceDescription sd;
-	protected final Consumer<ServiceDescription> saver;
-	protected final String graphIri;
-	private final Lock writeLock;
 	private final Consumer<Long> allSetter;
 	private final BiConsumer<GraphDescription, Long> graphSetter;
 	private final Map<String, Roaring64NavigableMap> graphIriIds;
+	protected final CommonVariables cv;
 
-	public CountDistinctIriInAGraphVirtuoso(Repository repository, ServiceDescription sd,
-			Consumer<ServiceDescription> saver, String graphIri, Lock writeLock, Consumer<Long> allSetter,
-			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64NavigableMap> graphIriIds2,
-			Semaphore limiter, AtomicInteger finishedQueries) {
-		super(repository, limiter, finishedQueries);
-		this.sd = sd;
-		this.saver = saver;
-		this.graphIri = graphIri;
-		this.writeLock = writeLock;
+	protected CountDistinctIriInAGraphVirtuoso(CommonVariables cv, Consumer<Long> allSetter,
+			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64NavigableMap> graphIriIds2) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.allSetter = allSetter;
 		this.graphSetter = graphSetter;
 		this.graphIriIds = graphIriIds2;
@@ -69,6 +57,7 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 
 		// If we did not save this data before recalculate it.
 		Roaring64NavigableMap rb;
+		String graphIri = cv.gd().getGraphName();
 		if (!graphIriIds.containsKey(graphIri) || graphIriIds.get(graphIri).isEmpty()) {
 			rb = findUniqueIriIds(quadStoreConnection);
 			graphIriIds.put(graphIri, rb);
@@ -124,16 +113,16 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 	@Override
 	protected void set(Long count) {
 		try {
-			writeLock.lock();
+			cv.writeLock().lock();
 
-			final GraphDescription graph = sd.getGraph(graphIri);
+			final GraphDescription graph = cv.gd();
 			if (graph != null) {
 				graphSetter.accept(graph, count);
 			}
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
-		saver.accept(sd);
+		cv.save();
 	}
 
 	protected void setAll() {
@@ -143,10 +132,10 @@ public abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Lon
 				all.or(rbm);
 			}
 			final long iricounts = all.getLongCardinality();
-			writeLock.lock();
+			cv.writeLock().lock();
 			allSetter.accept(iricounts);
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
 	}
 

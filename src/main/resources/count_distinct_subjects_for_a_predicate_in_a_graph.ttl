@@ -18,10 +18,5 @@ WHERE {
 }""" ;
     schema:keywords "void" , "predicate", "count", "graph" ;
     schema:target [
-        a owl:Class ;
-        rdfs:subClassOf [
-            a owl:Restriction ;
-            owl:onProperty rdf:type ;
-            owl:someValuesFrom sd:Service
-        ]
+        a sd:Service
     ] .

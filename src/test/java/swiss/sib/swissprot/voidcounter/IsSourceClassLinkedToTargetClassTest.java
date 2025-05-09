@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
 class IsSourceClassLinkedToTargetClassTest {
 	private Repository repository;
@@ -70,11 +71,11 @@ class IsSourceClassLinkedToTargetClassTest {
 		li.setGraph(RDF.LI);
 		ClassPartition target = new ClassPartition(RDF.BAG);
 		li.getClasses().add(target);
-		
+		ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		Lock writeLock = new ReentrantLock();
-		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(repository, pp, source, bag, writeLock,
-				new Semaphore(1), finishedQueries, li, scheduler, null);
+		CommonVariables cv = new CommonVariables(sd , bag, repository, s->{}, writeLock, new Semaphore(1), finishedQueries, false);
+		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, scheduler, null);
 		counter.call();
 		assertEquals(1, pp.getLinkSets().size());
 		assertEquals(1, finishedQueries.get());

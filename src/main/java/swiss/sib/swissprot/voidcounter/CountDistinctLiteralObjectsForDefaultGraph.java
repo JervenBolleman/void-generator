@@ -3,20 +3,14 @@ package swiss.sib.swissprot.voidcounter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
@@ -26,17 +20,11 @@ public final class CountDistinctLiteralObjectsForDefaultGraph extends QueryCalla
 	private static final String SELECT_OBJECTS_IN_RDF_OBJ = "SELECT COUNT(RO_ID) AS c FROM RDF_OBJ";
 	private static final String COUNT_DISTINCT_INLINE_VALUES = "SELECT COUNT(DISTINCT(RDF_QUAD.O)) AS c from RDF_QUAD WHERE is_rdf_box(RDF_QUAD.O) = 0 AND isiri_id(O) = 0 AND is_bnode_iri_id(O) = 0";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjectsForDefaultGraph.class);
-	private final ServiceDescription sd;
-	private final Consumer<ServiceDescription> saver;
-	private final Lock writeLock;
+	private final CommonVariables cv;
 
-	public CountDistinctLiteralObjectsForDefaultGraph(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter,
-			AtomicInteger finishedQueries) {
-		super(repository, limiter, finishedQueries);
-		this.sd = sd;
-		this.saver = saver;
-		this.writeLock = writeLock;
+	public CountDistinctLiteralObjectsForDefaultGraph(CommonVariables cv) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 	}
 
 	@Override
@@ -52,7 +40,7 @@ public final class CountDistinctLiteralObjectsForDefaultGraph extends QueryCalla
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct literal " + sd.getDistinctLiteralObjectCount() + "objects for all");
+		log.debug("Counted distinct literal {} objects for all", cv.sd().getDistinctLiteralObjectCount() );
 	}
 
 	@Override
@@ -95,12 +83,12 @@ public final class CountDistinctLiteralObjectsForDefaultGraph extends QueryCalla
 	@Override
 	protected void set(Long count) {
 		try {
-			writeLock.lock();
-			sd.setDistinctLiteralObjectCount(count);
+			cv.writeLock().lock();
+			cv.sd().setDistinctLiteralObjectCount(count);
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
-		saver.accept(sd);
+		cv.save();
 	}
 	
 	@Override

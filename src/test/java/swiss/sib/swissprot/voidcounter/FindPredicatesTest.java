@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -49,6 +51,8 @@ public class FindPredicatesTest {
 		LOGGER.debug("ran shutdown");
 	}
 
+	Function<QueryCallable<?>, CompletableFuture<Exception>> schedule = (isd) -> null;
+	
 	@Test
 	void empty() throws IOException {
 
@@ -58,10 +62,12 @@ public class FindPredicatesTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->null, writeLock, new Semaphore(1),
-				finishedQueries, (isd) -> {
-				}, sd, null);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
+				new Semaphore(1), finishedQueries, false);
+		
+		
+		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(cv,Set.of(),schedule
+				,()->null);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(0, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());
@@ -83,11 +89,11 @@ public class FindPredicatesTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-
-		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->null, writeLock, new Semaphore(1),
-				finishedQueries, (isd) -> {
-				}, sd, null);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
+				new Semaphore(1), finishedQueries, false);
+		
+		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(cv,Set.of(),schedule
+				,()->null);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());
@@ -109,10 +115,10 @@ public class FindPredicatesTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(gd, repository, Set.of(),
-				(s)->null, writeLock, new Semaphore(1),
-				finishedQueries, (isd) -> {
-				}, sd, null);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
+				new Semaphore(1), finishedQueries, false);
+		final FindPredicates countDistinctIriSubjectsForAllGraphs = new FindPredicates(cv,Set.of(),schedule
+				,()->null);
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());

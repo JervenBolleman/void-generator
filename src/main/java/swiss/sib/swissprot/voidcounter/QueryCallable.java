@@ -16,10 +16,10 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 	protected final Repository repository;
 	protected final Semaphore limiter;
 	protected volatile boolean running = false;
-	private volatile String query;
 	protected final AtomicInteger finishedQueries;
+	private volatile String query;
 
-	public QueryCallable(Repository repository, Semaphore limiter, AtomicInteger finishedQueries) {
+	protected QueryCallable(Repository repository, Semaphore limiter, AtomicInteger finishedQueries) {
 		super();
 		this.repository = repository;
 		this.limiter = limiter;
