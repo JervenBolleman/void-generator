@@ -99,7 +99,7 @@ public class ServiceDescriptionRDFReader {
 				IRI clazzIri = (IRI) getOne(source, classPartition, VOID.CLASS, null, Statement::getObject);
 				ClassPartition cp = new ClassPartition(clazzIri);
 				gd.getClasses().add(cp);
-				Iterator<Statement> cpPredicates = source.getStatements(graphIri, VOID.PROPERTY_PARTITION, null)
+				Iterator<Statement> cpPredicates = source.getStatements(classPartition, VOID.PROPERTY_PARTITION, null)
 						.iterator();
 				handlePredicatePartition(source, cpPredicates, cp::putPredicatePartition);
 			}

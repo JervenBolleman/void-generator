@@ -2,21 +2,27 @@ package swiss.sib.swissprot.voidcounter.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.time.LocalDate;
+import java.util.Iterator;
 
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.UnsupportedRDFormatException;
 import org.junit.jupiter.api.Test;
 
+import swiss.sib.swissprot.servicedescription.ClassPartition;
+import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFReader;
 
@@ -68,6 +74,7 @@ public class ServiceDescriptionRDFReaderTest {
 	public void slightlyMoreComplex() throws RDFParseException, UnsupportedRDFormatException, IOException {
 		String slightlyMoreComplexTtl = """
 				@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+				@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 				@prefix void: <http://rdfs.org/ns/void#> .
 				@prefix : <http://www.w3.org/ns/sparql-service-description#> .
 				@prefix void_ext: <http://ldf.fi/void-ext#> .
@@ -106,7 +113,13 @@ public class ServiceDescriptionRDFReaderTest {
 				
 				<https://example.org/.well-known/void#test_graph!954c4977bb7f807aff75c0541673b595!Bag>
 				  a void:Dataset;
-				  void:class rdf:Bag .
+				  void:class rdf:Bag ;
+				  void:propertyPartition <https://example.org/.well-known/void#test_graph!954c4977bb7f807aff75c0541673b595!seeAlso> .
+				  
+				<https://example.org/.well-known/void#test_graph!954c4977bb7f807aff75c0541673b595!seeAlso>
+				 a void:Dataset ;
+				 void:property rdfs:seeAlso ;
+				 void:triples 1 . 
 				""";
 
 		Model slightlyMoreComplex = Rio.parse(new StringReader(slightlyMoreComplexTtl), RDFFormat.TURTLE);
@@ -114,6 +127,19 @@ public class ServiceDescriptionRDFReaderTest {
 		assertEquals("test title", sd.getTitle());
 		assertEquals(LocalDate.of(2024, 06, 06), sd.getReleaseDate());
 		assertEquals("2022", sd.getVersion());
-
+		
+		assertEquals(1, sd.getGraphs().size());
+		Iterator<GraphDescription> iterator = sd.getGraphs().iterator();
+		assertTrue(iterator.hasNext());
+		GraphDescription next = iterator.next();
+		assertNotNull(next);
+		assertEquals(1, next.getClasses().size());
+		Iterator<ClassPartition> classes = next.getClasses().iterator();
+		assertTrue(classes.hasNext());
+		ClassPartition class1 = classes.next();
+		assertNotNull(class1);
+		assertEquals(RDF.BAG, class1.getClazz());
+		assertEquals(1 , class1.getPredicatePartitions().size());
+		assertNotNull(class1.getPredicatePartition(RDFS.SEEALSO));
 	}
 }
