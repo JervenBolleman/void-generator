@@ -25,18 +25,7 @@ import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
-	private static final String QUERY = """
-			SELECT ?clazz (COUNT(?subject) AS ?count)
-			WHERE {
-				GRAPH ?sourceGraphName {
-					?subject a ?sourceType ;
-					   ?predicate ?target .
-				}
-				GRAPH ?targetGraphName {
-					?target a ?clazz
-				}
-			} GROUP BY ?clazz 
-			""";
+	private static final String QUERY = Helper.loadSparqlQuery("inter_graph_links_grouped_by_type");
 
 	public static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraph.class);
 

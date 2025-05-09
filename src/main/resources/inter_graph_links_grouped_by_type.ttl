@@ -1,0 +1,28 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:inter_graph_links a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Count links between graphs requires prebound graphs"^^rdf:HTML ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """SELECT 
+  (COUNT(?target) AS ?lsc)
+WHERE  { 
+ GRAPH ?graphName { 
+    ?subject a ?sourceType 
+  } 
+  GRAPH ?linkingGraphName { 
+    ?subject ?predicate ?target
+  } 
+  GRAPH ?otherGraphName {
+	?target a ?targetType 
+  }
+}""" ;
+    schema:keywords "void" , "iri", "count" ;
+    schema:target [
+        rdfs:subClassOf sd:Service
+    ] .

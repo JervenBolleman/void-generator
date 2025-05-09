@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
-import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 final class CountDistinctIriSubjectsForDefaultGraph extends QueryCallable<Long> {
 	private static final String SUBJECTS = "subjects";
@@ -45,7 +44,6 @@ final class CountDistinctIriSubjectsForDefaultGraph extends QueryCallable<Long> 
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {	
-		assert !(connection instanceof VirtuosoRepositoryConnection);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 	}
 

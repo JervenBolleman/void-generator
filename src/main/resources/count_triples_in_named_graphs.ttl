@@ -1,0 +1,22 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:count_triples_in_named_graphs a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Count triples in a graph, requires prebound graphs"^^rdf:HTML ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """SELECT
+  (COUNT(?p) AS ?count) 
+WHERE { 
+  GRAPH ?graph {
+    ?s ?p ?o
+  }
+}""" ;
+    schema:keywords "void" , "count" ;
+    schema:target [
+        rdfs:subClassOf sd:Service
+    ] .
