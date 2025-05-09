@@ -68,19 +68,10 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFWriter;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
-import swiss.sib.swissprot.voidcounter.CountDistinctBnodeObjectsForAllGraphs;
-import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjects;
-import swiss.sib.swissprot.voidcounter.CountDistinctBnodeSubjectsInDefaultGraph;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriObjectsForDefaultGraph;
-import swiss.sib.swissprot.voidcounter.CountDistinctIriSubjectsForDefaultGraph;
-import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjects;
-import swiss.sib.swissprot.voidcounter.CountDistinctLiteralObjectsForDefaultGraph;
-import swiss.sib.swissprot.voidcounter.FindDistinctClassses;
-import swiss.sib.swissprot.voidcounter.FindPredicates;
+import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
-import swiss.sib.swissprot.voidcounter.TripleCount;
-import swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso;
-import swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsInAGraphVirtuoso;
+import swiss.sib.swissprot.voidcounter.sparql.SparqlCounters;
+import swiss.sib.swissprot.voidcounter.virtuoso.VirtuosoCounters;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 
 @Command(name = "void-generate", mixinStandardHelpOptions = true, version = "0.1", description = "Generate a void file")
@@ -177,6 +168,8 @@ public class Generate implements Callable<Integer> {
 	final AtomicInteger scheduledQueries = new AtomicInteger();
 	final AtomicInteger finishedQueries = new AtomicInteger();
 
+	private Counters counters;
+
 	private static final ValueFactory VF = SimpleValueFactory.getInstance();
 
 	private static final Pattern COMMA = Pattern.compile(",", Pattern.LITERAL);
@@ -196,6 +189,7 @@ public class Generate implements Callable<Integer> {
 					.collect(Collectors.toSet());
 		} else
 			this.knownPredicates = new HashSet<>();
+
 		if (virtuosoJdcb != null) {
 			repository = new VirtuosoRepository(virtuosoJdcb, user, password);
 		} else if (fromTestFile != null) {
@@ -267,30 +261,33 @@ public class Generate implements Callable<Integer> {
 		} else
 			this.knownPredicates = new HashSet<>();
 		this.iriOfVoid = SimpleValueFactory.getInstance().createIRI(iriOfVoidAsString);
-		this.distinctSubjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "subject-bitsets-per-graph");
-		this.distinctObjectIrisFile = new File(sdFile.getParentFile(), sdFile.getName() + "object-bitsets-per-graph");
+		Consumer<ServiceDescription> saver;
+		if (repository instanceof VirtuosoRepository) {
+			this.distinctSubjectIrisFile = new File(sdFile.getAbsolutePath() + ".distinct-subjects");
+			this.distinctObjectIrisFile = new File(sdFile.getAbsolutePath() + ".distinct-objects");
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris = readGraphsWithSerializedBitMaps(
+					this.distinctSubjectIrisFile);
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris = readGraphsWithSerializedBitMaps(
+					this.distinctObjectIrisFile);
+			this.counters = new VirtuosoCounters(distinctSubjectIris, distinctObjectIris);
+			saver = sdg -> writeServiceDescriptionAndGraphs(distinctSubjectIris, distinctObjectIris, sdg, iriOfVoid);
+		} else {
+			this.counters = new SparqlCounters();
+			saver = sdg -> writeServiceDescription(sdg, iriOfVoid);
+		}
 
-		ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris = readGraphsWithSerializedBitMaps(
-				this.distinctSubjectIrisFile);
-		ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris = readGraphsWithSerializedBitMaps(
-				this.distinctObjectIrisFile);
-		Consumer<ServiceDescription> saver = sdg -> writeServiceDescriptionAndGraphs(distinctSubjectIris,
-				distinctObjectIris, sdg, iriOfVoid);
-
-		scheduleCounters(sd, saver, distinctSubjectIris, distinctObjectIris);
+		scheduleCounters(sd, saver);
 
 		waitForCountToFinish(futures);
 		if (add) {
 			log.debug("Starting the count of the void data itself using {}", maxConcurrency);
-			countTheVoidDataItself(iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
-					repository instanceof VirtuosoRepository, limit);
+			countTheVoidDataItself(iriOfVoid, saver, limit);
 			waitForCountToFinish(futures);
 			saveResults(iriOfVoid, saver);
 
 			log.debug("Starting the count of the void data itself a second time using {}", maxConcurrency);
 
-			countTheVoidDataItself(iriOfVoid, saver, distinctSubjectIris, distinctObjectIris,
-					repository instanceof VirtuosoRepository, limit);
+			countTheVoidDataItself(iriOfVoid, saver, limit);
 			waitForCountToFinish(futures);
 		}
 		saveResults(iriOfVoid, saver);
@@ -320,6 +317,26 @@ public class Generate implements Callable<Integer> {
 	private void writeServiceDescriptionAndGraphs(ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, ServiceDescription sdg,
 			IRI iriOfVoid) {
+		writeServiceDescription(sdg, iriOfVoid);
+		writeGraphs(distinctSubjectIris, distinctObjectIris);
+	}
+
+	private void writeGraphs(ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
+			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris) {
+		final Lock readLock = rwLock.readLock();
+		try {
+			readLock.lock();
+
+			if (virtuosoJdcb != null) {
+				writeGraphsWithSerializedBitMaps(distinctSubjectIrisFile, distinctSubjectIris);
+				writeGraphsWithSerializedBitMaps(distinctObjectIrisFile, distinctObjectIris);
+			}
+		} finally {
+			readLock.unlock();
+		}
+	}
+
+	private void writeServiceDescription(ServiceDescription sdg, IRI iriOfVoid) {
 		final Lock readLock = rwLock.readLock();
 		try {
 			readLock.lock();
@@ -329,10 +346,6 @@ public class Generate implements Callable<Integer> {
 						VF.createIRI(repositoryLocator));
 			} catch (Exception e) {
 				log.error("can not store ServiceDescription", e);
-			}
-			if (virtuosoJdcb != null) {
-				writeGraphsWithSerializedBitMaps(distinctSubjectIrisFile, distinctSubjectIris);
-				writeGraphsWithSerializedBitMaps(distinctObjectIrisFile, distinctObjectIris);
 			}
 		} finally {
 			readLock.unlock();
@@ -379,18 +392,15 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
-	private void countTheVoidDataItself(IRI voidGraph, Consumer<ServiceDescription> saver,
-			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
-			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris, boolean isVirtuoso, Semaphore limit) {
+	private void countTheVoidDataItself(IRI voidGraph, Consumer<ServiceDescription> saver, Semaphore limit) {
 		String voidGraphUri = voidGraph.toString();
 		GraphDescription voidGraphDescription = getOrCreateGraphDescriptionObject(voidGraphUri, sd);
 		scheduleBigCountsPerGraph(sd, voidGraphDescription, saver, limit);
 		Lock writeLock = rwLock.writeLock();
-		if (isVirtuoso) {
-			CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso cdso = new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(
-					sd, repository, saver, writeLock, distinctSubjectIris, distinctObjectIris, voidGraphUri, limit,
-					finishedQueries);
-			schedule(cdso);
+		if (repository instanceof VirtuosoRepository) {
+			CommonVariables cv = new CommonVariables(sd, voidGraphDescription, repository, saver, writeLock, limit,
+					finishedQueries, preferGroupBy);
+			schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(cv));
 		}
 		countSpecificThingsPerGraph(sd, knownPredicates, voidGraphDescription, limit, saver);
 	}
@@ -446,14 +456,12 @@ public class Generate implements Callable<Integer> {
 		return loop;
 	}
 
-	private void scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver,
-			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris,
-			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris) {
+	private void scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
 		Lock writeLock = rwLock.writeLock();
 		boolean isvirtuoso = repository instanceof VirtuosoRepository;
 		if (graphNames.isEmpty()) {
 			try (RepositoryConnection connection = repository.getConnection()) {
-				graphNames = FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
+				graphNames = counters.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
 		// Ensure that the graph description exists so that we won't have an issue
@@ -464,9 +472,10 @@ public class Generate implements Callable<Integer> {
 		Collection<GraphDescription> graphs = sd.getGraphs();
 
 		if (countDistinctObjects && countDistinctSubjects && isvirtuoso) {
-			for (String graphName : graphNames) {
-				schedule(new CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(sd, repository, saver, writeLock,
-						distinctSubjectIris, distinctObjectIris, graphName, limit, finishedQueries));
+			for (GraphDescription gd : graphs) {
+				CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries,
+						preferGroupBy);
+				schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(cv));
 			}
 		} else {
 			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries,
@@ -476,7 +485,7 @@ public class Generate implements Callable<Integer> {
 			}
 
 			if (countDistinctSubjects) {
-				countDistinctSubjects(cv, distinctSubjectIris, isvirtuoso, graphs);
+				countDistinctSubjects(cv, isvirtuoso, graphs);
 			}
 		}
 		for (GraphDescription gd : graphs) {
@@ -494,26 +503,24 @@ public class Generate implements Callable<Integer> {
 			boolean isvirtuoso, Semaphore limit) {
 		CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries,
 				preferGroupBy);
-		schedule(new CountDistinctBnodeObjectsForAllGraphs(cv));
+		schedule(counters.countDistinctBnodeObjectsInDefaultGraph(cv));
 		if (!isvirtuoso || !countDistinctSubjects) {
-			schedule(new CountDistinctIriObjectsForDefaultGraph(cv));
+			schedule(counters.countDistinctIriObjectsForDefaultGraph(cv));
 		}
-		schedule(new CountDistinctLiteralObjectsForDefaultGraph(cv));
+		schedule(counters.countDistinctLiteralObjectsForDefaultGraph(cv));
 	}
 
-	private void countDistinctSubjects(CommonVariables cv,
-			ConcurrentHashMap<String, Roaring64NavigableMap> distinctSubjectIris, boolean isvirtuoso,
-			Collection<GraphDescription> allGraphs) {
+	private void countDistinctSubjects(CommonVariables cv, boolean isvirtuoso, Collection<GraphDescription> allGraphs) {
 		if (!isvirtuoso) {
-			schedule(new CountDistinctIriSubjectsForDefaultGraph(cv));
+			schedule(counters.countDistinctIriSubjectsForDefaultGraph(cv));
 		} else if (!countDistinctObjects) {
 			for (GraphDescription gd : allGraphs) {
 				CommonVariables cvgd = new CommonVariables(cv.sd(), gd, cv.repository(), cv.saver(), cv.writeLock(),
 						cv.limiter(), cv.finishedQueries(), preferGroupBy);
-				schedule(new CountDistinctIriSubjectsInAGraphVirtuoso(cvgd, distinctSubjectIris));
+				schedule(counters.countDistinctIriSubjectsInAGraph(cvgd));
 			}
 		}
-		schedule(new CountDistinctBnodeSubjectsInDefaultGraph(cv));
+		schedule(counters.countDistinctBnodeSubjectsInDefaultGraph(cv));
 	}
 
 	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, GraphDescription gd,
@@ -521,13 +528,13 @@ public class Generate implements Callable<Integer> {
 		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, rwLock.writeLock(), limit, finishedQueries,
 				preferGroupBy);
 		if (findDistinctClasses && findPredicates && detailedCount) {
-			schedule(new FindPredicatesAndClasses(cv, this::schedule, knownPredicates, rwLock, classExclusion));
+			schedule(counters.findPredicatesAndClasses(cv, this::schedule, knownPredicates, rwLock, classExclusion));
 		} else {
 			if (findPredicates) {
-				schedule(new FindPredicates(cv, knownPredicates, this::schedule, null));
+				schedule(counters.findPredicates(cv, knownPredicates, this::schedule));
 			}
 			if (findDistinctClasses) {
-				schedule(new FindDistinctClassses(cv, this::schedule, classExclusion, null));
+				schedule(counters.findDistinctClassses(cv, this::schedule, classExclusion));
 			}
 		}
 	}
@@ -539,12 +546,12 @@ public class Generate implements Callable<Integer> {
 				preferGroupBy);
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			schedule(new CountDistinctLiteralObjects(cv));
+			schedule(counters.countDistinctLiteralObjects(cv));
 		}
 		if (countDistinctSubjects) {
-			schedule(new CountDistinctBnodeSubjects(cv));
+			schedule(counters.countDistinctBnodeSubjects(cv));
 		}
-		schedule(new TripleCount(cv));
+		schedule(counters.triples(cv));
 	}
 
 	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {

@@ -17,7 +17,6 @@ import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
@@ -25,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
@@ -36,52 +35,49 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	private static final Semaphore IN_PROCESS = new Semaphore(MAX_IN_PROCESS);
 	private static final ExecutorService ES = Executors.newCachedThreadPool(new ThreadFactory() {
 		private volatile int count;
+
 		@Override
 		public Thread newThread(Runnable r) {
 			return new Thread(r, "CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso-" + count++);
 		}
-		
+
 	});
 	private static final int RUN_OPTIMIZE_EVERY = 128;
 	private static final int COMMIT_TO_RB_AT = 16 * 4096;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.class);
-	protected final ServiceDescription sd;
-	protected final Consumer<ServiceDescription> saver;
-	protected final String graphIri;
-	private final Lock writeLock;
+
 	private final Consumer<Long> objectAllSetter;
 	private final Consumer<Long> subjectAllSetter;
 	private final Map<String, Roaring64NavigableMap> objectGraphIriIds;
 	private final Map<String, Roaring64NavigableMap> subjectGraphIriIds;
-	private final AtomicInteger running = new AtomicInteger(0);
+	private final CommonVariables cv;
+	
+	private final AtomicInteger runningQueries = new AtomicInteger(0);
 
-	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(ServiceDescription sd, Repository repository,
-			Consumer<ServiceDescription> saver, Lock writeLock, Map<String, Roaring64NavigableMap> graphSubjectIriIds,
-			Map<String, Roaring64NavigableMap> graphObjectIriIds, String graphIri, Semaphore limit, AtomicInteger finishedQueries) {
-		super(repository, limit, finishedQueries);
+	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(CommonVariables cv,
+			Map<String, Roaring64NavigableMap> graphSubjectIriIds,
+			Map<String, Roaring64NavigableMap> graphObjectIriIds) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.cv = cv;
 		this.subjectGraphIriIds = graphSubjectIriIds;
 		this.objectGraphIriIds = graphObjectIriIds;
-		this.objectAllSetter = sd::setDistinctIriObjectCount;
-		this.subjectAllSetter = sd::setDistinctIriSubjectCount;
-		this.writeLock = writeLock;
-		this.sd = sd;
-		this.saver = saver;
-		this.graphIri = graphIri;
+		this.objectAllSetter = l -> cv.sd().setDistinctIriObjectCount(l);
+		this.subjectAllSetter = l -> cv.sd().setDistinctIriSubjectCount(l);
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct iri objects and subjects for " + graphIri);
+		log.debug("Counting distinct iri objects and subjects for {}", cv.gd().getGraphName());
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
-		log.error("failed counting distinct iri objects and subjects" + graphIri, e);
+		log.error("failed counting distinct iri objects and subjects" + cv.gd().getGraphName(), e);
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct iri objects and subjects for graph " + graphIri);
+		log.debug("Counted distinct iri objects and subjects for graph ", cv.gd().getGraphName());
 	}
 
 	protected String queryForGraph() {
@@ -98,7 +94,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 				from
 				RDF_QUAD
 				where
-				RDF_QUAD.G = iri_to_id('""" + graphIri + "')";
+				RDF_QUAD.G = iri_to_id('""" + cv.gd().getGraphName() + "')";
 	}
 
 	protected SubObj findUniqueIriIds(final Connection quadStoreConnection) {
@@ -128,6 +124,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		// If we did not save this data before recalculate it.
 //		
 		SubObj so;
+		String graphIri = cv.gd().getGraphName();
 		if (!objectGraphIriIds.containsKey(graphIri) || !subjectGraphIriIds.containsKey(graphIri)) {
 
 			so = findUniqueIriIds(quadStoreConnection);
@@ -168,13 +165,13 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		} finally {
 			objLock.unlock();
 		}
-		
-		while (running.get() > 0) {
+
+		while (runningQueries.get() > 0) {
 			try {
 				Thread.sleep(100);
 			} catch (InterruptedException e) {
-                // ignore as we will just wait a bit more
-            }
+				Thread.currentThread().interrupt();
+			}
 		}
 	}
 
@@ -183,7 +180,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	 * Roaring64Bitmap
 	 */
 	private record AddedStatus(long addedToTemp, long runOptimizeCounter, Roaring64NavigableMap temp, Lock guard) {
-	};
+	}
 
 	private AddedStatus add(Roaring64NavigableMap rb, AddedStatus as, long current) {
 		if (current >= 0) {
@@ -191,7 +188,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 			if (as.addedToTemp >= COMMIT_TO_RB_AT) {
 				return mergeAndOptimizeIfNeeded(rb, as);
 			} else {
-				return new AddedStatus(as.addedToTemp + 1, as.runOptimizeCounter,as.temp, as.guard);
+				return new AddedStatus(as.addedToTemp + 1, as.runOptimizeCounter, as.temp, as.guard);
 			}
 		}
 		return as;
@@ -214,14 +211,14 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		 * May be null, in case we are running on the main thread.
 		 */
 		private final Semaphore limiter;
-		
+
 		public GuardedAction(AddedStatus as, Roaring64NavigableMap rb, Semaphore limiter) {
 			super();
 			this.as = as;
 			this.rb = rb;
 			this.limiter = limiter;
 		}
-		
+
 		protected final void act() {
 			try {
 				as.guard().lock();
@@ -233,45 +230,47 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 				}
 			}
 		}
+
 		protected abstract void doAction();
-		
+
 	}
-	
+
 	private class MergeAction extends GuardedAction {
 		public MergeAction(AddedStatus as, Roaring64NavigableMap rb, Semaphore limiter, AtomicInteger running) {
 			super(as, rb, limiter);
 		}
 
 		protected void doAction() {
-			running.incrementAndGet();
+			runningQueries.incrementAndGet();
 			as.temp.runOptimize();
 			rb.or(as.temp);
-			running.decrementAndGet();
+			runningQueries.decrementAndGet();
 		}
 	}
-	
+
 	private class RunOptimizeAction extends GuardedAction {
 		public RunOptimizeAction(AddedStatus as, Roaring64NavigableMap rb, Semaphore limiter, AtomicInteger running) {
 			super(as, rb, limiter);
 		}
 
 		protected void doAction() {
-			running.incrementAndGet();
+			runningQueries.incrementAndGet();
 			rb.runOptimize();
 			rb.or(as.temp);
-			running.decrementAndGet();
+			runningQueries.decrementAndGet();
 		}
 	}
 
 	/**
-	 * We try to run this in the shared queue if there is space otherwise we use the internal action.
-	 * If there is no space there then we run it immediately in the thread 
-	 * that is running the current code.
+	 * We try to run this in the shared queue if there is space otherwise we use the
+	 * internal action. If there is no space there then we run it immediately in the
+	 * thread that is running the current code.
+	 * 
 	 * @param actionMaker
 	 */
 	private void enQueue(final BiFunction<Semaphore, AtomicInteger, GuardedAction> actionMaker) {
-		if (IN_PROCESS.tryAcquire()){
-			GuardedAction apply = actionMaker.apply(IN_PROCESS, running);
+		if (IN_PROCESS.tryAcquire()) {
+			GuardedAction apply = actionMaker.apply(IN_PROCESS, runningQueries);
 			ES.submit(apply::act);
 		} else {
 			GuardedAction apply = actionMaker.apply(null, null);
@@ -282,26 +281,27 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	@Override
 	protected void set(SubObj count) {
 		try {
-			writeLock.lock();
+			cv.writeLock().lock();
 
-			final GraphDescription graph = sd.getGraph(graphIri);
+			final GraphDescription graph = cv.gd();
 			graph.setDistinctIriSubjectCount(count.subjects.getLongCardinality());
 			graph.setDistinctIriObjectCount(count.objects.getLongCardinality());
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
 		}
-		saver.accept(sd);
+		cv.save();
 	}
 
 	protected void setAll() {
 		try {
-
-			writeLock.lock();
+			cv.writeLock().lock();
 			subjectAllSetter.accept(countAll(subjectGraphIriIds));
 			objectAllSetter.accept(countAll(objectGraphIriIds));
 		} finally {
-			writeLock.unlock();
+			cv.writeLock().unlock();
+
 		}
+		cv.save();
 	}
 
 	private long countAll(Map<String, Roaring64NavigableMap> objectGraphIriIds2) {
@@ -312,7 +312,7 @@ public final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 		final long iricounts = all.getLongCardinality();
 		return iricounts;
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;
