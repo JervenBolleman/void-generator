@@ -15,33 +15,31 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.ObjectPartition;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<ObjectPartition>> {
-	private static final String QUERY = Helper
-			.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_named_individual");
+	private final String rawQuery;
 	private static final Logger log = LoggerFactory
 			.getLogger(FindNamedIndividualObjectSubjectForPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
-	
+
 	private final ClassPartition cp;
-	
-	
-	
+
 	private final CommonVariables cv;
 
-	
-
 	public FindNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
-			PredicatePartition predicatePartition, ClassPartition cp) {
+			PredicatePartition predicatePartition, ClassPartition cp, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.predicatePartition = predicatePartition;
 		this.cp = cp;
+		this.rawQuery = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_named_individual",
+				optimizeFor);
 	}
 
 	@Override
@@ -64,11 +62,11 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 
 	@Override
 	protected Set<ObjectPartition> run(RepositoryConnection connection) throws Exception {
-		MapBindingSet tq = new MapBindingSet();
-		tq.setBinding("graph", cv.gd().getGraph());
-		tq.setBinding("sourceType", cp.getClazz());
-		tq.setBinding("predicate", predicatePartition.getPredicate());
-		setQuery(QUERY, tq);
+		MapBindingSet bs = new MapBindingSet();
+		bs.setBinding("graph", cv.gd().getGraph());
+		bs.setBinding("sourceType", cp.getClazz());
+		bs.setBinding("predicate", predicatePartition.getPredicate());
+		setQuery(rawQuery, bs);
 		Set<ObjectPartition> namedObjects = new HashSet<>();
 		try (final TupleQueryResult tr = Helper.runTupleQuery(getQuery(), connection)) {
 			while (tr.hasNext()) {
@@ -76,8 +74,8 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 				if (next.hasBinding("target")) {
 					Value v = next.getBinding("target").getValue();
 					Value count = next.getBinding("count").getValue();
-					
-					if (v instanceof IRI i && count instanceof  Literal c) {
+
+					if (v instanceof IRI i && count instanceof Literal c) {
 						ObjectPartition subTarget = new ObjectPartition(i);
 						subTarget.setTripleCount(c.longValue());
 						namedObjects.add(subTarget);

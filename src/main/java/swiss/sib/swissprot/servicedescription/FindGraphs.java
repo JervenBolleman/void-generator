@@ -13,35 +13,32 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 
 public class FindGraphs {
-	
+
 	private FindGraphs() {
 		// Prevent instantiation
 	}
 
-	private static final String PREFFERED_QUERY = "SELECT DISTINCT ?g WHERE {GRAPH ?g {} }";
-	
-	private static final String FALLBACK_QUERY = "SELECT DISTINCT ?g WHERE {GRAPH ?g { ?s ?p ?o}}";
-	
 	private static final Set<String> VIRTUOSO_GRAPHS = Set.of("http://www.openlinksw.com/schemas/virtrdf#",
 			"http://www.w3.org/ns/ldp#", "urn:activitystreams-owl:map", "urn:core:services:sparql");
 
 	public static Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries)  {
+			AtomicInteger scheduledQueries, AtomicInteger finishedQueries, OptimizeFor optimizeFor)  {
 		Set<String> res = new HashSet<>();
-		findGraphs(connection, res, PREFFERED_QUERY, scheduledQueries, finishedQueries);
+		String prefQuery = Helper.loadSparqlQuery("find_graphs_preferred", optimizeFor);
+		findGraphs(connection, res, prefQuery, scheduledQueries, finishedQueries);
 		if (res.isEmpty()) {
-			findGraphs(connection, res, FALLBACK_QUERY, scheduledQueries, finishedQueries);
+			String fallbackQuery = Helper.loadSparqlQuery("find_graphs_fallback", optimizeFor);
+			findGraphs(connection, res, fallbackQuery, scheduledQueries, finishedQueries);
 		}
 		
 		return res;
 
 	}
 
-	private static void findGraphs(RepositoryConnection connection,
-			Set<String> res, String query, AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
+	private static void findGraphs(RepositoryConnection connection, Set<String> res, String query,
+			AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
 		scheduledQueries.incrementAndGet();
-		try (final TupleQueryResult foundGraphs = Helper
-				.runTupleQuery(query, connection)) {
+		try (final TupleQueryResult foundGraphs = Helper.runTupleQuery(query, connection)) {
 			while (foundGraphs.hasNext()) {
 				final BindingSet next = foundGraphs.next();
 				Binding binding = next.getBinding("g");
@@ -51,8 +48,8 @@ public class FindGraphs {
 						res.add(graphIRI);
 				}
 			}
-		} catch(RDF4JException e){
-			//Ignore this failure!
+		} catch (RDF4JException e) {
+			// Ignore this failure!
 		} finally {
 			finishedQueries.incrementAndGet();
 		}

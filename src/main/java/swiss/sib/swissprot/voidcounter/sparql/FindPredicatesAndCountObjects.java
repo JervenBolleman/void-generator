@@ -15,34 +15,40 @@ import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class FindPredicatesAndCountObjects extends QueryCallable<List<PredicatePartition>> {
 
-	private final Map<IRI, IRI> knownPredicates;
 	private static final Logger log = LoggerFactory.getLogger(FindPredicatesAndCountObjects.class);
 
+	private final Map<IRI, IRI> knownPredicates;
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 	private final Supplier<QueryCallable<?>> onSuccess;
-	private static final String QUERY = Helper.loadSparqlQuery("find_predicates_count_objects");
+	private final String rawQuery;
 	private final CommonVariables cv;
 
+	private final Counters counters;
+
 	public FindPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Supplier<QueryCallable<?>> onSuccess) {
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Supplier<QueryCallable<?>> onSuccess,
+			OptimizeFor optimizeFor, Counters counters) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
-
+		this.counters = counters;
+		this.rawQuery = Helper.loadSparqlQuery("find_predicates_count_objects", optimizeFor);
 		this.knownPredicates = new HashMap<>();
 		knownPredicates.stream().forEach(p -> this.knownPredicates.put(p, p));
 		this.schedule = schedule;
@@ -52,10 +58,10 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 
 	private List<PredicatePartition> findPredicates(GraphDescription gd, RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		TupleQuery tq = connection.prepareTupleQuery(QUERY);
-		tq.setBinding("graph", gd.getGraph());
-		setQuery(QUERY, tq.getBindings());
-		try (TupleQueryResult predicateQuery = tq.evaluate()) {
+		MapBindingSet bs = new MapBindingSet();
+		bs.setBinding("graph", gd.getGraph());
+		setQuery(rawQuery, bs);
+		try (TupleQueryResult predicateQuery = Helper.runTupleQuery(getQuery(), connection)) {
 			List<PredicatePartition> res = new ArrayList<>();
 			while (predicateQuery.hasNext()) {
 
@@ -114,8 +120,8 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 			cv.writeLock().unlock();
 		}
 		for (PredicatePartition predicatePartition : predicates) {
-			schedule.apply(new CountUniqueSubjectPerPredicateInGraph(cv, predicatePartition));
-			schedule.apply(new CountUniqueObjectsPerPredicateInGraph(cv, predicatePartition));
+			schedule.apply(counters.countUniqueSubjectPerPredicateInGraph(cv, predicatePartition));
+			schedule.apply(counters.countUniqueObjectsPerPredicateInGraph(cv, predicatePartition));
 		}
 	}
 

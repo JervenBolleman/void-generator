@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -25,7 +26,7 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	public static final Logger log = LoggerFactory.getLogger(FindPredicateLinkSets.class);
-	private static final String QUERY = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate");
+	private final String rawQuery;
 	private final Set<ClassPartition> classes;
 	private final PredicatePartition pp;
 	private final ClassPartition source;
@@ -40,7 +41,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	public FindPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes, PredicatePartition predicate,
 			ClassPartition source, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
-			String classExclusion, Counters counters) {
+			String classExclusion, Counters counters, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.classes = classes;
@@ -49,6 +50,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		this.schedule = schedule;
 		this.classExclusion = classExclusion;
 		this.counters = counters;
+		this.rawQuery = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate", optimizeFor);
 	}
 
 	private void findDatatypeOrSubclassPartitions(Set<ClassPartition> targetClasses,
@@ -83,11 +85,11 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 			PredicatePartition predicatePartition, ClassPartition source) {
 
 		try (RepositoryConnection localConnection = repository.getConnection()) {
-			TupleQuery tq = localConnection.prepareTupleQuery(QUERY);
+			TupleQuery tq = localConnection.prepareTupleQuery(rawQuery);
 			tq.setBinding("graph", cv.gd().getGraph());
 			tq.setBinding("sourceClass", source.getClazz());
 			tq.setBinding("predicate", predicatePartition.getPredicate());
-			setQuery(QUERY, tq.getBindings());
+			setQuery(rawQuery, tq.getBindings());
 			try (TupleQueryResult triples = tq.evaluate()) {
 				if (triples.hasNext()) {
 					return ((Literal) triples.next().getBinding("count").getValue()).longValue();

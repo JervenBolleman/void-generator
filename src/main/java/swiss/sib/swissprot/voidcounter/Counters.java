@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -17,7 +18,7 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public interface Counters {
 
-	Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries,
+	Set<String> findAllGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries,
 			AtomicInteger finishedQueries);
 
 	QueryCallable<Long> countDistinctBnodeSubjectsInAgraph(CommonVariables cv);
@@ -68,5 +69,19 @@ public interface Counters {
 
 	QueryCallable<?> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source);
+
+	QueryCallable<?> findPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
+			Supplier<QueryCallable<?>> onFoundPredicates);
+
+	QueryCallable<?> findDistinctClassses(CommonVariables cv, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
+			String classExclusion, Supplier<QueryCallable<?>> onFoundClasses);
+
+	QueryCallable<?> countUniqueSubjectPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition);
+
+	QueryCallable<?> countUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition);
+
+	QueryCallable<?> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
+			PredicatePartition pp);
 
 }

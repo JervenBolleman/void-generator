@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -14,8 +15,7 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> {
 
-	private static final String COUNT_LINKS_IN_SAME_GRAPH = Helper
-			.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_type");
+	private final String countLinks;
 
 	private static final String SUBJECTS = "subjects";
 
@@ -28,14 +28,16 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 
 	private final CommonVariables cv;
 
-	public IsSourceClassLinkedToTargetClass(CommonVariables cv,
-			ClassPartition target, PredicatePartition predicatePartition, ClassPartition source) {
+	public IsSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
+			PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.predicate = predicatePartition.getPredicate();
 		this.target = target;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
+		this.countLinks = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_type",
+				optimizeFor);
 	}
 
 	@Override
@@ -59,7 +61,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 		tq.setBinding("targetType", targetType);
 		tq.setBinding("graph", cv.gd().getGraph());
 		tq.setBinding("predicate", predicate);
-		setQuery(COUNT_LINKS_IN_SAME_GRAPH, tq);
+		setQuery(countLinks, tq);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 	}
 

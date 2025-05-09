@@ -7,19 +7,21 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 final class CountDistinctLiteralObjectsInDefaultGraph extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
-	private static final String COUNT_OBJECTS_WITH_SPARQL = Helper.loadSparqlQuery("count_distinct_literal_objects");
+	private final String countObjectsWithSparql;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjectsInDefaultGraph.class);
 	private final CommonVariables cv;
 
-	public CountDistinctLiteralObjectsInDefaultGraph(CommonVariables cv) {
+	public CountDistinctLiteralObjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
+		this.countObjectsWithSparql = Helper.loadSparqlQuery("count_distinct_literal_objects", optimizeFor);
 	}
 
 	@Override
@@ -42,8 +44,8 @@ final class CountDistinctLiteralObjectsInDefaultGraph extends QueryCallable<Long
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 	
-		setQuery(COUNT_OBJECTS_WITH_SPARQL);
-		return Helper.getSingleLongFromSparql(COUNT_OBJECTS_WITH_SPARQL, connection, OBJECTS);
+		setQuery(countObjectsWithSparql);
+		return Helper.getSingleLongFromSparql(countObjectsWithSparql, connection, OBJECTS);
 	}
 
 	@Override

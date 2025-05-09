@@ -21,12 +21,14 @@ import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
@@ -54,9 +56,10 @@ public class FindPredicatesTest {
 	}
 
 	Function<QueryCallable<?>, CompletableFuture<Exception>> schedule = (isd) -> null;
-	
-	@Test
-	void empty() throws IOException {
+
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void empty(OptimizeFor of) throws IOException {
 
 		final ServiceDescription sd = new ServiceDescription();
 		final GraphDescription gd = new GraphDescription();
@@ -64,19 +67,19 @@ public class FindPredicatesTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
-				new Semaphore(1), finishedQueries, false);
-		
-		
-		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,Set.of(),schedule
-				,()->null);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, s -> {
+		}, writeLock, new Semaphore(1), finishedQueries, false);
+
+		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
+				Set.of(), schedule, () -> null, OptimizeFor.SPARQL, new SparqlCounters(of));
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(0, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());
 	}
 
-	@Test
-	void one() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void one(OptimizeFor of) throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
@@ -91,18 +94,19 @@ public class FindPredicatesTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
-				new Semaphore(1), finishedQueries, false);
-		
-		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,Set.of(),schedule
-				,()->null);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, s -> {
+		}, writeLock, new Semaphore(1), finishedQueries, false);
+
+		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
+				Set.of(), schedule, () -> null, OptimizeFor.SPARQL, new SparqlCounters(of));
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());
 	}
 
-	@Test
-	void oneLast() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void oneLast(OptimizeFor of) throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
@@ -117,10 +121,10 @@ public class FindPredicatesTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
-				new Semaphore(1), finishedQueries, false);
-		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,Set.of(),schedule
-				,()->null);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, s -> {
+		}, writeLock, new Semaphore(1), finishedQueries, false);
+		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
+				Set.of(), schedule, () -> null, of, new SparqlCounters(of));
 		countDistinctIriSubjectsForAllGraphs.call();
 		assertEquals(1, gd.getPredicates().size());
 		assertEquals(1, finishedQueries.get());

@@ -7,41 +7,37 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctIriObjectsInDefaultGraph
-    extends QueryCallable<Long>
-{
+final class CountDistinctIriObjectsInDefaultGraph extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
-	private static final String COUNT_DISTINCT_IRI_OBJECTS_QUERY = Helper.loadSparqlQuery("count_distinct_iri_objects");
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInDefaultGraph.class);
+
+	private final String countDistinctIriObjectsQuery;
 	private final CommonVariables cv;
-	
-	
-	public CountDistinctIriObjectsInDefaultGraph(CommonVariables cv)
-	{
+
+	public CountDistinctIriObjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
+		countDistinctIriObjectsQuery = Helper.loadSparqlQuery("count_distinct_iri_objects", optimizeFor);
 	}
 
 	@Override
-	protected void logStart()
-	{
+	protected void logStart() {
 		log.debug("Counting distinct iri objects for default graph");
 	}
-	
+
 	@Override
-	protected void logFailed(Exception e)
-	{
+	protected void logFailed(Exception e) {
 		if (log.isErrorEnabled())
 			log.error("failed counting distinct iri objects for default graph", e);
 	}
 
 	@Override
-	protected void logEnd()
-	{
+	protected void logEnd() {
 		log.debug("Counted distinct iri {} objects for default graph", getCount());
 	}
 
@@ -51,17 +47,14 @@ final class CountDistinctIriObjectsInDefaultGraph
 
 	@Override
 	protected Long run(RepositoryConnection connection)
-	    throws RepositoryException, MalformedQueryException, QueryEvaluationException
-	{
-		setQuery(COUNT_DISTINCT_IRI_OBJECTS_QUERY);
+			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+		setQuery(countDistinctIriObjectsQuery);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, OBJECTS);
 	}
 
 	@Override
-	protected void set(Long count)
-	{
-		try 
-		{
+	protected void set(Long count) {
+		try {
 			cv.writeLock().lock();
 			cv.sd().setDistinctIriObjectCount(count);
 		} finally {
@@ -69,7 +62,7 @@ final class CountDistinctIriObjectsInDefaultGraph
 		}
 		cv.save();
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;

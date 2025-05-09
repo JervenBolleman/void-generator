@@ -8,18 +8,19 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
-	private static final String COUNT_DISTINCT_LITERAL_OBJECTS_IN_ALL_GRAPHS = Helper
-			.loadSparqlQuery("count_distinct_literal_objects_in_all_graphs");
+	private final String rawQuery;
 	private final CommonVariables cv;
 
-	public CountDistinctLiteralObjects(CommonVariables cv) {
+	public CountDistinctLiteralObjects(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		rawQuery = Helper.loadSparqlQuery("count_distinct_literal_objects_in_all_graphs", optimizeFor);
 		this.cv = cv;
 	}
 
@@ -45,7 +46,7 @@ final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		MapBindingSet bindings = new MapBindingSet();
 		bindings.addBinding("graph", cv.gd().getGraph());
-		setQuery(COUNT_DISTINCT_LITERAL_OBJECTS_IN_ALL_GRAPHS, bindings);
+		setQuery(rawQuery, bindings);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, "objects");
 	}
 

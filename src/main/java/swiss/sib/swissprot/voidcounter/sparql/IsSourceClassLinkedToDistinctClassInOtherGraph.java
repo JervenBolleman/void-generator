@@ -19,15 +19,20 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
-	private static final String QUERY = Helper.loadSparqlQuery("inter_graph_links_grouped_by_type");
+	private static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraph.class);
+	private static final String CLAZZ = "clazz";
+	private static final String COUNT = "count";
 
-	public static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraph.class);
+
+	private final String rawQuery;
 
 	private final IRI predicate;
 	private final PredicatePartition pp;
@@ -40,21 +45,25 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	private final CommonVariables cv;
 
+	private Counters counters;
+
 
 	//TODO pass in a different waiter/limiter and logic to make sure that the other graph class list is known before we start here.
 	//this can't use the current limiter logic as that would deadlock.
 	public IsSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source,
 			GraphDescription otherGraph,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, String classExclusion) {
+			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, String classExclusion, Counters counters, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
+		this.counters = counters;
 		this.predicate = predicatePartition.getPredicate();
 		this.pp = predicatePartition;
 		this.source = source;
 		this.otherGraph = otherGraph;
 		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
+		this.rawQuery = Helper.loadSparqlQuery("inter_graph_links_grouped_by_type", optimizeFor);
 	}
 
 	@Override
@@ -76,7 +85,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		} else {
 			for (ClassPartition cp : otherGraph.getClasses()) {
 				LinkSetToOtherGraph ls = new LinkSetToOtherGraph(pp, sourceType, cp.getClazz(), otherGraph, cv.gd().getGraph());
-				scheduler.apply(new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp));
+				scheduler.apply(counters.countTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp));
 			}
 			return List.of();    
 		}
@@ -84,7 +93,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	public List<LinkSetToOtherGraph> rediscoverPossibleLinkClasses(RepositoryConnection connection,
 			final IRI sourceType) {
-		String rq = makeQuery(QUERY, otherGraph, classExclusion);
+		String rq = makeQuery(rawQuery, otherGraph, classExclusion);
 		final MapBindingSet pbq = new MapBindingSet();
 		pbq.setBinding("sourceGraphName", cv.gd().getGraph());
 		pbq.setBinding("predicate", predicate);
@@ -95,9 +104,9 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		try (TupleQueryResult tqr = Helper.runTupleQuery(getQuery(), connection)) {
 			while (tqr.hasNext()) {
 				BindingSet next = tqr.next();
-				long count = ((Literal) next.getBinding("count").getValue()).longValue();
+				long count = ((Literal) next.getBinding(COUNT).getValue()).longValue();
 				if (count > 0) {
-					IRI targetType = (IRI) next.getBinding("clazz").getValue();
+					IRI targetType = (IRI) next.getBinding(CLAZZ).getValue();
 					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(pp, targetType, sourceType,
 							otherGraph, cv.gd().getGraph());
 					subTarget.setTripleCount(count);

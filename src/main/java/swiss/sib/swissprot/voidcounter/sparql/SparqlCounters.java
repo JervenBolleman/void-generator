@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -14,54 +15,61 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.FindGraphs;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public class SparqlCounters implements Counters {
-	@Override
-	public QueryCallable<Long> countDistinctBnodeSubjectsInAgraph(CommonVariables cv) {
-		return new CountDistinctBnodeSubjectsInAGraph(cv);
+	private final OptimizeFor optimizeFor;
+
+	public SparqlCounters(OptimizeFor optimizeFor) {
+		this.optimizeFor = optimizeFor;
 	}
 
-	public Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries,
+	@Override
+	public QueryCallable<Long> countDistinctBnodeSubjectsInAgraph(CommonVariables cv) {
+		return new CountDistinctBnodeSubjectsInAGraph(cv, optimizeFor);
+	}
+
+	public Set<String> findAllGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries,
 			AtomicInteger finishedQueries) {
-		return FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
+		return FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries, optimizeFor);
 	}
 
 	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv) {
-		return new CountDistinctIriSubjectsAndObjectsInAGraph(cv);
+		return new CountDistinctIriSubjectsAndObjectsInAGraph(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> countDistinctBnodeObjectsInDefaultGraph(CommonVariables cv) {
-		return new CountDistinctBnodeObjectsInDefaultGraph(cv);
+		return new CountDistinctBnodeObjectsInDefaultGraph(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> countDistinctIriObjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctIriObjectsInDefaultGraph(cv);
+		return new CountDistinctIriObjectsInDefaultGraph(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> countDistinctLiteralObjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctLiteralObjectsInDefaultGraph(cv);
+		return new CountDistinctLiteralObjectsInDefaultGraph(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> countDistinctIriSubjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctIriSubjectsForDefaultGraph(cv);
+		return new CountDistinctIriSubjectsForDefaultGraph(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> countDistinctIriSubjectsInAGraph(CommonVariables cvgd) {
-		return new CountDistinctIriSubjectsInAGraph(cvgd);
+		return new CountDistinctIriSubjectsInAGraph(cvgd, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> countDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv) {
-		return new CountDistinctBnodeSubjectsInDefaultGraph(cv);
+		return new CountDistinctBnodeSubjectsInDefaultGraph(cv, optimizeFor);
 	}
 
 	@Override
@@ -74,34 +82,34 @@ public class SparqlCounters implements Counters {
 	@Override
 	public QueryCallable<?> findPredicates(CommonVariables cv, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule) {
-		return new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, null);
+		return new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, null, optimizeFor, this);
 	}
 
 	@Override
 	public QueryCallable<?> findDistinctClassses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
-		return new FindDistinctClassses(cv, schedule, classExclusion, null);
+		return new FindDistinctClassses(cv, schedule, classExclusion, null, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<?> countDistinctLiteralObjects(CommonVariables cv) {
-		return new CountDistinctLiteralObjects(cv);
+		return new CountDistinctLiteralObjects(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<?> countDistinctBnodeSubjects(CommonVariables cv) {
-		return new CountDistinctBnodeSubjectsInAGraph(cv);
+		return new CountDistinctBnodeSubjectsInDefaultGraph(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> triples(CommonVariables cv) {
-		return new TripleCount(cv);
+		return new TripleCount(cv, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Long> isSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source) {
-		return new IsSourceClassLinkedToTargetClass(cv, target, predicatePartition, source);
+		return new IsSourceClassLinkedToTargetClass(cv, target, predicatePartition, source, optimizeFor);
 	}
 
 	@Override
@@ -109,25 +117,57 @@ public class SparqlCounters implements Counters {
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
 		return new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, predicatePartition, source, og, schedule,
-				classExclusion);
+				classExclusion, this, optimizeFor);
 	}
 
 	@Override
-	public QueryCallable<Set<IRI>> findDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition,
-			ClassPartition source) {
-		return new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source);
+	public QueryCallable<Set<IRI>> findDataTypeIfNoClassOrDtKnown(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source) {
+		return new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<Exception> findPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes,
 			PredicatePartition predicate, ClassPartition source,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
-		return new FindPredicateLinkSets(cv, classes, predicate, source, schedule, classExclusion, this);
+		return new FindPredicateLinkSets(cv, classes, predicate, source, schedule, classExclusion, this, optimizeFor);
 	}
 
 	@Override
 	public QueryCallable<?> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source) {
-		return new FindNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source);
+		return new FindNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source, optimizeFor);
+	}
+
+	@Override
+	public QueryCallable<?> findPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
+			Supplier<QueryCallable<?>> onFoundPredicates) {
+		return new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, onFoundPredicates, optimizeFor, this);
+	}
+
+	@Override
+	public QueryCallable<?> findDistinctClassses(CommonVariables cv,
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion,
+			Supplier<QueryCallable<?>> onFoundClasses) {
+		return new FindDistinctClassses(cv, schedule, classExclusion, onFoundClasses, optimizeFor);
+	}
+
+	@Override
+	public QueryCallable<?> countUniqueSubjectPerPredicateInGraph(CommonVariables cv,
+			PredicatePartition predicatePartition) {
+		return new CountUniqueSubjectPerPredicateInGraph(cv, predicatePartition, optimizeFor);
+	}
+
+	@Override
+	public QueryCallable<?> countUniqueObjectsPerPredicateInGraph(CommonVariables cv,
+			PredicatePartition predicatePartition) {
+		return new CountUniqueObjectsPerPredicateInGraph(cv, predicatePartition, optimizeFor);
+	}
+
+	@Override
+	public QueryCallable<?> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
+			PredicatePartition pp) {
+		return new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, optimizeFor);
 	}
 }

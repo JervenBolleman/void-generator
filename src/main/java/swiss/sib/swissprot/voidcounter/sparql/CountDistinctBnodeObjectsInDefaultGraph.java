@@ -7,22 +7,23 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 final class CountDistinctBnodeObjectsInDefaultGraph extends QueryCallable<Long> {
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInDefaultGraph.class);
 	private static final String OBJECTS = "objects";
 
-	private static final String COUNT_DISTINCT_BNODE_OBJECTS_IN_ALL_GRAPHS = Helper
-			.loadSparqlQuery("count_distinct_bnode_objects_in_default_graph");
-
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInDefaultGraph.class);
+	private final String countDistinctBnodeObjectsInAllGraphs;
 	private final CommonVariables cv;
 
-	public CountDistinctBnodeObjectsInDefaultGraph(CommonVariables cv) {
+	public CountDistinctBnodeObjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
+		countDistinctBnodeObjectsInAllGraphs = Helper.loadSparqlQuery("count_distinct_bnode_objects_in_all_graphs",
+				optimizeFor);
 	}
 
 	@Override
@@ -43,7 +44,7 @@ final class CountDistinctBnodeObjectsInDefaultGraph extends QueryCallable<Long> 
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		return Helper.getSingleLongFromSparql(COUNT_DISTINCT_BNODE_OBJECTS_IN_ALL_GRAPHS, connection, OBJECTS);
+		return Helper.getSingleLongFromSparql(countDistinctBnodeObjectsInAllGraphs, connection, OBJECTS);
 	}
 
 	@Override

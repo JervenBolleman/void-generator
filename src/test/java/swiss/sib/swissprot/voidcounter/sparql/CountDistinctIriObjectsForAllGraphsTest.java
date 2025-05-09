@@ -17,9 +17,11 @@ import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 
@@ -37,8 +39,9 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 		repository.shutDown();
 	}
 
-	@Test
-	void empty() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void empty(OptimizeFor of) throws IOException {
 
 		Lock writeLock = new ReentrantLock();
 		final ServiceDescription sd = new ServiceDescription();
@@ -46,14 +49,15 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
 		final CountDistinctIriObjectsInDefaultGraph countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(
-				cv);
+				cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(0, sd.getDistinctIriObjectCount());
 		assertEquals(1, finishedQueries.get());
 	}
 
-	@Test
-	void one() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void one(OptimizeFor of) throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
@@ -62,7 +66,7 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 			connection.add(stat, RDF.BAG);
 			connection.commit();
 		}
-		final ServiceDescription sd = new ServiceDescription();
+		ServiceDescription sd = new ServiceDescription();
 		GraphDescription bag = new GraphDescription();
 		bag.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(bag);
@@ -70,8 +74,7 @@ class CountDistinctIriObjectsForDefaultGraphTest {
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
-		final var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(
-				cv);
+		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriObjectCount());
 		assertEquals(1, finishedQueries.get());

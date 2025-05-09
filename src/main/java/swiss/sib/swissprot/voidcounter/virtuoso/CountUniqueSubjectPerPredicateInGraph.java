@@ -5,6 +5,7 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -16,7 +17,7 @@ class CountUniqueSubjectPerPredicateInGraph
 {
 
 	private static final String SUBJECTS = "subjects";
-	private static final String QUERY = Helper.loadSparqlQuery("count_distinct_subjects_for_a_predicate_in_a_graph");
+	private static final String QUERY = Helper.loadSparqlQuery("count_distinct_subjects_for_a_predicate_in_a_graph", OptimizeFor.VIRTUOSO);
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraph.class);
 
 	private final CommonVariables cv;

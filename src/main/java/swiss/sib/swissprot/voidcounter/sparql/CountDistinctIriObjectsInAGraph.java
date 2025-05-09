@@ -8,22 +8,22 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 final class CountDistinctIriObjectsInAGraph extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
-	private static final String COUNT_DISTINCT_IRI_OBJECTS_QUERY_IN_A_GRAPH = Helper
-			.loadSparqlQuery("count_distinct_iri_objects_in_all_graphs");
+	private final String rq;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInAGraph.class);
 	private CommonVariables cv;
 
-	public CountDistinctIriObjectsInAGraph(CommonVariables cv)
-	{
-		super(cv.repository(), cv.limiter(),cv.finishedQueries());
-		assert cv.gd()!= null;
+	public CountDistinctIriObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
+		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		assert cv.gd() != null;
 		this.cv = cv;
+		this.rq = Helper.loadSparqlQuery("count_distinct_iri_objects_in_all_graphs", optimizeFor);
 	}
 
 	@Override
@@ -55,7 +55,7 @@ final class CountDistinctIriObjectsInAGraph extends QueryCallable<Long> {
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		MapBindingSet bindings = new MapBindingSet();
 		bindings.addBinding("graph", cv.gd().getGraph());
-		setQuery(COUNT_DISTINCT_IRI_OBJECTS_QUERY_IN_A_GRAPH, bindings);
+		setQuery(rq, bindings);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, OBJECTS);
 	}
 

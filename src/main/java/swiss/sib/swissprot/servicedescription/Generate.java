@@ -159,6 +159,9 @@ public class Generate implements Callable<Integer> {
 	@Option(names = {
 			"--prefer-group-by" }, description = "Sends fewer queries, server side group by instead of client side nested loop", defaultValue = "false")
 	private boolean preferGroupBy;
+	
+	@Option(names = { "--optimize-for" }, description = "Which store to optimize for. Virtuoso, SPARQL or Qlever", defaultValue = "sparql")
+	private String optimizeFor = "sparql";
 
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
@@ -272,7 +275,7 @@ public class Generate implements Callable<Integer> {
 			this.counters = new VirtuosoCounters(distinctSubjectIris, distinctObjectIris);
 			saver = sdg -> writeServiceDescriptionAndGraphs(distinctSubjectIris, distinctObjectIris, sdg, iriOfVoid);
 		} else {
-			this.counters = new SparqlCounters();
+			this.counters = new SparqlCounters(OptimizeFor.fromString(optimizeFor));
 			saver = sdg -> writeServiceDescription(sdg, iriOfVoid);
 		}
 
@@ -458,10 +461,10 @@ public class Generate implements Callable<Integer> {
 
 	private void scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
 		Lock writeLock = rwLock.writeLock();
-		boolean isvirtuoso = repository instanceof VirtuosoRepository;
+		boolean optimizeForVirtuoso = "virtuoso".equalsIgnoreCase(optimizeFor);
 		if (graphNames.isEmpty()) {
 			try (RepositoryConnection connection = repository.getConnection()) {
-				graphNames = counters.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries);
+				graphNames = counters.findAllGraphs(connection, scheduledQueries, finishedQueries);
 			}
 		}
 		// Ensure that the graph description exists so that we won't have an issue
@@ -471,7 +474,7 @@ public class Generate implements Callable<Integer> {
 		}
 		Collection<GraphDescription> graphs = sd.getGraphs();
 
-		if (countDistinctObjects && countDistinctSubjects && isvirtuoso) {
+		if (countDistinctObjects && countDistinctSubjects && optimizeForVirtuoso) {
 			for (GraphDescription gd : graphs) {
 				CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries,
 						preferGroupBy);
@@ -481,11 +484,11 @@ public class Generate implements Callable<Integer> {
 			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries,
 					preferGroupBy);
 			if (countDistinctObjects) {
-				countDistinctObjects(sd, saver, writeLock, isvirtuoso, limit);
+				countDistinctObjects(sd, saver, writeLock, optimizeForVirtuoso, limit);
 			}
 
 			if (countDistinctSubjects) {
-				countDistinctSubjects(cv, isvirtuoso, graphs);
+				countDistinctSubjects(cv, optimizeForVirtuoso, graphs);
 			}
 		}
 		for (GraphDescription gd : graphs) {
@@ -718,5 +721,9 @@ public class Generate implements Callable<Integer> {
 
 	public void setDataReleaseDate(String dataReleaseDate) {
 		this.dataReleaseDate = dataReleaseDate;
+	}
+
+	public void setOptimizeFor(String optimizeFor) {
+		this.optimizeFor = optimizeFor;
 	}
 }

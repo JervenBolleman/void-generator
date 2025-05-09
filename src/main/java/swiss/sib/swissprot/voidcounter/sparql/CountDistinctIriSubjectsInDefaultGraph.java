@@ -4,6 +4,7 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
@@ -11,14 +12,15 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 final class CountDistinctIriSubjectsInDefaultGraph extends QueryCallable<Long> {
 
 	private static final String SUBJECTS = "subjects";
-	private static final String COUNT_DISTINCT_SUBJECT_QUERY = Helper.loadSparqlQuery("count_distinct_iri_subjects");
+	private final String rawQuery;
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsInDefaultGraph.class);
 	private final CommonVariables cv;
 
-	public CountDistinctIriSubjectsInDefaultGraph(CommonVariables cv) {
+	public CountDistinctIriSubjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
+		this.rawQuery = Helper.loadSparqlQuery("count_distinct_iri_subjects", optimizeFor);
 	}
 
 	@Override
@@ -41,8 +43,8 @@ final class CountDistinctIriSubjectsInDefaultGraph extends QueryCallable<Long> {
 	@Override
 	protected Long run(RepositoryConnection connection) throws Exception {
 
-		setQuery(COUNT_DISTINCT_SUBJECT_QUERY);
-		return Helper.getSingleLongFromSparql(COUNT_DISTINCT_SUBJECT_QUERY, connection, SUBJECTS);
+		setQuery(rawQuery);
+		return Helper.getSingleLongFromSparql(rawQuery, connection, SUBJECTS);
 	}
 
 	@Override

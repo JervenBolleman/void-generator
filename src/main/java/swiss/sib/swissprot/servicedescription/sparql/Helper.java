@@ -16,6 +16,9 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.UnsupportedRDFormatException;
+
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
+
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.impl.LinkedHashModel;
@@ -61,12 +64,14 @@ public class Helper {
 		return q.evaluate();
 	}
 
-	public static String loadSparqlQuery(String queryFileName) {
+	public static String loadSparqlQuery(String queryFileName, OptimizeFor optimizeFor) {
 		Model model = new LinkedHashModel();
-		try (var in = Helper.class.getClassLoader().getResourceAsStream(queryFileName + ".ttl")) {
-			model = Rio.parse(in, RDFFormat.TURTLE);
-		} catch (RDFParseException | UnsupportedRDFormatException | IOException e) {
-			throw new IllegalStateException("Failed to load SPARQL query from " + queryFileName, e);
+
+		if (!parse(queryFileName, model, optimizeFor)) {
+			boolean b = parse(queryFileName, model, OptimizeFor.SPARQL);
+			if (!b) {
+				throw new IllegalStateException("Failed to load SPARQL query from " + queryFileName);
+			}
 		}
 		Iterator<Statement> iterator = model.filter(null, SHACL.SELECT, null).iterator();
 		if (iterator.hasNext()) {
@@ -75,4 +80,17 @@ public class Helper {
 		throw new IllegalStateException("Failed to load SPARQL query from " + queryFileName);
 	}
 
+	private static boolean parse(String queryFileName, Model model, OptimizeFor optimizeFor) {
+		String fn = optimizeFor.dir() + '/' + queryFileName + ".ttl";
+		try (var in = Helper.class.getClassLoader()
+				.getResourceAsStream(fn)) {
+			if (in == null) {
+				return false;
+			}
+			model.addAll(Rio.parse(in, RDFFormat.TURTLE));
+			return true;
+		} catch (RDFParseException | UnsupportedRDFormatException | IOException e) {
+			throw new IllegalStateException("Failed to load SPARQL query from " + queryFileName, e);
+		}
+	}
 }

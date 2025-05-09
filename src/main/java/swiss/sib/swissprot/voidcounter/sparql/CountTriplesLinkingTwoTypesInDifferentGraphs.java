@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -23,7 +24,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 	private static final Logger log = LoggerFactory.getLogger(CountTriplesLinkingTwoTypesInDifferentGraphs.class);
 
 	private static final String LSC = "lsc";
-	private static final String COUNT_TRIPLES_LINKING = Helper.loadSparqlQuery("inter_graph_links");
+	private final String countTriplesLinking;
 
 	private final LinkSetToOtherGraph ls;
 
@@ -31,11 +32,13 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 
 	private final CommonVariables cv;
 
-	public CountTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls, PredicatePartition predicatePartition) {
+	public CountTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
+			PredicatePartition predicatePartition, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.ls = ls;
 		this.predicatePartition = predicatePartition;
+		this.countTriplesLinking = Helper.loadSparqlQuery("inter_graph_links", optimizeFor);
 	}
 
 	@Override
@@ -45,13 +48,13 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 
 	@Override
 	protected void logFailed(Exception e) {
-		if(log.isErrorEnabled())
-			log.error("failed counting triples between classses "+ ls, e);
+		if (log.isErrorEnabled())
+			log.error("failed counting triples between classses " + ls, e);
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct triples: {} for {}",ls.getTripleCount(), ls);
+		log.debug("Counted distinct triples: {} for {}", ls.getTripleCount(), ls);
 	}
 
 	@Override
@@ -65,8 +68,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		assert sourceType != null;
 		assert otherGraphName != null;
 		assert predicate != null;
-		
-		
+
 		MapBindingSet bs = new MapBindingSet();
 
 		SimpleValueFactory vf = SimpleValueFactory.getInstance();
@@ -76,8 +78,8 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		bs.setBinding("otherGraphName", vf.createIRI(otherGraphName));
 		bs.setBinding("targetType", targetType);
 		bs.setBinding("linkingGraphName", ls.getLinkingGraph());
-		setQuery(COUNT_TRIPLES_LINKING, bs);
-		
+		setQuery(countTriplesLinking, bs);
+
 		TupleQueryResult tq = Helper.runTupleQuery(getQuery(), connection);
 		if (tq.hasNext()) {
 			BindingSet next = tq.next();
@@ -100,7 +102,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		}
 		cv.save();
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;

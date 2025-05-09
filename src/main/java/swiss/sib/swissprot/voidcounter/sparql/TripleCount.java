@@ -6,18 +6,20 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public class TripleCount extends QueryCallable<Long> {
-	private static final String COUNT_TRIPLES_IN_GRAPH = Helper.loadSparqlQuery("count_triples_in_named_graphs");
+	private final String count;
 	private static final Logger log = LoggerFactory.getLogger(TripleCount.class);
 
 	private final CommonVariables cv;
 
-	public TripleCount(CommonVariables cv) {
+	public TripleCount(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		this.count = Helper.loadSparqlQuery("count_triples_in_named_graphs", optimizeFor);
 		this.cv =cv;
 	}
 
@@ -34,7 +36,7 @@ public class TripleCount extends QueryCallable<Long> {
 	protected Long run(RepositoryConnection connection) throws RepositoryException {	
 		MapBindingSet bs = new MapBindingSet();
 		bs.setBinding("graph", cv.gd().getGraph()); 
-		setQuery(COUNT_TRIPLES_IN_GRAPH, bs);
+		setQuery(count, bs);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, "count");			
 	}
 

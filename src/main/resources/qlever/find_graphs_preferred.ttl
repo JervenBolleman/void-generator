@@ -1,0 +1,23 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:find_graphs_preferred a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Find the graphs in an endpoint (best query)"^^rdf:HTML ;
+    rdfs:seeAlso <https://github.com/ad-freiburg/qlever/issue/2018> ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """SELECT
+  ?g 
+WHERE {
+  GRAPH ?g {
+    ?s ?p ?o
+  }
+} GROUP BY ?g""";
+    schema:keywords "void" , "graph", "distinct";
+    schema:target [
+        a sd:Service
+    ] .

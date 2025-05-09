@@ -7,6 +7,7 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
@@ -14,16 +15,14 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 final class CountDistinctIriSubjectsForDefaultGraph extends QueryCallable<Long> {
 	private static final String SUBJECTS = "subjects";
 
-	private static final String COUNT_DISTINCT_SUBJECT_IRI_QUERY = Helper.loadSparqlQuery("count_distinct_iri_subjects");
-
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsForDefaultGraph.class);
 
 	private final CommonVariables cv;
 
-	public CountDistinctIriSubjectsForDefaultGraph(CommonVariables cv) {
+	public CountDistinctIriSubjectsForDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
-		setQuery(COUNT_DISTINCT_SUBJECT_IRI_QUERY);
+		setQuery(Helper.loadSparqlQuery("count_distinct_iri_subjects", optimizeFor));
 	}
 
 	@Override
@@ -43,7 +42,7 @@ final class CountDistinctIriSubjectsForDefaultGraph extends QueryCallable<Long> 
 
 	@Override
 	protected Long run(RepositoryConnection connection)
-			throws RepositoryException, MalformedQueryException, QueryEvaluationException {	
+			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 	}
 
@@ -57,7 +56,7 @@ final class CountDistinctIriSubjectsForDefaultGraph extends QueryCallable<Long> 
 		}
 		cv.save();
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;

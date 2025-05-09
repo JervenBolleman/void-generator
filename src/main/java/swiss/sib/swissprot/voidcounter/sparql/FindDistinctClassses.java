@@ -24,14 +24,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class FindDistinctClassses extends QueryCallable<List<ClassPartition>> {
 	private static final String REPLACE = "###REPLACE###";
-	private static final String NESTED_LOOP_QUERY = Helper.loadSparqlQuery("distinct_types_in_a_graph");
-	private static final String GROUP_BY_QUERY = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph");
+	private final String nestedLoopQuery;
+	private final String groupByQuery;
 	private static final Logger log = LoggerFactory.getLogger(FindDistinctClassses.class);
 
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
@@ -42,13 +43,15 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 	public FindDistinctClassses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, 
-			String classExclusion, Supplier<QueryCallable<?>> onSuccess) {
+			String classExclusion, Supplier<QueryCallable<?>> onSuccess, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
 		this.onSuccess = onSuccess;
 		this.nested = !cv.preferGroupBy();
+		nestedLoopQuery = Helper.loadSparqlQuery("distinct_types_in_a_graph", optimizeFor);
+		groupByQuery = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph", optimizeFor);
 	}
 
 	@Override
@@ -121,17 +124,17 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 
 	private String makeNestedQuery() {
 		if (classExclusion == null || classExclusion.isBlank()) {
-			return NESTED_LOOP_QUERY;
+			return nestedLoopQuery;
 		} else {
-			return NESTED_LOOP_QUERY.replace(REPLACE, "FILTER (" + classExclusion + ")");
+			return nestedLoopQuery.replace(REPLACE, "FILTER (" + classExclusion + ")");
 		}
 	}
 	
 	private String makeGroupByQuery() {
 		if (classExclusion == null || classExclusion.isBlank()) {
-			return GROUP_BY_QUERY;
+			return groupByQuery;
 		} else {
-			return GROUP_BY_QUERY.replace(REPLACE, "FILTER (" + classExclusion + ")");
+			return groupByQuery.replace(REPLACE, "FILTER (" + classExclusion + ")");
 		}
 	}
 

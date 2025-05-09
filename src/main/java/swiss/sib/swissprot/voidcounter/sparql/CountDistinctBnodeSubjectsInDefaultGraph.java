@@ -7,19 +7,21 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 final class CountDistinctBnodeSubjectsInDefaultGraph extends QueryCallable<Long> {
 	private static final String SUBJECTS = "subjects";
-	private static final String COUNT_DISTINCT_SUBJECT_QUERY = Helper.loadSparqlQuery("count_distinct_bnode_subjects");
+	private final String rawQuery;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjectsInDefaultGraph.class);
 
 	private final CommonVariables cv;
 
-	public CountDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv) {
+	public CountDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		rawQuery = Helper.loadSparqlQuery("count_distinct_bnode_subjects", optimizeFor);
 		this.cv = cv;
 	}
 
@@ -38,7 +40,7 @@ final class CountDistinctBnodeSubjectsInDefaultGraph extends QueryCallable<Long>
 			throws QueryEvaluationException, RepositoryException, MalformedQueryException
 
 	{
-		setQuery(COUNT_DISTINCT_SUBJECT_QUERY);
+		setQuery(rawQuery);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 	}
 

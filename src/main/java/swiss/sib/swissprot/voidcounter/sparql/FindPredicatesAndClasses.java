@@ -56,9 +56,9 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	@Override
 	protected Exception run(RepositoryConnection connection) throws Exception {
 		Supplier<QueryCallable<?>> onFoundClasses = () -> new FindClassPredicatePairs(cv, rwLock, classExclusion, schedule, counters);
-		Supplier<QueryCallable<?>> onFoundPredicates = () -> new FindDistinctClassses(cv, schedule,
+		Supplier<QueryCallable<?>> onFoundPredicates = () -> counters.findDistinctClassses(cv, schedule,
 				classExclusion, onFoundClasses);
-		schedule.apply(new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, onFoundPredicates));
+		schedule.apply(counters.findPredicatesAndCountObjects(cv, knownPredicates, schedule, onFoundPredicates));
 
 		return null;
 	}

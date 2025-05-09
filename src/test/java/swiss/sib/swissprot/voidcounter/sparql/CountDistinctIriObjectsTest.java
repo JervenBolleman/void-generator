@@ -17,9 +17,11 @@ import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 
@@ -37,8 +39,9 @@ class CountDistinctIriObjectsTest {
 		repository.shutDown();
 	}
 
-	@Test
-	void empty() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void empty(OptimizeFor of) throws IOException {
 
 		final ServiceDescription sd = new ServiceDescription();
 		Lock writeLock = new ReentrantLock();
@@ -46,7 +49,7 @@ class CountDistinctIriObjectsTest {
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
 
-		var count = new CountDistinctIriObjectsInDefaultGraph(cv);
+		var count = new CountDistinctIriObjectsInDefaultGraph(cv, of);
 		count.call();
 		assertEquals(0, sd.getDistinctIriObjectCount());
 		assertEquals(1, finishedQueries.get());
@@ -55,14 +58,15 @@ class CountDistinctIriObjectsTest {
 		gd.setGraph(RDF.BAG);
 		cv = new CommonVariables(sd, gd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
-		var count2 = new CountDistinctIriObjectsInAGraph(cv);
+		var count2 = new CountDistinctIriObjectsInAGraph(cv, OptimizeFor.SPARQL);
 		count2.call();
 		assertEquals(0, gd.getDistinctIriObjectCount());
 		assertEquals(2, finishedQueries.get());
 	}
 
-	@Test
-	void one() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void one(OptimizeFor of) throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
@@ -77,7 +81,7 @@ class CountDistinctIriObjectsTest {
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
 
-		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(cv);
+		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriObjectCount());
 		assertEquals(1, finishedQueries.get());
@@ -87,7 +91,7 @@ class CountDistinctIriObjectsTest {
 		sd.putGraphDescription(gd);
 		cv = new CommonVariables(sd, gd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries, false);
-		var count2 = new CountDistinctIriObjectsInAGraph(cv);
+		var count2 = new CountDistinctIriObjectsInAGraph(cv, OptimizeFor.SPARQL);
 		count2.call();
 		assertEquals(1, gd.getDistinctIriObjectCount());
 		assertEquals(2, finishedQueries.get());

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -30,16 +31,17 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
  */
 final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 	private static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
-	private static final String DATA_TYPE_QUERY = Helper.loadSparqlQuery("select_distinct_datatypes");
+	private final String dataTypeQuery;
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 	private final CommonVariables cv;
 
-	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition, ClassPartition source) {
+	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
+		this.dataTypeQuery = Helper.loadSparqlQuery("find_datatypes_if_no_class_or_dt_known", optimizeFor);
 	}
 
 	@Override
@@ -63,11 +65,11 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 			RepositoryConnection localConnection, Set<IRI> datatypes) {
 
 
-		TupleQuery tq = localConnection.prepareTupleQuery(DATA_TYPE_QUERY);
+		TupleQuery tq = localConnection.prepareTupleQuery(dataTypeQuery);
 		tq.setBinding("graphName", cv.gd().getGraph());
 		tq.setBinding("sourceType", sourceType);
 		tq.setBinding("predicate", predicate);
-		setQuery(DATA_TYPE_QUERY, tq.getBindings());
+		setQuery(dataTypeQuery, tq.getBindings());
 		try (TupleQueryResult eval = tq.evaluate()) {
 			while (eval.hasNext()) {
 				final BindingSet next = eval.next();

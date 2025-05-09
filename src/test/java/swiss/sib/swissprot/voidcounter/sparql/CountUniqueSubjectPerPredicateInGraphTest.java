@@ -18,12 +18,14 @@ import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -50,8 +52,9 @@ public class CountUniqueSubjectPerPredicateInGraphTest {
 		LOGGER.debug("ran shutdown");
 	}
 
-	@Test
-	void oneLast() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void oneLast(OptimizeFor of) throws IOException {
 
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
@@ -70,7 +73,7 @@ public class CountUniqueSubjectPerPredicateInGraphTest {
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
 				new Semaphore(1), finishedQueries, false);
-		var counter = new CountUniqueSubjectPerPredicateInGraph(cv, pp);
+		var counter = new CountUniqueSubjectPerPredicateInGraph(cv, pp, of);
 		counter.call();
 		assertEquals(1, pp.getDistinctSubjectCount());
 		assertEquals(0, pp.getDistinctObjectCount());

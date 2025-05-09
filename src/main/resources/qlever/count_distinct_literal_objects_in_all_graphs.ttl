@@ -1,0 +1,29 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:count_distinct_literal_objects_in_all_graphs a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Count the number of distinct literals used in the object position of triples (in a pre bound graph) (qlever optimized form)"^^rdf:HTML ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """SELECT 
+  (COUNT(?object) AS ?objects) 
+WHERE {
+  {
+    SELECT
+      DISTINCT ?object
+    WHERE {
+      GRAPH ?graph {
+        ?subject ?predicate ?object .
+        FILTER (!(isIRI(?object))|| !isBlank(?object)))
+      }
+    }
+  } 
+}""" ;
+    schema:keywords "void" , "literal", "count" ;
+    schema:target [
+        a sd:Service
+    ] .

@@ -21,10 +21,12 @@ import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -46,8 +48,9 @@ class IsSourceClassLinkedToTargetClassTest {
 		executors.shutdown();
 	}
 
-	@Test
-	void one() throws IOException {
+	@ParameterizedTest
+	@EnumSource(OptimizeFor.class)
+	void one(OptimizeFor of) throws IOException {
 
 		Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler = (q)->{
 			return CompletableFuture.supplyAsync(q::call, executors); 
@@ -77,7 +80,7 @@ class IsSourceClassLinkedToTargetClassTest {
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		Lock writeLock = new ReentrantLock();
 		CommonVariables cv = new CommonVariables(sd , bag, repository, s->{}, writeLock, new Semaphore(1), finishedQueries, false);
-		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, scheduler, null);
+		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, scheduler, null, new SparqlCounters(of), of);
 		counter.call();
 		assertEquals(1, pp.getLinkSets().size());
 		assertEquals(1, finishedQueries.get());

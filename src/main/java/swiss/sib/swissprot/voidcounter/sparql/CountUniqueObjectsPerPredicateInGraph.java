@@ -9,6 +9,7 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -19,17 +20,18 @@ class CountUniqueObjectsPerPredicateInGraph
 {
 
 	private static final String OBJECTS = "objects";
-	private static final String SC = Helper.loadSparqlQuery("count_distinct_objects");
+	private final String rawQuery;
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueObjectsPerPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
 	private final CommonVariables cv;
 	
-	public CountUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition)
+	public CountUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition, OptimizeFor optimizeFor)
 	{
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.predicatePartition = predicatePartition;
+		this.rawQuery = Helper.loadSparqlQuery("count_distinct_objects", optimizeFor);
 	}
 
 	@Override
@@ -53,7 +55,7 @@ class CountUniqueObjectsPerPredicateInGraph
 		MapBindingSet bindingSet = new MapBindingSet();
 		bindingSet.setBinding("graph", cv.gd().getGraph());
 		bindingSet.setBinding("predicate", predicate);
-		setQuery(SC, bindingSet);
+		setQuery(rawQuery, bindingSet);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, OBJECTS);
 	}
 

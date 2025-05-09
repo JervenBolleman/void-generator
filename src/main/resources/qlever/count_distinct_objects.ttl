@@ -5,24 +5,24 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 
-ex:inter_graph_links a sh:SPARQLExecutable,
+ex:count_distinct_objects a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
-    rdfs:comment "Count links between graphs requires prebound graphs"^^rdf:HTML ;
+    rdfs:comment "Count the number of distinct IRIs used in the object position of triples in graphs"^^rdf:HTML ;
     sh:prefixes _:sparql_examples_prefixes ;
-    sh:select """SELECT 
-  (COUNT(?target) AS ?lsc)
-WHERE  { 
- GRAPH ?graphName { 
-    ?subject a ?sourceType 
-  } 
-  GRAPH ?linkingGraphName { 
-    ?subject ?predicate ?target
-  } 
-  GRAPH ?otherGraphName {
-	?target a ?targetType 
+    sh:select """SELECT
+  (COUNT(?object) AS ?objects)
+WHERE {
+  {
+    SELECT
+      DISTINCT ?object
+    WHERE {
+      GRAPH ?graph {
+        ?subject ?predicate ?object .
+      }
+    }
   }
 }""" ;
-    schema:keywords "void" , "iri", "count" ;
+    schema:keywords "void" , "object", "count", "distinct" ;
     schema:target [
-        rdfs:subClassOf sd:Service
+        a sd:Service
     ] .
