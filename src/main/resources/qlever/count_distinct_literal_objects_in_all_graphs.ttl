@@ -18,7 +18,7 @@ WHERE {
     WHERE {
       GRAPH ?graph {
         ?subject ?predicate ?object .
-        FILTER (!(isIRI(?object))|| !isBlank(?object)))
+        FILTER (!(isIRI(?object) || isBlank(?object)))
       }
     }
   } 
