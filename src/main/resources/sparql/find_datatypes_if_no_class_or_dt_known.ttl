@@ -1,0 +1,25 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:find_datatypes_if_no_class_or_dt_known a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Finds datatype partitions, last resort query"^^rdf:HTML ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """SELECT
+  DISTINCT ?dt
+WHERE {
+  GRAPH ?graphName {
+    ?subject a ?sourceType .
+    ?subject ?predicate ?target .
+    FILTER(isLiteral(?target)) .
+    BIND(datatype(?target) AS ?dt)
+  }
+}""" ;
+    schema:keywords "void" , "count" ;
+    schema:target [
+        rdfs:subClassOf sd:Service
+    ] .
