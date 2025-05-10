@@ -15,7 +15,7 @@ ex:count_distinct_bnode_objects_in_all_graphs a sh:SPARQLExecutable,
 WHERE {
     SELECT
         DISTINCT ?graph ?object
-    WHERE
+    WHERE {
         GRAPH ?graph {
             ?subject ?predicate ?object .
             FILTER(isBlank(?object))
