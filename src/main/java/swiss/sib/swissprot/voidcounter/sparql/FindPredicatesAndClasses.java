@@ -113,10 +113,11 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 			}
 		
 			for (PredicatePartition predicate : predicates) {
-				for (ClassPartition source : classes) {
-					if (!RDF.TYPE.equals(predicate.getPredicate()))
-						schedule.apply(counters.findPredicateLinkSets(cv, classes, predicate, source,
-								schedule, classExclusion));
+				if (!RDF.TYPE.equals(predicate.getPredicate())) {
+					for (ClassPartition source : classes) {
+						schedule.apply(counters.findPredicateLinkSets(cv, classes, predicate, source, schedule,
+								classExclusion));
+					}
 				}
 			}
 			return null;
