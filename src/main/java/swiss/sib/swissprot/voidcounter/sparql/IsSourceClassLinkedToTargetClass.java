@@ -14,13 +14,12 @@ import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> {
-
-	private final String countLinks;
+	private static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToTargetClass.class);
 
 	private static final String SUBJECTS = "subjects";
 
-	public static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToTargetClass.class);
 
+	private final String countLinks;
 	private final IRI predicate;
 	private final ClassPartition target;
 	private final PredicatePartition predicatePartition;
@@ -36,8 +35,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 		this.target = target;
 		this.predicatePartition = predicatePartition;
 		this.source = source;
-		this.countLinks = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_type",
-				optimizeFor);
+		this.countLinks = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_type", optimizeFor);
 	}
 
 	@Override
@@ -56,12 +54,12 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 	protected Long run(RepositoryConnection connection) throws Exception {
 		final IRI sourceType = source.getClazz();
 		final IRI targetType = target.getClazz();
-		MapBindingSet tq = new MapBindingSet();
-		tq.setBinding("sourceType", sourceType);
-		tq.setBinding("targetType", targetType);
-		tq.setBinding("graph", cv.gd().getGraph());
-		tq.setBinding("predicate", predicate);
-		setQuery(countLinks, tq);
+		MapBindingSet bs = new MapBindingSet();
+		bs.setBinding("sourceType", sourceType);
+		bs.setBinding("targetType", targetType);
+		bs.setBinding("graph", cv.gd().getGraph());
+		bs.setBinding("predicate", predicate);
+		setQuery(countLinks, bs);
 		return Helper.getSingleLongFromSparql(getQuery(), connection, SUBJECTS);
 	}
 
@@ -77,7 +75,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 			} finally {
 				cv.writeLock().unlock();
 			}
-			cv.saver().accept(cv.sd());
+			cv.save();
 		}
 	}
 

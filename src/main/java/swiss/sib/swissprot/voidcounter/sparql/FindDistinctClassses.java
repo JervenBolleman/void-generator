@@ -38,8 +38,8 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
 	private final String classExclusion;
 	private final Supplier<QueryCallable<?>> onSuccess;
-	private final boolean nested;
 	private final CommonVariables cv;
+	private final OptimizeFor optimizeFor;
 
 	public FindDistinctClassses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, 
@@ -49,9 +49,9 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
 		this.onSuccess = onSuccess;
-		this.nested = !optimizeFor.preferGroupBy();
-		nestedLoopQuery = Helper.loadSparqlQuery("distinct_types_in_a_graph", optimizeFor);
-		groupByQuery = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph", optimizeFor);
+		this.optimizeFor = optimizeFor;
+		this.nestedLoopQuery = Helper.loadSparqlQuery("distinct_types_in_a_graph", optimizeFor);
+		this.groupByQuery = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph", optimizeFor);
 	}
 
 	@Override
@@ -75,10 +75,10 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		List<ClassPartition> classesList = new ArrayList<>();
 		MapBindingSet tq = new MapBindingSet();
 		tq.setBinding("graph", cv.gd().getGraph());
-		if (nested)
-			nested(connection, classesList, tq);
-		else
+		if (optimizeFor.preferGroupBy())
 			groupBy(connection, classesList, tq);
+		else
+			nested(connection, classesList, tq);
 		if (onSuccess != null) {
 			scheduler.apply(onSuccess.get());
 		}
@@ -118,7 +118,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			}
 		}
 		for (ClassPartition cp : classesList) {
-			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries));
+			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries, optimizeFor));
 		}
 	}
 
@@ -157,49 +157,54 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	}
 
 	private final class CountMembersOfClassPartition extends QueryCallable<Long> {
-		private static final String COUNT_TYPE_ARCS = "SELECT (COUNT(?thing) AS ?count) WHERE {GRAPH ?graph {?thing a ?class }}";
+		private final String count_type_arcs;
 
 		public CountMembersOfClassPartition(Repository repository, Semaphore limiter, ClassPartition cp,
-				AtomicInteger finishedQueries) {
+				AtomicInteger finishedQueries, OptimizeFor optimizeFor) {
 			super(repository, limiter, finishedQueries);
 			this.cp = cp;
+			this.count_type_arcs = Helper.loadSparqlQuery("count_triples_for_type_in_graph", optimizeFor);
 		}
 
 		private final ClassPartition cp;
 
 		@Override
 		protected void logStart() {
-			log.debug("Counting distinct triples for class " + cp.getClazz() + " for {}", cv.gd().getGraphName());
-
+			log.debug("Counting distinct triples for class {} for {}", cp.getClazz(), cv.gd().getGraphName());
 		}
 
 		@Override
 		protected void logFailed(Exception e) {
-			log.error("failed counting distinct triples for class " + cv.gd().getGraphName(), e);
+			if (log.isErrorEnabled())
+				log.error("failed counting distinct triples for class " + cv.gd().getGraphName(), e);
 		}
 
 		@Override
 		protected void logEnd() {
-			log.debug("Counted distinct triples for class " + cp.getClazz() + " for {} ", cv.gd().getGraphName());
+			log.debug("Counted distinct triples for class {} for {} ", cp.getClazz(), cv.gd().getGraphName());
 		}
 
 		@Override
 		protected Long run(RepositoryConnection connection) throws Exception {
 
-			MapBindingSet tq = new MapBindingSet();
-			tq.setBinding("graph", cv.gd().getGraph());
-			tq.setBinding("class", cp.getClazz());
-			setQuery(COUNT_TYPE_ARCS, tq);
+			MapBindingSet bs = new MapBindingSet();
+			bs.setBinding("graph", cv.gd().getGraph());
+			bs.setBinding("class", cp.getClazz());
+			setQuery(count_type_arcs, bs);
 			return Helper.getSingleLongFromSparql(getQuery(), connection, "count");
 		}
 
 		@Override
 		protected void set(Long t) {
-
-			if (t > 0) {
-				cp.setTripleCount(t);
-			} else {
-				cv.gd().getClasses().remove(cp);
+			try {
+				cv.writeLock().lock();
+				if (t > 0) {
+					cp.setTripleCount(t);
+				} else {
+					cv.gd().getClasses().remove(cp);
+				}
+			} finally {
+				cv.writeLock().unlock();
 			}
 		}
 
