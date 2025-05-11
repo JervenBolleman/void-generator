@@ -45,7 +45,8 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	private final CommonVariables cv;
 
-	private Counters counters;
+	private final Counters counters;
+	private final OptimizeFor optimizeFor;
 
 
 	//TODO pass in a different waiter/limiter and logic to make sure that the other graph class list is known before we start here.
@@ -57,6 +58,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.counters = counters;
+		this.optimizeFor = optimizeFor;
 		this.predicate = predicatePartition.getPredicate();
 		this.pp = predicatePartition;
 		this.source = source;
@@ -80,7 +82,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	protected List<LinkSetToOtherGraph> run(RepositoryConnection connection) throws Exception {
 		final IRI sourceType = source.getClazz();
 
-		if (otherGraph.getPredicates().isEmpty()) {
+		if (otherGraph.getPredicates().isEmpty() || optimizeFor.preferGroupBy()) {
 			return rediscoverPossibleLinkClasses(connection, sourceType);
 		} else {
 			for (ClassPartition cp : otherGraph.getClasses()) {
