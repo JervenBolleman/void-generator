@@ -79,7 +79,7 @@ class IsSourceClassLinkedToTargetClassTest {
 		ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		Lock writeLock = new ReentrantLock();
-		CommonVariables cv = new CommonVariables(sd , bag, repository, s->{}, writeLock, new Semaphore(1), finishedQueries, false);
+		CommonVariables cv = new CommonVariables(sd , bag, repository, s->{}, writeLock, new Semaphore(1), finishedQueries);
 		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, scheduler, null, new SparqlCounters(of), of);
 		counter.call();
 		assertEquals(1, pp.getLinkSets().size());

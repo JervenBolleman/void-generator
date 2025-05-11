@@ -1,7 +1,17 @@
 package swiss.sib.swissprot.servicedescription;
 
 public enum OptimizeFor {
-	SPARQL, VIRTUOSO, QLEVER;
+	SPARQL(true), VIRTUOSO(false), QLEVER(true);
+
+	private final boolean preferGroupBy;
+
+	public boolean preferGroupBy() {
+		return preferGroupBy;
+	}
+
+	OptimizeFor(boolean preferGroupBy) {
+		this.preferGroupBy = preferGroupBy;
+	}
 
 	static OptimizeFor fromString(String optimizeFor) {
 		for (OptimizeFor of : OptimizeFor.values()) {

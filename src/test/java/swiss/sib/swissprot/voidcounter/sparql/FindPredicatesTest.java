@@ -68,7 +68,7 @@ public class FindPredicatesTest {
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, gd, repository, s -> {
-		}, writeLock, new Semaphore(1), finishedQueries, false);
+		}, writeLock, new Semaphore(1), finishedQueries);
 
 		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
 				Set.of(), schedule, () -> null, OptimizeFor.SPARQL, new SparqlCounters(of));
@@ -95,7 +95,7 @@ public class FindPredicatesTest {
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, gd, repository, s -> {
-		}, writeLock, new Semaphore(1), finishedQueries, false);
+		}, writeLock, new Semaphore(1), finishedQueries);
 
 		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
 				Set.of(), schedule, () -> null, OptimizeFor.SPARQL, new SparqlCounters(of));
@@ -122,7 +122,7 @@ public class FindPredicatesTest {
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, gd, repository, s -> {
-		}, writeLock, new Semaphore(1), finishedQueries, false);
+		}, writeLock, new Semaphore(1), finishedQueries);
 		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
 				Set.of(), schedule, () -> null, of, new SparqlCounters(of));
 		countDistinctIriSubjectsForAllGraphs.call();

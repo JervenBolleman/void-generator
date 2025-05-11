@@ -49,7 +49,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
 		this.onSuccess = onSuccess;
-		this.nested = !cv.preferGroupBy();
+		this.nested = !optimizeFor.preferGroupBy();
 		nestedLoopQuery = Helper.loadSparqlQuery("distinct_types_in_a_graph", optimizeFor);
 		groupByQuery = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph", optimizeFor);
 	}

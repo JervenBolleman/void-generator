@@ -155,10 +155,6 @@ public class Generate implements Callable<Integer> {
 	@Option(names = {
 			"--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
 	private String dataReleaseDate;
-
-	@Option(names = {
-			"--prefer-group-by" }, description = "Sends fewer queries, server side group by instead of client side nested loop", defaultValue = "false")
-	private boolean preferGroupBy;
 	
 	@Option(names = { "--optimize-for" }, description = "Which store to optimize for. Virtuoso, SPARQL or Qlever", defaultValue = "sparql")
 	private String optimizeFor = "sparql";
@@ -404,7 +400,7 @@ public class Generate implements Callable<Integer> {
 		Lock writeLock = rwLock.writeLock();
 		if (repository instanceof VirtuosoRepository) {
 			CommonVariables cv = new CommonVariables(sd, voidGraphDescription, repository, saver, writeLock, limit,
-					finishedQueries, preferGroupBy);
+					finishedQueries);
 			schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(cv));
 		}
 		countSpecificThingsPerGraph(sd, knownPredicates, voidGraphDescription, limit, saver);
@@ -478,13 +474,11 @@ public class Generate implements Callable<Integer> {
 
 		if (countDistinctObjects && countDistinctSubjects && optimizeForVirtuoso) {
 			for (GraphDescription gd : graphs) {
-				CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries,
-						preferGroupBy);
+				CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries);
 				schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(cv));
 			}
 		} else {
-			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries,
-					preferGroupBy);
+			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
 			if (countDistinctObjects) {
 				countDistinctObjects(sd, saver, writeLock, optimizeForVirtuoso, limit);
 			}
@@ -506,8 +500,7 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctObjects(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock,
 			boolean isvirtuoso, Semaphore limit) {
-		CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries,
-				preferGroupBy);
+		CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
 		schedule(counters.countDistinctBnodeObjectsInDefaultGraph(cv));
 		if (!isvirtuoso || !countDistinctSubjects) {
 			schedule(counters.countDistinctIriObjectsForDefaultGraph(cv));
@@ -521,7 +514,7 @@ public class Generate implements Callable<Integer> {
 		} else if (!countDistinctObjects) {
 			for (GraphDescription gd : allGraphs) {
 				CommonVariables cvgd = new CommonVariables(cv.sd(), gd, cv.repository(), cv.saver(), cv.writeLock(),
-						cv.limiter(), cv.finishedQueries(), preferGroupBy);
+						cv.limiter(), cv.finishedQueries());
 				schedule(counters.countDistinctIriSubjectsInAGraph(cvgd));
 			}
 		}
@@ -530,8 +523,7 @@ public class Generate implements Callable<Integer> {
 
 	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, GraphDescription gd,
 			Semaphore limit, Consumer<ServiceDescription> saver) {
-		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, rwLock.writeLock(), limit, finishedQueries,
-				preferGroupBy);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, rwLock.writeLock(), limit, finishedQueries);
 		if (findDistinctClasses && findPredicates && detailedCount) {
 			schedule(counters.findPredicatesAndClasses(cv, this::schedule, knownPredicates, rwLock, classExclusion));
 		} else {
@@ -547,8 +539,7 @@ public class Generate implements Callable<Integer> {
 	private void scheduleBigCountsPerGraph(ServiceDescription sd, GraphDescription gd,
 			Consumer<ServiceDescription> saver, Semaphore limit) {
 		Lock writeLock = rwLock.writeLock();
-		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries,
-				preferGroupBy);
+		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries);
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
 			schedule(counters.countDistinctLiteralObjects(cv));

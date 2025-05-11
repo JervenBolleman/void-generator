@@ -47,7 +47,7 @@ class CountDistinctIriSubjectsTest {
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries, false);
+		}, writeLock, new Semaphore(1), finishedQueries);
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(0, sd.getDistinctIriSubjectCount());
@@ -69,7 +69,7 @@ class CountDistinctIriSubjectsTest {
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		Lock writeLock = new ReentrantLock();
 		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries, false);
+		}, writeLock, new Semaphore(1), finishedQueries);
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriSubjectCount());
@@ -79,7 +79,7 @@ class CountDistinctIriSubjectsTest {
 		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
 		cv = new CommonVariables(sd, gd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries, false);
+		}, writeLock, new Semaphore(1), finishedQueries);
 		var count = new CountDistinctIriSubjectsInAGraph(cv, of);
 		count.call();
 		assertEquals(1, gd.getDistinctIriSubjectCount());

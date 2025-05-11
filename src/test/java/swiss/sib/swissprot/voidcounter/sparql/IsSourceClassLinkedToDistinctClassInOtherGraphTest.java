@@ -66,7 +66,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	@EnumSource(OptimizeFor.class) 
 	public void testRun(OptimizeFor of) throws Exception {
 		ServiceDescription sd = new ServiceDescription();
-		CommonVariables cv = new CommonVariables(sd , gd, repository, s->{}, writeLock, limiter, finishedQueries, false);
+		CommonVariables cv = new CommonVariables(sd , gd, repository, s->{}, writeLock, limiter, finishedQueries);
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
 				predicatePartition, sourceClass, ogd, (s) -> null, null, new SparqlCounters(of), of);
 		try (RepositoryConnection connection = repository.getConnection()) {
@@ -86,7 +86,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	@EnumSource(OptimizeFor.class) 
 	public void testRunExclude(OptimizeFor fr) throws Exception {
 		ServiceDescription sd = new ServiceDescription();
-		CommonVariables cv = new CommonVariables(sd , gd, repository, null, writeLock, limiter, finishedQueries, false);
+		CommonVariables cv = new CommonVariables(sd , gd, repository, null, writeLock, limiter, finishedQueries);
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv,  
 				predicatePartition, sourceClass, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(fr), fr);
 		Exception call = isSourceClassLinkedToTargetClass.call();
@@ -98,7 +98,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	@EnumSource(OptimizeFor.class) 
 	public void testWithOtherKnown(OptimizeFor of) throws Exception {
 		ServiceDescription sd = new ServiceDescription();
-		CommonVariables cv = new CommonVariables(sd , gd, repository, null, writeLock, limiter, finishedQueries, false);
+		CommonVariables cv = new CommonVariables(sd , gd, repository, null, writeLock, limiter, finishedQueries);
 		ogd.getClasses().add(new ClassPartition(targetClass.getClazz()));
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
 				predicatePartition, sourceClass, ogd, (s) -> null, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(of), of);		

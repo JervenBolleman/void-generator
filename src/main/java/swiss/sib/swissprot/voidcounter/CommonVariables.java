@@ -11,7 +11,7 @@ import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
 public record CommonVariables(ServiceDescription sd, GraphDescription gd, Repository repository,
-		Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries, boolean preferGroupBy) {
+		Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) {
 
 	public void save() {
 		saver.accept(sd);
