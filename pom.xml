@@ -10,7 +10,7 @@
   <url>https://github.com/jervenbolleman/void-generator</url>
   <scm>
     <url>https://github.com/jervenbolleman/void-generator</url>
-    <developerConnection>Jerven Bolleman</developerConnection>
+    <developerConnection>scm:git:https://github.com/jervenbolleman/void-generator</developerConnection>
   </scm>
   <properties>
     <rdf4j.version>5.1.2</rdf4j.version>
