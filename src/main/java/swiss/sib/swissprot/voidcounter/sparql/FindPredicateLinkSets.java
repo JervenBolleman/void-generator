@@ -38,6 +38,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private final String classExclusion;
 	private final CommonVariables cv;
 	private final Counters counters;
+	private final OptimizeFor optimizeFor;
 
 	public FindPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes, PredicatePartition predicate,
 			ClassPartition source, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
@@ -50,6 +51,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		this.schedule = schedule;
 		this.classExclusion = classExclusion;
 		this.counters = counters;
+		this.optimizeFor = optimizeFor;
 		this.rawQuery = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate", optimizeFor);
 	}
 
@@ -65,10 +67,15 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 		schedule.apply(counters.findNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source));
 
-		for (ClassPartition target : targetClasses) {
-
-			schedule.apply(counters.isSourceClassLinkedToTargetClass(cv,target,
+		if (optimizeFor.preferGroupBy()) {
+			schedule.apply(counters.isSourceClassLinkedToTargetClasses(cv,targetClasses,
 					predicatePartition, source));
+		} else {
+			for (ClassPartition target : targetClasses) {
+	
+				schedule.apply(counters.isSourceClassLinkedToTargetClass(cv,target,
+						predicatePartition, source));
+			}
 		}
 
 		for (GraphDescription og : cv.sd().getGraphs()) {

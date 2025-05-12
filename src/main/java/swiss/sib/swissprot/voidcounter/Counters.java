@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -83,5 +84,8 @@ public interface Counters {
 
 	QueryCallable<?> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp);
+
+	QueryCallable<Map<IRI, Long>> isSourceClassLinkedToTargetClasses(CommonVariables cv, Set<ClassPartition> targetClasses,
+			PredicatePartition predicatePartition, ClassPartition source);
 
 }

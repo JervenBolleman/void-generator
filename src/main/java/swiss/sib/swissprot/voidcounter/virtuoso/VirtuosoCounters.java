@@ -1,6 +1,7 @@
 package swiss.sib.swissprot.voidcounter.virtuoso;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
@@ -31,6 +32,7 @@ import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndClasses;
 import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndCountObjects;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraph;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToTargetClass;
+import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToTargetClasses;
 import swiss.sib.swissprot.voidcounter.sparql.TripleCount;
 
 public class VirtuosoCounters implements Counters {
@@ -185,5 +187,11 @@ public class VirtuosoCounters implements Counters {
 	public QueryCallable<?> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp) {
 		return new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, OptimizeFor.VIRTUOSO);
+	}
+	
+	@Override
+	public QueryCallable<Map<IRI, Long>> isSourceClassLinkedToTargetClasses(CommonVariables cv,
+			Set<ClassPartition> targetClasses, PredicatePartition predicatePartition, ClassPartition source) {
+		return new IsSourceClassLinkedToTargetClasses(cv, targetClasses, predicatePartition, source, OptimizeFor.VIRTUOSO);
 	}
 }
