@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -51,8 +50,8 @@ public class VirtuosoCounters implements Counters {
 		return new CountDistinctBnodeSubjectsInAGraph(cv);
 	}
 
-	public QueryCallable<Set<String>> findAllGraphs(CommonVariables cv, AtomicInteger scheduledQueries) {
-		return new FindGraphs(cv, VIRTUOSO, scheduledQueries);
+	public QueryCallable<Set<String>> findAllGraphs(CommonVariables cv) {
+		return new FindGraphs(cv, VIRTUOSO);
 	}
 
 	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv) {

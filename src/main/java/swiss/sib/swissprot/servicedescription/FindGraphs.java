@@ -2,7 +2,6 @@ package swiss.sib.swissprot.servicedescription;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.rdf4j.common.exception.RDF4JException;
 import org.eclipse.rdf4j.query.Binding;
@@ -15,18 +14,24 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
+/**
+ * This class is responsible for finding all graphs in the repository that are
+ * not Virtuoso graphs. It uses SPARQL queries to retrieve the graph names and
+ * stores them in a set.
+ * 
+ * If the preferred query does not return any results, it falls back to a query 
+ * that is supported by more backend stores.
+ */
 public class FindGraphs extends QueryCallable<Set<String>> {
 	private final OptimizeFor optimizeFor;
 
-	private final AtomicInteger scheduledQueries;
-
 	private final CommonVariables cv;
 
-	public FindGraphs(CommonVariables cv, OptimizeFor optimizeFor, AtomicInteger scheduledQueries) {
+	
+	public FindGraphs(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
 		this.optimizeFor = optimizeFor;
-		this.scheduledQueries = scheduledQueries;
 	}
 
 	private static final Logger log = org.slf4j.LoggerFactory.getLogger(FindGraphs.class);
@@ -37,19 +42,15 @@ public class FindGraphs extends QueryCallable<Set<String>> {
 	public Set<String> findAllNonVirtuosoGraphs(RepositoryConnection connection) {
 		Set<String> res = new HashSet<>();
 		String prefQuery = Helper.loadSparqlQuery("find_graphs_preferred", optimizeFor);
-		findGraphs(connection, res, prefQuery, scheduledQueries, finishedQueries);
+		findGraphs(connection, res, prefQuery);
 		if (res.isEmpty()) {
 			String fallbackQuery = Helper.loadSparqlQuery("find_graphs_fallback", optimizeFor);
-			findGraphs(connection, res, fallbackQuery, scheduledQueries, finishedQueries);
+			findGraphs(connection, res, fallbackQuery);
 		}
-
 		return res;
-
 	}
 
-	private void findGraphs(RepositoryConnection connection, Set<String> res, String query,
-			AtomicInteger scheduledQueries, AtomicInteger finishedQueries) {
-		scheduledQueries.incrementAndGet();
+	private void findGraphs(RepositoryConnection connection, Set<String> res, String query) {
 		setQuery(query);
 		try (final TupleQueryResult foundGraphs = Helper.runTupleQuery(query, connection)) {
 			while (foundGraphs.hasNext()) {
@@ -63,8 +64,6 @@ public class FindGraphs extends QueryCallable<Set<String>> {
 			}
 		} catch (RDF4JException e) {
 			// Ignore this failure!
-		} finally {
-			finishedQueries.incrementAndGet();
 		}
 	}
 

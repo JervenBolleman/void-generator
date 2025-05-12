@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -19,7 +18,7 @@ import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public interface Counters {
 
-	QueryCallable<Set<String>> findAllGraphs(CommonVariables cv, AtomicInteger scheduledQueries);
+	QueryCallable<Set<String>> findAllGraphs(CommonVariables cv);
 
 	QueryCallable<Long> countDistinctBnodeSubjectsInAgraph(CommonVariables cv);
 
@@ -86,5 +85,4 @@ public interface Counters {
 
 	QueryCallable<Map<IRI, Long>> isSourceClassLinkedToTargetClasses(CommonVariables cv, Set<ClassPartition> targetClasses,
 			PredicatePartition predicatePartition, ClassPartition source);
-
 }

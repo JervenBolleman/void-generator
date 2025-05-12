@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -34,8 +33,8 @@ public class SparqlCounters implements Counters {
 		return new CountDistinctBnodeSubjectsInAGraph(cv, optimizeFor);
 	}
 
-	public QueryCallable<Set<String>> findAllGraphs(CommonVariables cv, AtomicInteger scheduledQueries) {
-		return new FindGraphs(cv, optimizeFor, scheduledQueries);
+	public QueryCallable<Set<String>> findAllGraphs(CommonVariables cv) {
+		return new FindGraphs(cv, optimizeFor);
 	}
 
 	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv) {

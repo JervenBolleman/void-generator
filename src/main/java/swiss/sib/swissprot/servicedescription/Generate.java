@@ -270,6 +270,7 @@ public class Generate implements Callable<Integer> {
 					this.distinctObjectIrisFile);
 			this.counters = new VirtuosoCounters(distinctSubjectIris, distinctObjectIris);
 			saver = sdg -> writeServiceDescriptionAndGraphs(distinctSubjectIris, distinctObjectIris, sdg, iriOfVoid);
+			optimizeFor = "virtuoso";
 		} else {
 			OptimizeFor fromString = OptimizeFor.fromString(optimizeFor);
 			log.info("Optimizing for backing store: {}", fromString);
@@ -461,8 +462,6 @@ public class Generate implements Callable<Integer> {
 		Lock writeLock = rwLock.writeLock();
 		boolean optimizeForVirtuoso = "virtuoso".equalsIgnoreCase(optimizeFor);
 		determineGraphNames(sd, saver, writeLock);
-		// Ensure that the graph description exists so that we won't have an issue
-		// accessing them at any point.
 		
 		Collection<GraphDescription> graphs = sd.getGraphs();
 
@@ -492,15 +491,19 @@ public class Generate implements Callable<Integer> {
 		}
 	}
 
+	/**
+	 * Ensure that the graph description exists so that we won't have an issue
+	 * accessing them at any point.
+	 * @param sd
+	 * @param saver
+	 * @param writeLock
+	 */
 	private void determineGraphNames(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock) {
 		if (graphNames.isEmpty()) {
 			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
-			QueryCallable<Set<String>> allGraphs = counters.findAllGraphs(cv, finishedQueries);
-			Exception call = allGraphs.call();
-			if (call != null) {
-				log.error("Failed to find all graphs", call);
-				throw new RuntimeException("Failed to find all graphs", call);
-			}
+			QueryCallable<Set<String>> allGraphs = counters.findAllGraphs(cv);
+			schedule(allGraphs);
+			waitForCountToFinish(futures);
 		} else {
 			for (var graphName : graphNames) {
 				getOrCreateGraphDescriptionObject(graphName, sd);
