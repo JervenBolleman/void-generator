@@ -10,12 +10,12 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.repository.RepositoryConnection;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.FindGraphs;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.ObjectPartition;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
@@ -34,9 +34,8 @@ public class SparqlCounters implements Counters {
 		return new CountDistinctBnodeSubjectsInAGraph(cv, optimizeFor);
 	}
 
-	public Set<String> findAllGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries,
-			AtomicInteger finishedQueries) {
-		return FindGraphs.findAllNonVirtuosoGraphs(connection, scheduledQueries, finishedQueries, optimizeFor);
+	public QueryCallable<Set<String>> findAllGraphs(CommonVariables cv, AtomicInteger scheduledQueries) {
+		return new FindGraphs(cv, optimizeFor, scheduledQueries);
 	}
 
 	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv) {
@@ -81,24 +80,24 @@ public class SparqlCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<?> findPredicates(CommonVariables cv, Set<IRI> knownPredicates,
+	public QueryCallable<List<PredicatePartition>> findPredicates(CommonVariables cv, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule) {
 		return new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, null, optimizeFor, this);
 	}
 
 	@Override
-	public QueryCallable<?> findDistinctClassses(CommonVariables cv,
+	public QueryCallable<List<ClassPartition>> findDistinctClassses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
 		return new FindDistinctClassses(cv, schedule, classExclusion, null, optimizeFor);
 	}
 
 	@Override
-	public QueryCallable<?> countDistinctLiteralObjects(CommonVariables cv) {
+	public QueryCallable<Long> countDistinctLiteralObjects(CommonVariables cv) {
 		return new CountDistinctLiteralObjects(cv, optimizeFor);
 	}
 
 	@Override
-	public QueryCallable<?> countDistinctBnodeSubjects(CommonVariables cv) {
+	public QueryCallable<Long> countDistinctBnodeSubjects(CommonVariables cv) {
 		return new CountDistinctBnodeSubjectsInDefaultGraph(cv, optimizeFor);
 	}
 
@@ -135,20 +134,20 @@ public class SparqlCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<?> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
+	public QueryCallable<Set<ObjectPartition>> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source) {
 		return new FindNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source, optimizeFor);
 	}
 
 	@Override
-	public QueryCallable<?> findPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
+	public QueryCallable<List<PredicatePartition>> findPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
 			Supplier<QueryCallable<?>> onFoundPredicates) {
 		return new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, onFoundPredicates, optimizeFor, this);
 	}
 
 	@Override
-	public QueryCallable<?> findDistinctClassses(CommonVariables cv,
+	public QueryCallable<List<ClassPartition>> findDistinctClassses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion,
 			Supplier<QueryCallable<?>> onFoundClasses) {
 		return new FindDistinctClassses(cv, schedule, classExclusion, onFoundClasses, optimizeFor);

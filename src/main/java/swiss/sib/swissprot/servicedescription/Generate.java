@@ -460,16 +460,10 @@ public class Generate implements Callable<Integer> {
 	private void scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
 		Lock writeLock = rwLock.writeLock();
 		boolean optimizeForVirtuoso = "virtuoso".equalsIgnoreCase(optimizeFor);
-		if (graphNames.isEmpty()) {
-			try (RepositoryConnection connection = repository.getConnection()) {
-				graphNames = counters.findAllGraphs(connection, scheduledQueries, finishedQueries);
-			}
-		}
+		determineGraphNames(sd, saver, writeLock);
 		// Ensure that the graph description exists so that we won't have an issue
 		// accessing them at any point.
-		for (var graphName : graphNames) {
-			getOrCreateGraphDescriptionObject(graphName, sd);
-		}
+		
 		Collection<GraphDescription> graphs = sd.getGraphs();
 
 		if (countDistinctObjects && countDistinctSubjects && optimizeForVirtuoso) {
@@ -495,6 +489,22 @@ public class Generate implements Callable<Integer> {
 		// smaller sets.
 		for (GraphDescription gd : graphs) {
 			countSpecificThingsPerGraph(sd, knownPredicates, gd, limit, saver);
+		}
+	}
+
+	private void determineGraphNames(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock) {
+		if (graphNames.isEmpty()) {
+			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
+			QueryCallable<Set<String>> allGraphs = counters.findAllGraphs(cv, finishedQueries);
+			Exception call = allGraphs.call();
+			if (call != null) {
+				log.error("Failed to find all graphs", call);
+				throw new RuntimeException("Failed to find all graphs", call);
+			}
+		} else {
+			for (var graphName : graphNames) {
+				getOrCreateGraphDescriptionObject(graphName, sd);
+			}	
 		}
 	}
 

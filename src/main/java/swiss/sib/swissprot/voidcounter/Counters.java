@@ -10,17 +10,16 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.repository.RepositoryConnection;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
+import swiss.sib.swissprot.servicedescription.ObjectPartition;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 
 public interface Counters {
 
-	Set<String> findAllGraphs(RepositoryConnection connection, AtomicInteger scheduledQueries,
-			AtomicInteger finishedQueries);
+	QueryCallable<Set<String>> findAllGraphs(CommonVariables cv, AtomicInteger scheduledQueries);
 
 	QueryCallable<Long> countDistinctBnodeSubjectsInAgraph(CommonVariables cv);
 
@@ -40,15 +39,15 @@ public interface Counters {
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
 			ReadWriteLock rwLock, String classExclusion);
 
-	QueryCallable<?> findPredicates(CommonVariables cv, Set<IRI> knownPredicates,
+	QueryCallable<List<PredicatePartition>> findPredicates(CommonVariables cv, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule);
 
-	QueryCallable<?> findDistinctClassses(CommonVariables cv,
+	QueryCallable<List<ClassPartition>> findDistinctClassses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion);
 
-	QueryCallable<?> countDistinctLiteralObjects(CommonVariables cv);
+	QueryCallable<Long> countDistinctLiteralObjects(CommonVariables cv);
 
-	QueryCallable<?> countDistinctBnodeSubjects(CommonVariables cv);
+	QueryCallable<Long> countDistinctBnodeSubjects(CommonVariables cv);
 
 	QueryCallable<Long> triples(CommonVariables cv);
 
@@ -68,21 +67,21 @@ public interface Counters {
 			PredicatePartition predicate, ClassPartition source,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion);
 
-	QueryCallable<?> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
+	QueryCallable<Set<ObjectPartition>> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source);
 
-	QueryCallable<?> findPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
+	QueryCallable<List<PredicatePartition>> findPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
 			Supplier<QueryCallable<?>> onFoundPredicates);
 
-	QueryCallable<?> findDistinctClassses(CommonVariables cv, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
+	QueryCallable<List<ClassPartition>> findDistinctClassses(CommonVariables cv, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
 			String classExclusion, Supplier<QueryCallable<?>> onFoundClasses);
 
-	QueryCallable<?> countUniqueSubjectPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition);
+	QueryCallable<Long> countUniqueSubjectPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition);
 
-	QueryCallable<?> countUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition);
+	QueryCallable<Long> countUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition);
 
-	QueryCallable<?> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
+	QueryCallable<Long> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp);
 
 	QueryCallable<Map<IRI, Long>> isSourceClassLinkedToTargetClasses(CommonVariables cv, Set<ClassPartition> targetClasses,
