@@ -174,7 +174,7 @@ public class Generate implements Callable<Integer> {
 	private static final Pattern COMMA = Pattern.compile(",", Pattern.LITERAL);
 
 	@Override
-	public Integer call() throws Exception {
+	public Integer call() {
 		if (commaSeperatedGraphs != null)
 			this.graphNames = COMMA.splitAsStream(commaSeperatedGraphs).collect(Collectors.toSet());
 		else
@@ -202,6 +202,8 @@ public class Generate implements Callable<Integer> {
 				conn.begin();
 				conn.add(fromTestFile, graph);
 				conn.commit();
+			} catch (RDFParseException | RepositoryException | IOException e) {
+				return 1;
 			}
 		} else if (repositoryLocator.startsWith("http")) {
 			SPARQLRepository sr = new SPARQLRepository(repositoryLocator);
