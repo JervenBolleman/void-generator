@@ -23,10 +23,10 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<IRI, Long>> {
 	private static final String TARGET_TYPE = "targetType";
+	private static final String SUBJECTS = "subjects";
 
 	private static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToTargetClasses.class);
 
-	private static final String SUBJECTS = "subjects";
 
 	private final String countLinks;
 	private final IRI predicate;
@@ -44,7 +44,7 @@ public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<
 		targets.forEach(t -> this.targets.put(t.getClazz(), t));
 		this.predicatePartition = predicatePartition;
 		this.source = source;
-		this.countLinks = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_type", optimizeFor);
+		this.countLinks = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_many_types", optimizeFor);
 	}
 
 	@Override
