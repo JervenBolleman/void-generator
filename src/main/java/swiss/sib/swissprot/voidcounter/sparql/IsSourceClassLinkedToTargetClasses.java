@@ -77,12 +77,7 @@ public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<
 		try (TupleQueryResult result = Helper.runTupleQuery(getQuery(), connection)) {
 			while (result.hasNext()) {
 				BindingSet bs = result.next();
-				long count = 0;
-				// This is a workaround for a qlever bug where we might not have a binding
-				// for the subjects but it should be there
-				if (bs.getBinding(SUBJECTS) != null) {
-					((Literal) bs.getBinding(SUBJECTS).getValue()).longValue();
-				}
+				long count = ((Literal) bs.getBinding(SUBJECTS).getValue()).longValue();
 				IRI targetValue = (IRI) bs.getBinding(TARGET_TYPE).getValue();
 				resultMap.put(targetValue, count);
 			}
