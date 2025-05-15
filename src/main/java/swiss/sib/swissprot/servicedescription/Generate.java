@@ -227,7 +227,7 @@ public class Generate implements Callable<Integer> {
 		this.sd = new ServiceDescription();
 		// At least 1 but no more than one third of the cpus
 		if (maxConcurrency <= 0) {
-			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
+			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 5);
 		}
 		limit = new Semaphore(maxConcurrency);
 		executors = Executors.newFixedThreadPool(maxConcurrency);

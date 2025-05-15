@@ -70,21 +70,24 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		if (optimizeFor.preferGroupBy()) {
 			schedule.apply(counters.isSourceClassLinkedToTargetClasses(cv,targetClasses,
 					predicatePartition, source));
+			schedule.apply(
+					counters.isSourceClassLinkedToDistinctClassInOtherGraphs(cv,predicatePartition,
+							source, schedule, classExclusion));
 		} else {
 			for (ClassPartition target : targetClasses) {
 	
 				schedule.apply(counters.isSourceClassLinkedToTargetClass(cv,target,
 						predicatePartition, source));
 			}
-		}
-
-		for (GraphDescription og : cv.sd().getGraphs()) {
-			if (!og.getGraphName().equals(cv.gd().getGraphName())) {
-				schedule.apply(
-						counters.isSourceClassLinkedToDistinctClassInOtherGraph(cv,predicatePartition,
-								source, og, schedule, classExclusion));
+			for (GraphDescription og : cv.sd().getGraphs()) {
+				if (!og.getGraphName().equals(cv.gd().getGraphName())) {
+					schedule.apply(
+							counters.isSourceClassLinkedToDistinctClassInOtherGraph(cv,predicatePartition,
+									source, og, schedule, classExclusion));
+				}
 			}
 		}
+
 		schedule.apply(counters.findDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source));
 	}
 

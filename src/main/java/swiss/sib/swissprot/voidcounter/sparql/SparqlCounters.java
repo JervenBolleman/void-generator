@@ -112,6 +112,14 @@ public class SparqlCounters implements Counters {
 	}
 
 	@Override
+	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source, 
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion){
+		return new IsSourceClassLinkedToDistinctClassInOtherGraphs(cv, predicatePartition, source, 
+				classExclusion, optimizeFor);
+	}
+	
+	@Override
 	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {

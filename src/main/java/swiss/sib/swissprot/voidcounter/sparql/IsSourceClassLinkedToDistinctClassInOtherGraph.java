@@ -95,7 +95,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	public List<LinkSetToOtherGraph> rediscoverPossibleLinkClasses(RepositoryConnection connection,
 			final IRI sourceType) {
-		String rq = makeQuery(rawQuery, otherGraph, classExclusion);
+		String rq = makeQuery(rawQuery, otherGraph.getClasses(), classExclusion);
 		final MapBindingSet pbq = new MapBindingSet();
 		pbq.setBinding("sourceGraphName", cv.gd().getGraph());
 		pbq.setBinding("predicate", predicate);
@@ -119,8 +119,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		return pps;
 	}
 
-	private static String makeQuery(String query, GraphDescription otherGraph, String classExclusion) {
-		Set<ClassPartition> classes = otherGraph.getClasses();
+	static String makeQuery(String query, Set<ClassPartition> classes , String classExclusion) {
 		String withKnownClasses = addKnownClasses(query, classes);
 		//If we already know the other classes then we do not need to filter them out
 		if (classExclusion == null || !classes.isEmpty()) {
@@ -130,18 +129,22 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		}
 	}
 
-	private static String addKnownClasses(String query2, Set<ClassPartition> classes) {
+	static String addKnownClasses(String query2, Set<ClassPartition> classes) {
 		if (classes.isEmpty())
 			return query2;
 		else {
 			String collect = classes.stream().map(ClassPartition::getClazz).map(c -> "(<" + c.stringValue() + ">)")
 					.collect(Collectors.joining(" "));
-			return insertBeforeEnd(query2, "\tVALUES (?clazz) {" + collect + "}\n");
+			return insertAfterWhere(query2, "\tVALUES (?clazz) {" + collect + "}\n");
 		}
 	}
 
-	private static String insertBeforeEnd(String query, String collect) {
+	static String insertBeforeEnd(String query, String collect) {
 		return new StringBuilder(query).insert(query.lastIndexOf('}') - 1, collect).toString();
+	}
+	
+	static String insertAfterWhere(String query, String collect) {
+		return new StringBuilder(query).insert(query.indexOf('{') + 1, collect).toString();
 	}
 
 	@Override

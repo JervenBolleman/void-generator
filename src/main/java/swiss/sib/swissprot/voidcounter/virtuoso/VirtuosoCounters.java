@@ -30,6 +30,7 @@ import swiss.sib.swissprot.voidcounter.sparql.FindPredicateLinkSets;
 import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndClasses;
 import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndCountObjects;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraph;
+import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraphs;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToTargetClass;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToTargetClasses;
 import swiss.sib.swissprot.voidcounter.sparql.TripleCount;
@@ -128,6 +129,14 @@ public class VirtuosoCounters implements Counters {
 		return new IsSourceClassLinkedToTargetClass(cv, target, predicatePartition, source, VIRTUOSO);
 	}
 
+	@Override
+	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source, 
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion){
+		return new IsSourceClassLinkedToDistinctClassInOtherGraphs(cv, predicatePartition, source, 
+				classExclusion, VIRTUOSO);
+	}
+	
 	@Override
 	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,

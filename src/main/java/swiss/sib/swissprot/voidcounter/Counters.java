@@ -55,6 +55,10 @@ public interface Counters {
 	QueryCallable<Long> isSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source);
 
+	QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source, 
+			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion);
+	
 	QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion);
