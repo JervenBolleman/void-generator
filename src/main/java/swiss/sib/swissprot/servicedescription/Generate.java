@@ -463,21 +463,25 @@ public class Generate implements Callable<Integer> {
 	private void scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
 		Lock writeLock = rwLock.writeLock();
 		boolean optimizeForVirtuoso = "virtuoso".equalsIgnoreCase(optimizeFor);
-		determineGraphNames(sd, saver, writeLock);
 		
-		Collection<GraphDescription> graphs = sd.getGraphs();
-
-		if (countDistinctObjects && countDistinctSubjects && optimizeForVirtuoso) {
-			for (GraphDescription gd : graphs) {
-				CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries);
-				schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(cv));
-			}
-		} else {
-			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
+		
+		CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
+		boolean needsGraphNamesForDistinctCounts = countDistinctObjects && countDistinctSubjects;
+		if (!needsGraphNamesForDistinctCounts)
+		{
 			if (countDistinctObjects) {
 				countDistinctObjects(sd, saver, writeLock, optimizeForVirtuoso, limit);
 			}
+		}
+		determineGraphNames(sd, saver, writeLock);
+		Collection<GraphDescription> graphs = sd.getGraphs();
 
+		if (needsGraphNamesForDistinctCounts) {
+			for (GraphDescription gd : graphs) {
+				CommonVariables cvwg = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries);
+				schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(cvwg));
+			}
+		} else {
 			if (countDistinctSubjects) {
 				countDistinctSubjects(cv, optimizeForVirtuoso, graphs);
 			}
@@ -733,5 +737,9 @@ public class Generate implements Callable<Integer> {
 
 	public void setOptimizeFor(String optimizeFor) {
 		this.optimizeFor = optimizeFor;
+	}
+	
+	public void setMaxConcurrency(int maxConcurrency) {
+		this.maxConcurrency = maxConcurrency;
 	}
 }
