@@ -550,6 +550,7 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private void countDistinctSubjects(CommonVariables cv, boolean isvirtuoso) {
+		schedule(counters.countDistinctBnodeSubjectsInDefaultGraph(cv));
 		if (!isvirtuoso) {
 			schedule(counters.countDistinctIriSubjectsForDefaultGraph(cv));
 		} else if (!countDistinctObjects) {
@@ -559,7 +560,6 @@ public class Generate implements Callable<Integer> {
 				schedule(counters.countDistinctIriSubjectsInAGraph(cvgd));
 			}
 		}
-		schedule(counters.countDistinctBnodeSubjectsInDefaultGraph(cv));
 	}
 
 	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, GraphDescription gd,
