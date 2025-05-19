@@ -240,6 +240,8 @@ public class Generate implements Callable<Integer> {
 
 	private final Semaphore limit;
 
+	private CompletableFuture<Exception> findingGraphs = null;
+
 	public final CompletableFuture<Exception> schedule(QueryCallable<?> task) {
 		scheduledQueries.incrementAndGet();
 		tasks.add(task);
@@ -473,26 +475,26 @@ public class Generate implements Callable<Integer> {
 				countDistinctObjects(sd, saver, writeLock, optimizeForVirtuoso, limit);
 			}
 		}
+		schedule(counters.triples(cv));
 		determineGraphNames(sd, saver, writeLock);
-		Collection<GraphDescription> graphs = sd.getGraphs();
 
 		if (needsGraphNamesForDistinctCounts) {
-			for (GraphDescription gd : graphs) {
+			for (GraphDescription gd : getGraphs()) {
 				CommonVariables cvwg = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries);
 				schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(cvwg));
 			}
 		} else {
 			if (countDistinctSubjects) {
-				countDistinctSubjects(cv, optimizeForVirtuoso, graphs);
+				countDistinctSubjects(cv, optimizeForVirtuoso);
 			}
 		}
-		for (GraphDescription gd : graphs) {
+		for (GraphDescription gd : getGraphs()) {
 			scheduleBigCountsPerGraph(sd, gd, saver, limit);
 		}
 
 		// Ensure that we first do the big counts before starting on counting the
 		// smaller sets.
-		for (GraphDescription gd : graphs) {
+		for (GraphDescription gd : getGraphs()) {
 			countSpecificThingsPerGraph(sd, knownPredicates, gd, limit, saver);
 		}
 	}
@@ -508,13 +510,26 @@ public class Generate implements Callable<Integer> {
 		if (graphNames.isEmpty()) {
 			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
 			QueryCallable<Set<String>> allGraphs = counters.findAllGraphs(cv);
-			schedule(allGraphs);
-			waitForCountToFinish(futures);
+			findingGraphs  = schedule(allGraphs);
 		} else {
-			for (var graphName : graphNames) {
+			for (var graphName : getGraphNames()) {
 				getOrCreateGraphDescriptionObject(graphName, sd);
 			}	
 		}
+	}
+	
+	private Set<String> getGraphNames(){
+		if (findingGraphs != null && !findingGraphs.isDone()) {
+			findingGraphs.join();
+		}
+		return graphNames;
+	}
+	
+	private Collection<GraphDescription> getGraphs(){
+		if (findingGraphs != null && !findingGraphs.isDone()) {
+			findingGraphs.join();
+		}
+		return sd.getGraphs();
 	}
 
 	private void countDistinctObjects(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock,
@@ -527,11 +542,11 @@ public class Generate implements Callable<Integer> {
 		schedule(counters.countDistinctLiteralObjectsForDefaultGraph(cv));
 	}
 
-	private void countDistinctSubjects(CommonVariables cv, boolean isvirtuoso, Collection<GraphDescription> allGraphs) {
+	private void countDistinctSubjects(CommonVariables cv, boolean isvirtuoso) {
 		if (!isvirtuoso) {
 			schedule(counters.countDistinctIriSubjectsForDefaultGraph(cv));
 		} else if (!countDistinctObjects) {
-			for (GraphDescription gd : allGraphs) {
+			for (GraphDescription gd : getGraphs()) {
 				CommonVariables cvgd = new CommonVariables(cv.sd(), gd, cv.repository(), cv.saver(), cv.writeLock(),
 						cv.limiter(), cv.finishedQueries());
 				schedule(counters.countDistinctIriSubjectsInAGraph(cvgd));
@@ -566,10 +581,9 @@ public class Generate implements Callable<Integer> {
 		if (countDistinctSubjects) {
 			schedule(counters.countDistinctBnodeSubjects(cv));
 		}
-		schedule(counters.triples(cv));
 	}
 
-	protected GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
+	private GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
 		GraphDescription pgd = sd.getGraph(graphName);
 		if (pgd == null) {
 			pgd = new GraphDescription();
