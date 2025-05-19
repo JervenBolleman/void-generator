@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -40,7 +39,6 @@ import java.util.stream.Collectors;
 
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -53,11 +51,8 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.RDFHandler;
-import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.Rio;
-import org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import org.slf4j.Logger;
@@ -610,51 +605,19 @@ public class Generate implements Callable<Integer> {
 	private void updateGraph(RepositoryConnection connection, IRI voidGraphUri)
 			throws RepositoryException, RDFParseException, IOException {
 		log.debug("Updating {}", voidGraphUri);
-
-		try (InputStream in = new FileInputStream(sdFile)) {
-			RDFXMLParser p = new RDFXMLParser();
-			p.setRDFHandler(new RDFHandler() {
-
-				@Override
-				public void startRDF() throws RDFHandlerException {
-					if (!connection.isActive())
-						connection.begin();
-				}
-
-				@Override
-				public void handleStatement(Statement st) throws RDFHandlerException {
-					connection.add(st, voidGraphUri);
-
-				}
-
-				@Override
-				public void handleNamespace(String prefix, String uri) throws RDFHandlerException {
-					connection.setNamespace(prefix, uri);
-				}
-
-				@Override
-				public void handleComment(String comment) throws RDFHandlerException {
-					// Ignore comments
-				}
-
-				@Override
-				public void endRDF() throws RDFHandlerException {
-					connection.commit();
-				}
-			});
-			p.parse(in);
-		}
-
+		connection.begin();
+		connection.add(sdFile, voidGraphUri);
+		connection.commit();
 		log.debug("Updating {} done", voidGraphUri);
 	}
 
 	private void clearGraph(RepositoryConnection connection, IRI voidGraphUri)
 			throws RepositoryException, MalformedQueryException {
 
-		connection.begin();
-		final Update prepareUpdate = connection.prepareUpdate(QueryLanguage.SPARQL,
-				"DROP SILENT GRAPH <" + voidGraphUri + ">");
 		try {
+			connection.begin();
+			final Update prepareUpdate = connection.prepareUpdate(QueryLanguage.SPARQL,
+					"DROP SILENT GRAPH <" + voidGraphUri + ">");
 			prepareUpdate.execute();
 			connection.commit();
 		} catch (UpdateExecutionException e1) {
