@@ -17,11 +17,9 @@ final class CountDistinctBnodeObjectsInAGraph extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
 
 	private final String countDistinctBnodeObjectsInAllGraphs;
-	private final CommonVariables cv;
 
 	public CountDistinctBnodeObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		countDistinctBnodeObjectsInAllGraphs = Helper.loadSparqlQuery("count_distinct_bnode_objects_in_a_graphs",
 				optimizeFor);
 	}

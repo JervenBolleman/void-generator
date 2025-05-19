@@ -24,12 +24,10 @@ class CountUniqueObjectsPerPredicateInGraph
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueObjectsPerPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
-	private final CommonVariables cv;
 	
 	public CountUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition, OptimizeFor optimizeFor)
 	{
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.predicatePartition = predicatePartition;
 		this.rawQuery = Helper.loadSparqlQuery("count_distinct_objects", optimizeFor);
 	}

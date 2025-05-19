@@ -17,12 +17,10 @@ final class CountDistinctIriObjectsInAGraph extends QueryCallable<Long> {
 	private static final String OBJECTS = "objects";
 	private final String rq;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInAGraph.class);
-	private CommonVariables cv;
 
 	public CountDistinctIriObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		super(cv);
 		assert cv.gd() != null;
-		this.cv = cv;
 		this.rq = Helper.loadSparqlQuery("count_distinct_iri_objects_in_all_graphs", optimizeFor);
 	}
 

@@ -34,7 +34,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 	private static final String SUBJECTS = "count";
 	private static final String TARGET_TYPE = "clazz";
 	private static final String TARGET_GRAPH = "targetGraph";
-	private final CommonVariables cv;
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 	private final String classExclusion;
@@ -42,8 +41,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 
 	public IsSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv, PredicatePartition predicatePartition,
 			ClassPartition source, String classExclusion, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.classExclusion = classExclusion;

@@ -30,12 +30,9 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 
 	private final PredicatePartition predicatePartition;
 
-	private final CommonVariables cv;
-
 	public CountTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition predicatePartition, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.ls = ls;
 		this.predicatePartition = predicatePartition;
 		this.countTriplesLinking = Helper.loadSparqlQuery("inter_graph_links", optimizeFor);

@@ -1,55 +1,74 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.repository.Repository;
+import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class QueryCallable<T> implements Callable<Exception> {
+	private static final int DEFAULT_SLEEP = 60*1000;
+	private static final int MAX_ATTEMPTS = 3;
 	protected static final long SWITCH_TO_OPTIMIZED_COUNT_AT = 100_000_000L;
-	protected final Repository repository;
-	protected final Semaphore limiter;
+	protected final CommonVariables cv;
 	protected volatile boolean running = false;
-	protected final AtomicInteger finishedQueries;
+	private int attempt = 0;
 	private volatile String query;
+	private Exception exception;
 
-	protected QueryCallable(Repository repository, Semaphore limiter, AtomicInteger finishedQueries) {
+	protected QueryCallable(CommonVariables cv) {
 		super();
-		this.repository = repository;
-		this.limiter = limiter;
-		this.finishedQueries = finishedQueries;
+		this.cv = cv;
 	}
 
 	@Override
 	public Exception call() {
 		try {
-			limiter.acquireUninterruptibly();
-			try (RepositoryConnection localConnection = repository.getConnection()) {
-				running = true;
-				logStart();
-				T t = run(localConnection);
-				set(t);
-				logEnd();
-				finishedQueries.incrementAndGet();
-			} catch (Exception e) {
-				logFailed(e);
-				return e;
-			}
+			cv.limiter().acquireUninterruptibly();
+			while (attempt < MAX_ATTEMPTS)
+				try (RepositoryConnection localConnection = cv.repository().getConnection()) {
+					execute(localConnection);
+					return null;
+				} catch (QueryEvaluationException e) {
+					//If we ran out of resources we wait a bit and try again a little bit later.
+					getLog().debug("Failed due to: {} at attempt {}", e.getMessage(), attempt);
+					exception = e;
+					++attempt;
+					int sleepInMilliSeconds = DEFAULT_SLEEP;
+					if (e.getMessage().contains("allocate")) {
+						//not enough ram for qlever sleep longer
+						sleepInMilliSeconds = DEFAULT_SLEEP * 5;
+					}
+					try {
+						Thread.sleep(sleepInMilliSeconds);
+					} catch (InterruptedException e1) {
+						Thread.interrupted();
+						return e;
+					}
+				} catch (Exception e) {
+					logFailed(e);
+					return e;
+				}
 		} finally {
 			running = false;
-			limiter.release();
+			cv.limiter().release();
 		}
-		return null;
+		return exception;
+	}
+
+	private final void execute(RepositoryConnection localConnection) throws Exception {
+		running = true;
+		logStart();
+		T t = run(localConnection);
+		set(t);
+		logEnd();
+		cv.finishedQueries().incrementAndGet();
 	}
 
 	protected void logFailed(Exception e) {
-		LoggerFactory.getLogger(getClass()).error("Failed", e);
+		getLog().error("Failed", e);
 	}
 
 	protected abstract void logStart();

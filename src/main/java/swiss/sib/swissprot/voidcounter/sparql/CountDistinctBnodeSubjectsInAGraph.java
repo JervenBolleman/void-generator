@@ -18,11 +18,9 @@ final class CountDistinctBnodeSubjectsInAGraph extends QueryCallable<Long> {
 	private final String rq;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjectsInAGraph.class);
 	
-	private final CommonVariables cv;
-
 	public CountDistinctBnodeSubjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;		
+		super(cv);
+		
 		this.rq = Helper.loadSparqlQuery("count_distinct_bnode_subjects_in_all_graphs", optimizeFor);
 	}
 

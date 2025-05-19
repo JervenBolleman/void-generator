@@ -25,12 +25,10 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 
-	private final CommonVariables cv;
-
 	public IsSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
+		
 		this.predicate = predicatePartition.getPredicate();
 		this.target = target;
 		this.predicatePartition = predicatePartition;

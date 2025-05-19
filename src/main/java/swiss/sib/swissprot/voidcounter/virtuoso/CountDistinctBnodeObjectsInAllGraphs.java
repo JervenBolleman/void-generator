@@ -19,18 +19,17 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
+import virtuoso.rdf4j.driver.VirtuosoRepository;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 final class CountDistinctBnodeObjectsInAllGraphs extends QueryCallable<Long> {
 	private static final String COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL = "SELECT iri_id_num(RDF_QUAD.O), iri_id_num(RDF_QUAD.G) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) > 0";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInAllGraphs.class);
-	private final CommonVariables cv;
 	private final Map<Long, Roaring64Bitmap> graphIriIds = new HashMap<>();
 
 	public CountDistinctBnodeObjectsInAllGraphs(CommonVariables cv) {
-		super(cv.repository(), cv.limiter(),cv.finishedQueries());
-		assert cv.repository() instanceof VirtuosoRepositoryConnection;
-		this.cv = cv;
+		super(cv);
+		assert cv.repository() instanceof VirtuosoRepository;
 	}
 
 	@Override

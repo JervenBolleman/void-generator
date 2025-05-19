@@ -26,14 +26,12 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 	private final Set<IRI> knownPredicates;
 	private final ReadWriteLock rwLock;
 	private final String classExclusion;
-	private final CommonVariables cv;
 	private final Counters counters;
 
 	public FindPredicatesAndClasses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
 			ReadWriteLock rwLock,  String classExclusion, Counters counters) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.schedule = schedule;
 		this.knownPredicates = knownPredicates;
 		this.rwLock = rwLock;
@@ -73,14 +71,12 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception> {
 		private final ReadWriteLock rwLock;
 		private final String classExclusion;
 		private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
-		private final CommonVariables cv;
 		private final Counters counters;
 
 		public FindClassPredicatePairs(CommonVariables cv,
 				ReadWriteLock rwLock, String classExclusion,
 				Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Counters counters) {
-			super(cv.repository(), cv.limiter(), cv.finishedQueries());
-			this.cv = cv;
+			super(cv);
 			this.rwLock = rwLock;
 			this.classExclusion = classExclusion;
 			this.schedule = schedule;

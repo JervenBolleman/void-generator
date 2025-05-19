@@ -19,11 +19,9 @@ final class CountDistinctLiteralObjectsInDefaultGraph extends QueryCallable<Long
 	private static final String SELECT_OBJECTS_IN_RDF_OBJ = "SELECT COUNT(RO_ID) AS c FROM RDF_OBJ";
 	private static final String COUNT_DISTINCT_INLINE_VALUES = "SELECT COUNT(DISTINCT(RDF_QUAD.O)) AS c from RDF_QUAD WHERE is_rdf_box(RDF_QUAD.O) = 0 AND isiri_id(O) = 0 AND is_bnode_iri_id(O) = 0";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjectsInDefaultGraph.class);
-	private final CommonVariables cv;
 
 	public CountDistinctLiteralObjectsInDefaultGraph(CommonVariables cv) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 	}
 
 	@Override

@@ -17,11 +17,9 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
-	private final CommonVariables cv;
 
 	public CountDistinctLiteralObjects(CommonVariables cv) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 	}
 
 	@Override

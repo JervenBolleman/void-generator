@@ -17,11 +17,9 @@ final class CountDistinctIriSubjectsForDefaultGraph extends QueryCallable<Long> 
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsForDefaultGraph.class);
 
-	private final CommonVariables cv;
-
 	public CountDistinctIriSubjectsForDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
+		
 		setQuery(Helper.loadSparqlQuery("count_distinct_iri_subjects", optimizeFor));
 	}
 

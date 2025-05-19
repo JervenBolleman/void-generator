@@ -37,15 +37,14 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 	
 	private final String classExclusion;
-	private final CommonVariables cv;
 	private final Counters counters;
 	private final OptimizeFor optimizeFor;
 
 	public FindPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes, PredicatePartition predicate,
 			ClassPartition source, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
 			String classExclusion, Counters counters, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
+		
 		this.classes = classes;
 		this.pp = predicate;
 		this.source = source;

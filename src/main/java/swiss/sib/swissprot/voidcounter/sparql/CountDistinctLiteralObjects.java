@@ -16,12 +16,10 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 final class CountDistinctLiteralObjects extends QueryCallable<Long> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
 	private final String rawQuery;
-	private final CommonVariables cv;
 
 	public CountDistinctLiteralObjects(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		super(cv);
 		rawQuery = Helper.loadSparqlQuery("count_distinct_literal_objects_in_all_graphs", optimizeFor);
-		this.cv = cv;
 	}
 
 	@Override

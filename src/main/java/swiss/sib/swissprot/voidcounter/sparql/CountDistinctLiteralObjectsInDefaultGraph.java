@@ -16,11 +16,9 @@ final class CountDistinctLiteralObjectsInDefaultGraph extends QueryCallable<Long
 	private static final String OBJECTS = "objects";
 	private final String countObjectsWithSparql;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjectsInDefaultGraph.class);
-	private final CommonVariables cv;
 
 	public CountDistinctLiteralObjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.countObjectsWithSparql = Helper.loadSparqlQuery("count_distinct_literal_objects", optimizeFor);
 	}
 

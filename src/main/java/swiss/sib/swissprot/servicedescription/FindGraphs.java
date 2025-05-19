@@ -27,12 +27,9 @@ public class FindGraphs extends QueryCallable<Set<String>> {
 	private static final Logger log = LoggerFactory.getLogger(FindGraphs.class);
 
 	private final OptimizeFor optimizeFor;
-	private final CommonVariables cv;
-
 	
 	public FindGraphs(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.optimizeFor = optimizeFor;
 	}
 

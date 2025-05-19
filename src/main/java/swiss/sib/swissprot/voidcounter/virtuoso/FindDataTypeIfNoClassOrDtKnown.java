@@ -33,33 +33,33 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 	private static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
-	private final CommonVariables cv;
 
-	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition, ClassPartition source) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition,
+			ClassPartition source) {
+		super(cv);
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 	}
 
 	@Override
 	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
-		return findDatatypeIfNoClassOrDtKnown(source, predicatePartition);
+		return findDatatypeIfNoClassOrDtKnown(source, predicatePartition, connection);
 	}
 
-	private Set<IRI> findDatatypeIfNoClassOrDtKnown(ClassPartition source, PredicatePartition predicatePartition)
+	private Set<IRI> findDatatypeIfNoClassOrDtKnown(ClassPartition source, PredicatePartition predicatePartition,
+			RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		final Resource sourceType = source.getClazz();
 
 		Resource predicate = predicatePartition.getPredicate();
 		Set<IRI> datatypes = new HashSet<>();
-		try (RepositoryConnection connection = repository.getConnection()) {
-			if (connection instanceof VirtuosoRepositoryConnection) {
-				virtuosoOptimized(sourceType, predicate, datatypes, connection);
-			} else {
-				throw new IllegalStateException("Not a virtuoso connection");
-			}
+
+		if (connection instanceof VirtuosoRepositoryConnection) {
+			virtuosoOptimized(sourceType, predicate, datatypes, connection);
+		} else {
+			throw new IllegalStateException("Not a virtuoso connection");
 		}
+
 		return datatypes;
 	}
 
@@ -71,8 +71,8 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 				+ "FROM RDF_QUAD PO, RDF_QUAD ST WHERE  ST.S=PO.S AND "
 				+ " ST.P=iri_to_id('http://www.w3.org/1999/02/22-rdf-syntax-ns#type') AND ST.O=iri_to_id('" + sourceType
 				+ "') AND " + " PO.P=iri_to_id('" + predicate + "') AND " + " isiri_id(PO.O) = 0 AND "
-				+ " PO.G=iri_to_id('" + cv.gd().getGraphName() + "') AND " + " ST.G=iri_to_id('" + cv.gd().getGraphName()
-				+ "'))t");
+				+ " PO.G=iri_to_id('" + cv.gd().getGraphName() + "') AND " + " ST.G=iri_to_id('"
+				+ cv.gd().getGraphName() + "'))t");
 		try (final Statement createStatement = quadStoreConnection.createStatement()) {
 
 			try (ResultSet rs = createStatement.executeQuery(getQuery())) {
@@ -88,13 +88,15 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 
 	@Override
 	protected void logStart() {
-		log.debug("Finding distinct datatypes for {} and predicate {}", cv.gd().getGraphName(), predicatePartition.getPredicate());
+		log.debug("Finding distinct datatypes for {} and predicate {}", cv.gd().getGraphName(),
+				predicatePartition.getPredicate());
 
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Found distinct datatypes for {} and predicate ", cv.gd().getGraphName(), predicatePartition.getPredicate());
+		log.debug("Found distinct datatypes for {} and predicate ", cv.gd().getGraphName(),
+				predicatePartition.getPredicate());
 
 	}
 
@@ -110,7 +112,7 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 			cv.writeLock().unlock();
 		}
 	}
-	
+
 	@Override
 	protected Logger getLog() {
 		return log;

@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -17,7 +15,6 @@ import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.query.impl.MapBindingSet;
-import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
@@ -44,7 +41,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	public FindDistinctClassses(CommonVariables cv,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, 
 			String classExclusion, Supplier<QueryCallable<?>> onSuccess, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		super(cv);
 		this.cv = cv;
 		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
@@ -118,7 +115,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			}
 		}
 		for (ClassPartition cp : classesList) {
-			scheduler.apply(new CountMembersOfClassPartition(repository, limiter, cp, finishedQueries, optimizeFor));
+			scheduler.apply(new CountMembersOfClassPartition(cv, cp, optimizeFor));
 		}
 	}
 
@@ -159,9 +156,9 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	private final class CountMembersOfClassPartition extends QueryCallable<Long> {
 		private final String count_type_arcs;
 
-		public CountMembersOfClassPartition(Repository repository, Semaphore limiter, ClassPartition cp,
-				AtomicInteger finishedQueries, OptimizeFor optimizeFor) {
-			super(repository, limiter, finishedQueries);
+		public CountMembersOfClassPartition(CommonVariables cv, ClassPartition cp,
+				OptimizeFor optimizeFor) {
+			super(cv);
 			this.cp = cp;
 			this.count_type_arcs = Helper.loadSparqlQuery("count_triples_for_type_in_graph", optimizeFor);
 		}

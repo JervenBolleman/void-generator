@@ -24,13 +24,11 @@ class CountUniqueObjectsPerPredicateInGraph
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueObjectsPerPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
-	private final CommonVariables cv;
 	
 	public CountUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition)
 	{
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		super(cv);
 		assert cv.repository() instanceof VirtuosoRepository;
-		this.cv = cv;
 		this.predicatePartition = predicatePartition;
 	}
 

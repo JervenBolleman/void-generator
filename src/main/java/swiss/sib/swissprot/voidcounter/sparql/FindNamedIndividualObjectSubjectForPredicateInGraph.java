@@ -30,12 +30,11 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 
 	private final ClassPartition cp;
 
-	private final CommonVariables cv;
 
 	public FindNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition cp, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
+		
 		this.predicatePartition = predicatePartition;
 		this.cp = cp;
 		this.rawQuery = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate_to_named_individual",

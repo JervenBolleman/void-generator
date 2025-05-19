@@ -25,12 +25,10 @@ abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Long> {
 	private final Consumer<Long> allSetter;
 	private final BiConsumer<GraphDescription, Long> graphSetter;
 	private final Map<String, Roaring64NavigableMap> graphIriIds;
-	protected final CommonVariables cv;
 
 	protected CountDistinctIriInAGraphVirtuoso(CommonVariables cv, Consumer<Long> allSetter,
 			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64NavigableMap> graphIriIds2) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.allSetter = allSetter;
 		this.graphSetter = graphSetter;
 		this.graphIriIds = graphIriIds2;

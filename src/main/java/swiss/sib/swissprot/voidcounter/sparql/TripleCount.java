@@ -15,12 +15,9 @@ public class TripleCount extends QueryCallable<Long> {
 	private final String count;
 	private static final Logger log = LoggerFactory.getLogger(TripleCount.class);
 
-	private final CommonVariables cv;
-
 	public TripleCount(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		super(cv);
 		this.count = Helper.loadSparqlQuery("count_triples_in_named_graphs", optimizeFor);
-		this.cv =cv;
 	}
 
 	@Override

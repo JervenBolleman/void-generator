@@ -34,12 +34,9 @@ public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 
-	private final CommonVariables cv;
-
 	public IsSourceClassLinkedToTargetClasses(CommonVariables cv, Collection<ClassPartition> targets,
 			PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.predicate = predicatePartition.getPredicate();
 		targets.forEach(t -> this.targets.put(t.getClazz(), t));
 		this.predicatePartition = predicatePartition;

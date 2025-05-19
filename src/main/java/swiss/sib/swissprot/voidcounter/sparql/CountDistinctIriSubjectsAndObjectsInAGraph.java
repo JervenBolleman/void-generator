@@ -21,12 +21,10 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 final class CountDistinctIriSubjectsAndObjectsInAGraph extends QueryCallable<SubObjCount> {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInAGraph.class);
-	private final CommonVariables cv;
 	private final String query;
 
 	public CountDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		query = Helper.loadSparqlQuery("count_distinct_subjects_objects_in_a_graph", optimizeFor);
 	}
 

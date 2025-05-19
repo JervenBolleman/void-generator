@@ -19,13 +19,11 @@ class CountUniqueSubjectPerPredicateInGraph
 	private final String rawQuery;
 	public static final Logger log = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraph.class);
 
-	private final CommonVariables cv;
 	private final PredicatePartition predicatePartition;
 	
 	public CountUniqueSubjectPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition, OptimizeFor optimizeFor)
 	{
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.predicatePartition = predicatePartition;
 		this.rawQuery =  Helper.loadSparqlQuery("count_distinct_subjects_for_a_predicate_in_a_graph", optimizeFor);
 	}

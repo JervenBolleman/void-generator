@@ -21,12 +21,10 @@ final class CountDistinctIriSubjectsAndObjectsInDefaultGraph extends
 		QueryCallable<SubObjCount> {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInDefaultGraph.class);
-	private final CommonVariables cv;
 	private final String query;
 
 	public CountDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		query = Helper.loadSparqlQuery("count_distinct_subjects_objects", optimizeFor);
 	}
 

@@ -43,8 +43,6 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	private final GraphDescription otherGraph;
 
-	private final CommonVariables cv;
-
 	private final Counters counters;
 	private final OptimizeFor optimizeFor;
 
@@ -55,8 +53,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 			PredicatePartition predicatePartition, ClassPartition source,
 			GraphDescription otherGraph,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, String classExclusion, Counters counters, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.counters = counters;
 		this.optimizeFor = optimizeFor;
 		this.predicate = predicatePartition.getPredicate();

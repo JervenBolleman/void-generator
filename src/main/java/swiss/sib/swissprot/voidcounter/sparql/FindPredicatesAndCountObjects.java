@@ -38,15 +38,13 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 	private final Supplier<QueryCallable<?>> onSuccess;
 	private final String rawQuery;
-	private final CommonVariables cv;
 
 	private final Counters counters;
 
 	public FindPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Supplier<QueryCallable<?>> onSuccess,
 			OptimizeFor optimizeFor, Counters counters) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.counters = counters;
 		this.rawQuery = Helper.loadSparqlQuery("find_predicates_count_objects", optimizeFor);
 		this.knownPredicates = new HashMap<>();

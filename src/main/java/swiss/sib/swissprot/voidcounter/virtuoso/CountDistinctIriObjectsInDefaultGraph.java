@@ -15,14 +15,11 @@ final class CountDistinctIriObjectsInDefaultGraph
     extends QueryCallable<Long>
 {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInDefaultGraph.class);
-	private final CommonVariables cv;
-	
 	
 	public CountDistinctIriObjectsInDefaultGraph(CommonVariables cv)
 	{
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		super(cv);
 		assert cv.repository() instanceof VirtuosoRepositoryConnection;
-		this.cv = cv;
 	}
 
 	@Override

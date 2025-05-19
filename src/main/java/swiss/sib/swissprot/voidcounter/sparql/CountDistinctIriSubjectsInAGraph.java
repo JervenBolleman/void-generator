@@ -16,13 +16,12 @@ final class CountDistinctIriSubjectsInAGraph extends QueryCallable<Long> {
 	private final String rq;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsInAGraph.class);
 
-	private final CommonVariables cv;
 
 	public CountDistinctIriSubjectsInAGraph(CommonVariables cv, OptimizeFor opti) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
+		super(cv);
 		this.rq = Helper.loadSparqlQuery("count_distinct_iri_subjects_in_all_graphs",
 				opti);
-		this.cv = cv;
+		
 	}
 
 	protected Long run(RepositoryConnection connection) throws Exception {

@@ -34,11 +34,9 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 	private final String dataTypeQuery;
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
-	private final CommonVariables cv;
 
 	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.dataTypeQuery = Helper.loadSparqlQuery("find_datatypes_if_no_class_or_dt_known", optimizeFor);
@@ -46,18 +44,16 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 
 	@Override
 	protected Set<IRI> run(RepositoryConnection connection) throws Exception {
-		return findDatatypeIfNoClassOrDtKnown(source, predicatePartition);
+		return findDatatypeIfNoClassOrDtKnown(source, predicatePartition, connection);
 	}
 
-	private Set<IRI> findDatatypeIfNoClassOrDtKnown(ClassPartition source, PredicatePartition predicatePartition)
+	private Set<IRI> findDatatypeIfNoClassOrDtKnown(ClassPartition source, PredicatePartition predicatePartition, RepositoryConnection connection2)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		final Resource sourceType = source.getClazz();
 
 		Resource predicate = predicatePartition.getPredicate();
 		Set<IRI> datatypes = new HashSet<>();
-		try (RepositoryConnection connection = repository.getConnection()) {
-				pureSparql(predicate, sourceType, connection, datatypes);
-		}
+		pureSparql(predicate, sourceType, connection2, datatypes);
 		return datatypes;
 	}
 

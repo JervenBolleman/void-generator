@@ -50,15 +50,13 @@ final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	private final Consumer<Long> subjectAllSetter;
 	private final Map<String, Roaring64NavigableMap> objectGraphIriIds;
 	private final Map<String, Roaring64NavigableMap> subjectGraphIriIds;
-	private final CommonVariables cv;
 	
 	private final AtomicInteger runningQueries = new AtomicInteger(0);
 
 	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(CommonVariables cv,
 			Map<String, Roaring64NavigableMap> graphSubjectIriIds,
 			Map<String, Roaring64NavigableMap> graphObjectIriIds) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
+		super(cv);
 		this.subjectGraphIriIds = graphSubjectIriIds;
 		this.objectGraphIriIds = graphObjectIriIds;
 		this.objectAllSetter = l -> cv.sd().setDistinctIriObjectCount(l);

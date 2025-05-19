@@ -9,17 +9,15 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
+import virtuoso.rdf4j.driver.VirtuosoRepository;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 final class CountDistinctBnodeSubjectsInDefaultGraph extends QueryCallable<Long> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjectsInDefaultGraph.class);
 
-	private final CommonVariables cv;
-
 	public CountDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		assert cv.repository() instanceof VirtuosoRepositoryConnection;
-		this.cv = cv;
+		super(cv);
+		assert cv.repository() instanceof VirtuosoRepository;
 	}
 
 	@Override

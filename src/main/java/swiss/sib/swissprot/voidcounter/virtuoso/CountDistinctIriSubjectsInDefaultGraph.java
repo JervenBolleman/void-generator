@@ -14,12 +14,9 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 final class CountDistinctIriSubjectsInDefaultGraph extends QueryCallable<Long> {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsInDefaultGraph.class);
-	private CommonVariables cv;
 
 	public CountDistinctIriSubjectsInDefaultGraph(CommonVariables cv) {
-		super(cv.repository(), cv.limiter(), cv.finishedQueries());
-		this.cv = cv;
-		
+		super(cv);
 	}
 
 	private long countDistinctSubjectsInAllGraphs(RepositoryConnection localConnection)
