@@ -3,7 +3,6 @@ package swiss.sib.swissprot.voidcounter.virtuoso;
 import static swiss.sib.swissprot.servicedescription.OptimizeFor.VIRTUOSO;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
@@ -32,7 +31,6 @@ import swiss.sib.swissprot.voidcounter.sparql.FindPredicatesAndCountObjects;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraph;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraphs;
 import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToTargetClass;
-import swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToTargetClasses;
 import swiss.sib.swissprot.voidcounter.sparql.TripleCount;
 
 public class VirtuosoCounters implements Counters {
@@ -119,7 +117,7 @@ public class VirtuosoCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<Long> triples(CommonVariables cv) {
+	public QueryCallable<Long> countTriplesInNamedGraph(CommonVariables cv) {
 		return new TripleCount(cv, VIRTUOSO);
 	}
 
@@ -130,7 +128,7 @@ public class VirtuosoCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv,
+	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInGraphs(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source, 
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion){
 		return new IsSourceClassLinkedToDistinctClassInOtherGraphs(cv, predicatePartition, source, 
@@ -194,11 +192,5 @@ public class VirtuosoCounters implements Counters {
 	public QueryCallable<Long> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp) {
 		return new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, VIRTUOSO);
-	}
-	
-	@Override
-	public QueryCallable<Map<IRI, Long>> isSourceClassLinkedToTargetClasses(CommonVariables cv,
-			Set<ClassPartition> targetClasses, PredicatePartition predicatePartition, ClassPartition source) {
-		return new IsSourceClassLinkedToTargetClasses(cv, targetClasses, predicatePartition, source, VIRTUOSO);
 	}
 }

@@ -1,14 +1,11 @@
 package swiss.sib.swissprot.voidcounter.sparql;
 
-import static swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraph.insertAfterWhere;
-import static swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraph.insertBeforeEnd;
 import static swiss.sib.swissprot.voidcounter.sparql.IsSourceClassLinkedToDistinctClassInOtherGraph.makeQuery;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -28,6 +25,10 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
+/**
+ * Generates both class paritions in a graph and linkset partitions between graphs
+ * using one query.
+ */
 public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallable<List<LinkSetToOtherGraph>> {
 	private static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraphs.class);
 	private static final String SUBJECTS = "count";
@@ -38,7 +39,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 	private final ClassPartition source;
 	private final String classExclusion;
 	private final String rawQuery;
-	private final OptimizeFor optimizeFor;
 
 	public IsSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv, PredicatePartition predicatePartition,
 			ClassPartition source, String classExclusion, OptimizeFor optimizeFor) {
@@ -47,7 +47,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 		this.predicatePartition = predicatePartition;
 		this.source = source;
 		this.classExclusion = classExclusion;
-		this.optimizeFor = optimizeFor;
 		this.rawQuery = Helper.loadSparqlQuery("inter_graph_links_grouped_by_type_and_target_graph", optimizeFor);
 	}
 
@@ -74,14 +73,8 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 		ibs.setBinding("sourceGraph", cv.gd().getGraph());
 		ibs.setBinding("predicate", predicatePartition.getPredicate());
 		String rq = makeQuery(rawQuery, knownClasses(), classExclusion);
-		String query ;
-		if (optimizeFor == OptimizeFor.QLEVER) {
-			query = insertBeforeEnd(rq, filterNotGraph());
-		} else {
-			query = insertAfterWhere(rq, targetGraphValuesClause());
-		}
 
-		setQuery(query, ibs);
+		setQuery(rq, ibs);
 		List<LinkSetToOtherGraph> pps = new ArrayList<>();
 		try (TupleQueryResult result = Helper.runTupleQuery(getQuery(), connection)) {
 			while (result.hasNext()) {
@@ -90,27 +83,18 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 				IRI targetType = (IRI) bs.getBinding(TARGET_TYPE).getValue();
 				IRI targetGraph = (IRI) bs.getBinding(TARGET_GRAPH).getValue();
 
-				LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
-						cv.sd().getGraph(targetGraph.stringValue()), cv.gd().getGraph());
-				subTarget.setTripleCount(count);
-				pps.add(subTarget);
+				GraphDescription targetGD = cv.sd().getGraph(targetGraph.stringValue());
+				if (targetGD != null) {
+					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(predicatePartition, targetType, sourceType,
+							targetGD, cv.gd().getGraph());
+					subTarget.setTripleCount(count);
+					pps.add(subTarget);
+				} else {
+					log.debug("Ignoring connection to graph {} by configuration", targetGraph);
+				}
 			}
 		}
 		return pps;
-	}
-
-	private String targetGraphValuesClause() {
-		IRI sourceGraph = cv.gd().getGraph();
-		return cv.sd().getGraphs().stream().map(GraphDescription::getGraph).filter(g -> !g.equals(sourceGraph))
-				.map(IRI::stringValue).map(s -> "(<" + s + ">)")
-				.collect(Collectors.joining(" ", "\nVALUES ( ?targetGraph ) {", "}"));
-	}
-	
-	private String filterNotGraph() {
-		IRI sourceGraph = cv.gd().getGraph();
-		return cv.sd().getGraphs().stream().map(GraphDescription::getGraph).filter(g -> !g.equals(sourceGraph))
-				.map(IRI::stringValue).map(s -> "(<" + s + ">)")
-				.collect(Collectors.joining(", ", "\nFILTER (?targetGraph IN  (", "))"));
 	}
 
 	private Set<ClassPartition> knownClasses() {
@@ -124,11 +108,18 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 		try {
 			cv.writeLock().lock();
 			for (LinkSetToOtherGraph lstog : t) {
-				predicatePartition.putLinkPartition(lstog);
+				if (lstog.getOtherGraph().equals(cv.gd())) {
+					ClassPartition subTarget = new ClassPartition(lstog.getTargetType());
+					subTarget.setTripleCount(lstog.getTripleCount());
+					predicatePartition.putClassPartition(subTarget);
+				} else {
+					predicatePartition.putLinkPartition(lstog);
+				}
 			}
 		} finally {
 			cv.writeLock().unlock();
 		}
+		cv.save();
 	}
 
 	@Override

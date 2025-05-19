@@ -1,5 +1,6 @@
 package swiss.sib.swissprot.voidcounter.sparql;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
@@ -68,14 +70,12 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		schedule.apply(counters.findNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source));
 
 		if (optimizeFor.preferGroupBy()) {
-			schedule.apply(counters.isSourceClassLinkedToTargetClasses(cv,targetClasses,
-					predicatePartition, source));
-			schedule.apply(
-					counters.isSourceClassLinkedToDistinctClassInOtherGraphs(cv,predicatePartition,
-							source, schedule, classExclusion));
+			QueryCallable<List<LinkSetToOtherGraph>> linkOrSubClassPartition = counters
+					.isSourceClassLinkedToDistinctClassInGraphs(cv, predicatePartition, source, schedule,
+							classExclusion);
+			schedule.apply(linkOrSubClassPartition);
 		} else {
 			for (ClassPartition target : targetClasses) {
-	
 				schedule.apply(counters.isSourceClassLinkedToTargetClass(cv,target,
 						predicatePartition, source));
 			}

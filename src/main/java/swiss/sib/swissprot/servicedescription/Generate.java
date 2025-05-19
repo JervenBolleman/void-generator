@@ -482,7 +482,7 @@ public class Generate implements Callable<Integer> {
 				countDistinctObjects(sd, saver, writeLock, optimizeForVirtuoso, limit);
 			}
 		}
-		schedule(counters.triples(cv));
+		
 		determineGraphNames(sd, saver, writeLock);
 
 		if (needsGraphNamesForDistinctCounts) {
@@ -580,14 +580,15 @@ public class Generate implements Callable<Integer> {
 	private void scheduleBigCountsPerGraph(ServiceDescription sd, GraphDescription gd,
 			Consumer<ServiceDescription> saver, Semaphore limit) {
 		Lock writeLock = rwLock.writeLock();
-		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries);
+		CommonVariables gdcv = new CommonVariables(sd, gd, repository, saver, writeLock, limit, finishedQueries);
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			schedule(counters.countDistinctLiteralObjects(cv));
+			schedule(counters.countDistinctLiteralObjects(gdcv));
 		}
 		if (countDistinctSubjects) {
-			schedule(counters.countDistinctBnodeSubjects(cv));
+			schedule(counters.countDistinctBnodeSubjects(gdcv));
 		}
+		schedule(counters.countTriplesInNamedGraph(gdcv));
 	}
 
 	private GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {

@@ -1,7 +1,6 @@
 package swiss.sib.swissprot.voidcounter.sparql;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -101,7 +100,7 @@ public class SparqlCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<Long> triples(CommonVariables cv) {
+	public QueryCallable<Long> countTriplesInNamedGraph(CommonVariables cv) {
 		return new TripleCount(cv, optimizeFor);
 	}
 
@@ -112,7 +111,7 @@ public class SparqlCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv,
+	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInGraphs(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source, 
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion){
 		return new IsSourceClassLinkedToDistinctClassInOtherGraphs(cv, predicatePartition, source, 
@@ -176,11 +175,5 @@ public class SparqlCounters implements Counters {
 	public QueryCallable<Long> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp) {
 		return new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, optimizeFor);
-	}
-
-	@Override
-	public QueryCallable<Map<IRI, Long>> isSourceClassLinkedToTargetClasses(CommonVariables cv,
-			Set<ClassPartition> targetClasses, PredicatePartition predicatePartition, ClassPartition source) {
-		return new IsSourceClassLinkedToTargetClasses(cv, targetClasses, predicatePartition, source, optimizeFor);
 	}
 }

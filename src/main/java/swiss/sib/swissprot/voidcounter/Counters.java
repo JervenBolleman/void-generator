@@ -1,7 +1,6 @@
 package swiss.sib.swissprot.voidcounter;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -48,14 +47,14 @@ public interface Counters {
 
 	QueryCallable<Long> countDistinctBnodeSubjects(CommonVariables cv);
 
-	QueryCallable<Long> triples(CommonVariables cv);
+	QueryCallable<Long> countTriplesInNamedGraph(CommonVariables cv);
 
 	QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv);
 
 	QueryCallable<Long> isSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source);
 
-	QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv,
+	QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInGraphs(CommonVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source, 
 			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion);
 	
@@ -86,7 +85,4 @@ public interface Counters {
 
 	QueryCallable<Long> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp);
-
-	QueryCallable<Map<IRI, Long>> isSourceClassLinkedToTargetClasses(CommonVariables cv, Set<ClassPartition> targetClasses,
-			PredicatePartition predicatePartition, ClassPartition source);
 }
