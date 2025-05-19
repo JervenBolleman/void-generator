@@ -8,9 +8,8 @@ import java.util.function.Function;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
-import org.eclipse.rdf4j.repository.Repository;
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
@@ -91,16 +90,16 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 		schedule.apply(counters.findDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source));
 	}
 
-	private long countTriplesInPredicateClassPartition(final Repository repository,
+	private long countTriplesInPredicateClassPartition(final RepositoryConnection connection,
 			PredicatePartition predicatePartition, ClassPartition source) {
 
-		try (RepositoryConnection localConnection = repository.getConnection()) {
-			TupleQuery tq = localConnection.prepareTupleQuery(rawQuery);
-			tq.setBinding("graph", cv.gd().getGraph());
-			tq.setBinding("sourceClass", source.getClazz());
-			tq.setBinding("predicate", predicatePartition.getPredicate());
-			setQuery(rawQuery, tq.getBindings());
-			try (TupleQueryResult triples = tq.evaluate()) {
+		try {
+			MapBindingSet bs = new MapBindingSet();
+			bs.setBinding("graph", cv.gd().getGraph());
+			bs.setBinding("sourceClass", source.getClazz());
+			bs.setBinding("predicate", predicatePartition.getPredicate());
+			setQuery(rawQuery, bs);
+			try (TupleQueryResult triples = Helper.runTupleQuery(getQuery(), connection)) {
 				if (triples.hasNext()) {
 					return ((Literal) triples.next().getBinding("count").getValue()).longValue();
 				}
@@ -128,7 +127,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 
 		try {
 			subpredicatePartition = new PredicatePartition(pp.getPredicate());
-			long tripleCount = countTriplesInPredicateClassPartition(repository, pp, source);
+			long tripleCount = countTriplesInPredicateClassPartition(connection, pp, source);
 			subpredicatePartition.setTripleCount(tripleCount);
 
 		} catch (RepositoryException e) {

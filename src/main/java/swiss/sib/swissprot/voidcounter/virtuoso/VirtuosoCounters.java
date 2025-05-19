@@ -193,4 +193,24 @@ public class VirtuosoCounters implements Counters {
 			PredicatePartition pp) {
 		return new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, VIRTUOSO);
 	}
+	
+	@Override
+	public boolean allInUnionGraph() {
+		return VIRTUOSO.allInUnionGraph();
+	}
+
+	@Override
+	public QueryCallable<Long> countDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv) {
+		throw new IllegalStateException("Virtuoso has a default graph, should not use this");
+	}
+
+	@Override
+	public QueryCallable<Long> countDistinctIriObjectsInAGraph(CommonVariables cvgd) {
+		return new CountDistinctIriObjectsInAGraphVirtuoso(cvgd, distinctObjectIris);
+	}
+
+	@Override
+	public QueryCallable<?> countDistinctBnodeObjectsInAGraph(CommonVariables gdcv) {
+		return new CountDistinctBnodeObjectsInAGraphVirtuoso(gdcv, distinctObjectIris);
+	}
 }

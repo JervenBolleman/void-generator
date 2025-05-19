@@ -1,16 +1,26 @@
 package swiss.sib.swissprot.servicedescription;
 
 public enum OptimizeFor {
-	SPARQL(true), VIRTUOSO(false), QLEVER(true);
+	SPARQL(true, false), VIRTUOSO(false, true), QLEVER(true, true), SPARQLUNION(true, true);
 
 	private final boolean preferGroupBy;
+	private final boolean allInUnionGraph;
 
 	public boolean preferGroupBy() {
 		return preferGroupBy;
 	}
+	
+	/** 
+	 * If the store supports an union graph as the default graph.
+	 * @return
+	 */
+	public boolean allInUnionGraph() {
+		return allInUnionGraph;
+	}
 
-	OptimizeFor(boolean preferGroupBy) {
+	OptimizeFor(boolean preferGroupBy, boolean allInUnionGraph) {
 		this.preferGroupBy = preferGroupBy;
+		this.allInUnionGraph = allInUnionGraph;	
 	}
 
 	static OptimizeFor fromString(String optimizeFor) {
@@ -30,8 +40,12 @@ public enum OptimizeFor {
 			return "virtuoso";
 		case QLEVER:
 			return "qlever";
+		case SPARQLUNION:
+			return "sparqlunion";
 		}
 		throw new IllegalStateException("Unexpected value: " + this);
 	}
+
+	
 
 }

@@ -7,7 +7,6 @@ import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.TupleQueryResult;
-import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
@@ -18,41 +17,40 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctIriSubjectsAndObjectsInAGraph extends QueryCallable<SubObjCount> {
+final class CountDistinctIriSubjectsAndObjectsInDefaultGraph extends
+		QueryCallable<SubObjCount> {
 
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInAGraph.class);
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInDefaultGraph.class);
 	private final CommonVariables cv;
 	private final String query;
 
-	public CountDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
+	public CountDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
-		query = Helper.loadSparqlQuery("count_distinct_subjects_objects_in_a_graph", optimizeFor);
+		query = Helper.loadSparqlQuery("count_distinct_subjects_objects", optimizeFor);
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct iri objects and subjects for {}", cv.gd().getGraphName());
+		log.debug("Counting distinct iri objects and subjects for default graph");
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
 		if (log.isErrorEnabled())
-			log.error("failed counting distinct iri objects and subjects " + cv.gd().getGraphName(), e);
+			log.error("failed counting distinct iri objects and subjects default graph", e);
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct iri objects and subjects for graph {}", cv.gd().getGraphName());
+		log.debug("Counted distinct iri objects and subjects for graph default graph");
 	}
 
 	@Override
 	protected SubObjCount run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 
-		MapBindingSet bs = new MapBindingSet();
-		bs.addBinding("graph", cv.gd().getGraph());
-		setQuery(query, bs);
+		setQuery(query);
 		try (TupleQueryResult r = Helper.runTupleQuery(getQuery(), connection)) {
 			Iterator<BindingSet> iterator = r.iterator();
 			if (iterator.hasNext()){
@@ -71,8 +69,8 @@ final class CountDistinctIriSubjectsAndObjectsInAGraph extends QueryCallable<Sub
 		cv.save();
 		try {
 			cv.writeLock().lock();
-			cv.gd().setDistinctIriSubjectCount(t.subjects());
-			cv.gd().setDistinctIriObjectCount(t.objects());
+			cv.sd().setDistinctIriSubjectCount(t.subjects());
+			cv.sd().setDistinctIriObjectCount(t.objects());
 		} finally {
 			cv.writeLock().unlock();
 		}

@@ -50,6 +50,8 @@ public interface Counters {
 	QueryCallable<Long> countTriplesInNamedGraph(CommonVariables cv);
 
 	QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv);
+	
+	QueryCallable<?> countDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv);
 
 	QueryCallable<Long> isSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source);
@@ -85,4 +87,10 @@ public interface Counters {
 
 	QueryCallable<Long> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp);
+
+	boolean allInUnionGraph();
+
+	QueryCallable<Long> countDistinctIriObjectsInAGraph(CommonVariables cvgd);
+
+	QueryCallable<?> countDistinctBnodeObjectsInAGraph(CommonVariables gdcv);
 }

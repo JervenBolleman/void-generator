@@ -39,6 +39,9 @@ public class SparqlCounters implements Counters {
 	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv) {
 		return new CountDistinctIriSubjectsAndObjectsInAGraph(cv, optimizeFor);
 	}
+	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv) {
+		return new CountDistinctIriSubjectsAndObjectsInDefaultGraph(cv, optimizeFor);
+	}
 
 	@Override
 	public QueryCallable<Long> countDistinctBnodeObjectsInDefaultGraph(CommonVariables cv) {
@@ -48,6 +51,11 @@ public class SparqlCounters implements Counters {
 	@Override
 	public QueryCallable<Long> countDistinctIriObjectsForDefaultGraph(CommonVariables cv) {
 		return new CountDistinctIriObjectsInDefaultGraph(cv, optimizeFor);
+	}
+	
+	@Override
+	public QueryCallable<Long> countDistinctIriObjectsInAGraph(CommonVariables cv) {
+		return new CountDistinctIriObjectsInAGraph(cv, optimizeFor);
 	}
 
 	@Override
@@ -175,5 +183,15 @@ public class SparqlCounters implements Counters {
 	public QueryCallable<Long> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition pp) {
 		return new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, optimizeFor);
+	}
+
+	@Override
+	public boolean allInUnionGraph() {
+		return optimizeFor.allInUnionGraph();
+	}
+
+	@Override
+	public QueryCallable<?> countDistinctBnodeObjectsInAGraph(CommonVariables gdcv) {
+		return new CountDistinctBnodeObjectsInAGraph(gdcv, optimizeFor);
 	}
 }

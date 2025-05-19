@@ -12,51 +12,46 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class CountDistinctIriObjectsInDefaultGraph extends QueryCallable<Long> {
+final class CountDistinctBnodeObjectsInAGraph extends QueryCallable<Long> {
+	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInAGraph.class);
 	private static final String OBJECTS = "objects";
-	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInDefaultGraph.class);
 
-	private final String countDistinctIriObjectsQuery;
+	private final String countDistinctBnodeObjectsInAllGraphs;
 	private final CommonVariables cv;
 
-	public CountDistinctIriObjectsInDefaultGraph(CommonVariables cv, OptimizeFor optimizeFor) {
+	public CountDistinctBnodeObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
 		super(cv.repository(), cv.limiter(), cv.finishedQueries());
 		this.cv = cv;
-		countDistinctIriObjectsQuery = Helper.loadSparqlQuery("count_distinct_iri_objects", optimizeFor);
+		countDistinctBnodeObjectsInAllGraphs = Helper.loadSparqlQuery("count_distinct_bnode_objects_in_a_graphs",
+				optimizeFor);
 	}
 
 	@Override
 	protected void logStart() {
-		log.debug("Counting distinct iri objects for default graph");
+		log.debug("Counting distinct bnode objects for all graphs");
 	}
 
 	@Override
 	protected void logFailed(Exception e) {
-		if (log.isErrorEnabled())
-			log.error("failed counting distinct iri objects for default graph", e);
+		log.error("failed counting distinct bnode objects all graphs", e);
 	}
 
 	@Override
 	protected void logEnd() {
-		log.debug("Counted distinct iri {} objects for default graph", getCount());
-	}
-
-	private long getCount() {
-		return cv.sd().getDistinctIriObjectCount();
+		log.debug("Counted distinct bnode for all graphs");
 	}
 
 	@Override
 	protected Long run(RepositoryConnection connection)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-		setQuery(countDistinctIriObjectsQuery);
-		return Helper.getSingleLongFromSparql(getQuery(), connection, OBJECTS);
+		return Helper.getSingleLongFromSparql(countDistinctBnodeObjectsInAllGraphs, connection, OBJECTS);
 	}
 
 	@Override
 	protected void set(Long count) {
 		try {
 			cv.writeLock().lock();
-			cv.sd().setDistinctIriObjectCount(count);
+			cv.sd().setDistinctBnodeObjectCount(count);
 		} finally {
 			cv.writeLock().unlock();
 		}
