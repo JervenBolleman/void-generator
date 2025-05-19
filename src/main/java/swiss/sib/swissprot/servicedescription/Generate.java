@@ -312,7 +312,7 @@ public class Generate implements Callable<Integer> {
 					map.put(graph, rb);
 				}
 			} catch (IOException e) {
-				log.error("", e);
+				log.error("IO error", e);
 			} catch (ClassNotFoundException e) {
 				log.error("Class can't be found code out of sync", e);
 			}
@@ -431,7 +431,7 @@ public class Generate implements Callable<Integer> {
 		}
 		if (finishedQueries.get() == scheduledQueries.get()) {
 			log.info("Ran " + finishedQueries.get() + " queries");
-		} else if (finishedQueries.get() > scheduledQueries.get()) {
+		} else if (finishedQueries.get() < scheduledQueries.get()) {
 			log.error("Scheduled more queries than finished: " + finishedQueries.get() + "/" + scheduledQueries.get());
 		} else {
 			log.error("Finished more queries than scheduled: " + finishedQueries.get() + "/" + scheduledQueries.get());
@@ -452,14 +452,21 @@ public class Generate implements Callable<Integer> {
 			// This is ok we just try again in the loop.
 		}
 		if (loop == 60) {
-			// We make a defensive copy of the tasks to avoid concurrent modification
-			// exceptions
-			new ArrayList<>(tasks).stream().filter(QueryCallable::isRunning)
-					.forEach(t -> log.info("Running: " + t.getClass() + " -> " + t.getQuery()));
+			
+			
+			logRunningQueries();
 			loop = 0;
 		}
 		loop++;
 		return loop;
+	}
+
+	private void logRunningQueries() {
+		// We make a defensive copy of the tasks to avoid concurrent modification
+		// exceptions
+		for (var qc : List.copyOf(tasks))
+			if (qc.isRunning())
+				log.info("Running: " + qc.getClass() + " -> " + qc.getQuery());
 	}
 
 	private void scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
