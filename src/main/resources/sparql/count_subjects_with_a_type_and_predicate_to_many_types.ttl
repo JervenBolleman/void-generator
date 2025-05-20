@@ -16,7 +16,8 @@ WHERE {
   GRAPH ?graph { 
     ?subject a ?sourceType ; 
       ?predicate ?target . 
-	?target a ?targetType .
+    ?target a ?targetType .
+    FILTER(isIri(?targetType))
   }
 } GROUP BY ?targetType
 """ ;
