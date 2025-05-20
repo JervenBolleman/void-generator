@@ -22,7 +22,7 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-final class CountDistinctBnodeObjectsInAllGraphs extends QueryCallable<Long> {
+final class CountDistinctBnodeObjectsInAllGraphs extends QueryCallable<Long, CommonVariables> {
 	private static final String COUNT_DISTINCT_OBJECT_BNODE_VIRT_SQL = "SELECT iri_id_num(RDF_QUAD.O), iri_id_num(RDF_QUAD.G) FROM RDF_QUAD WHERE isiri_id(RDF_QUAD.O) > 0 AND is_bnode_iri_id(RDF_QUAD.O) > 0";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInAllGraphs.class);
 	private final Map<Long, Roaring64Bitmap> graphIriIds = new HashMap<>();

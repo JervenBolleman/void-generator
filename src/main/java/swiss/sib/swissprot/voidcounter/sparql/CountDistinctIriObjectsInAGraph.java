@@ -10,15 +10,15 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctIriObjectsInAGraph extends QueryCallable<Long> {
+final class CountDistinctIriObjectsInAGraph extends QueryCallable<Long, CommonGraphVariables> {
 	private static final String OBJECTS = "objects";
 	private final String rq;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInAGraph.class);
 
-	public CountDistinctIriObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
+	public CountDistinctIriObjectsInAGraph(CommonGraphVariables cv, OptimizeFor optimizeFor) {
 		super(cv);
 		assert cv.gd() != null;
 		this.rq = Helper.loadSparqlQuery("count_distinct_iri_objects_in_all_graphs", optimizeFor);

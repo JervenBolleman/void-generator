@@ -8,12 +8,12 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 class CountUniqueSubjectPerPredicateInGraph
-    extends QueryCallable<Long>
+    extends QueryCallable<Long, CommonGraphVariables>
 {
 
 	private static final String SUBJECTS = "subjects";
@@ -22,7 +22,7 @@ class CountUniqueSubjectPerPredicateInGraph
 
 	private final PredicatePartition predicatePartition;
 	
-	public CountUniqueSubjectPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition)
+	public CountUniqueSubjectPerPredicateInGraph(CommonGraphVariables cv, PredicatePartition predicatePartition)
 	{
 		super(cv);
 

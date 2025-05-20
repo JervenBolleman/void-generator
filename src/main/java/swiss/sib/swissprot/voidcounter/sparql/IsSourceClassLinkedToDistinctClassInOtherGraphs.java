@@ -22,14 +22,14 @@ import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 /**
  * Generates both class paritions in a graph and linkset partitions between graphs
  * using one query.
  */
-public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallable<List<LinkSetToOtherGraph>> {
+public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallable<List<LinkSetToOtherGraph>, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraphs.class);
 	private static final String SUBJECTS = "count";
 	private static final String TARGET_TYPE = "clazz";
@@ -39,7 +39,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 	private final String classExclusion;
 	private final String rawQuery;
 
-	public IsSourceClassLinkedToDistinctClassInOtherGraphs(CommonVariables cv, PredicatePartition predicatePartition,
+	public IsSourceClassLinkedToDistinctClassInOtherGraphs(CommonGraphVariables cv, PredicatePartition predicatePartition,
 			ClassPartition source, String classExclusion, OptimizeFor optimizeFor) {
 		super(cv);
 		this.predicatePartition = predicatePartition;

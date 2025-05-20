@@ -7,13 +7,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 
 public final class CountDistinctBnodeObjectsInAGraphVirtuoso extends CountDistinctIriInAGraphVirtuoso {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInAGraphVirtuoso.class);
 
-	public CountDistinctBnodeObjectsInAGraphVirtuoso(CommonVariables cv, Map<String, Roaring64NavigableMap> graphIriIds) {
+	public CountDistinctBnodeObjectsInAGraphVirtuoso(CommonGraphVariables cv, Map<String, Roaring64NavigableMap> graphIriIds) {
 		super(cv, l -> cv.sd().setDistinctIriObjectCount(l), GraphDescription::setDistinctIriObjectCount,
 				graphIriIds);
 

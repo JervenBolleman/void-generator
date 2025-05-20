@@ -11,14 +11,14 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-final class CountDistinctLiteralObjects extends QueryCallable<Long> {
+final class CountDistinctLiteralObjects extends QueryCallable<Long, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
 
-	public CountDistinctLiteralObjects(CommonVariables cv) {
+	public CountDistinctLiteralObjects(CommonGraphVariables cv) {
 		super(cv);
 	}
 

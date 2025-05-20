@@ -23,7 +23,7 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
  * If the preferred query does not return any results, it falls back to a query 
  * that is supported by more backend stores.
  */
-public class FindGraphs extends QueryCallable<Set<String>> {
+public class FindGraphs extends QueryCallable<Set<String>, CommonVariables> {
 	private static final Logger log = LoggerFactory.getLogger(FindGraphs.class);
 
 	private final OptimizeFor optimizeFor;

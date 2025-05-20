@@ -25,7 +25,7 @@ import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 
 public class IsSourceClassLinkedToDistinctClassInOtherGraphsTest {
 
@@ -45,7 +45,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphsTest {
 	private Semaphore limiter;
 	private GraphDescription targetGraph;
 	private ServiceDescription sd;
-	private CommonVariables cv;
+	private CommonGraphVariables cv;
 
 	@BeforeEach
 	public void setup() {
@@ -64,7 +64,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphsTest {
 		sd.putGraphDescription(targetGraph);
 		sd.putGraphDescription(sourceGraph);
 		addTestData();
-		cv = new CommonVariables(sd , sourceGraph, repository, s->{}, writeLock, limiter, finishedQueries);
+		cv = new CommonGraphVariables(sd , sourceGraph, repository, s->{}, writeLock, limiter, finishedQueries);
 	}
 
 	@ParameterizedTest

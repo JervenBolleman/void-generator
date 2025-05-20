@@ -46,7 +46,7 @@ class CountDistinctLiteralObjectsForDefaultGraphTest {
 		final ServiceDescription sd = new ServiceDescription();
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 		var counter = new CountDistinctLiteralObjectsInDefaultGraph(cv, of);
 		counter.call();
@@ -71,7 +71,7 @@ class CountDistinctLiteralObjectsForDefaultGraphTest {
 		bag.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(bag);
 		Lock writeLock = new ReentrantLock();
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 		final var countDistinctIriObjectsForAllGraphs = new CountDistinctLiteralObjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();

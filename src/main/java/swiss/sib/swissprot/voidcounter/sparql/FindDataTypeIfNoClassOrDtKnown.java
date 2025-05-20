@@ -9,8 +9,8 @@ import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
+import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
@@ -20,7 +20,7 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 /**
@@ -29,13 +29,13 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
  * @author jbollema
  *
  */
-final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
+final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
 	private final String dataTypeQuery;
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 
-	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
+	public FindDataTypeIfNoClassOrDtKnown(CommonGraphVariables cv, PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
 		super(cv);
 		this.predicatePartition = predicatePartition;
 		this.source = source;
@@ -61,12 +61,12 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
 			RepositoryConnection localConnection, Set<IRI> datatypes) {
 
 
-		TupleQuery tq = localConnection.prepareTupleQuery(dataTypeQuery);
+		MapBindingSet tq = new MapBindingSet();
 		tq.setBinding("graphName", cv.gd().getGraph());
 		tq.setBinding("sourceType", sourceType);
 		tq.setBinding("predicate", predicate);
-		setQuery(dataTypeQuery, tq.getBindings());
-		try (TupleQueryResult eval = tq.evaluate()) {
+		setQuery(dataTypeQuery, tq);
+		try (TupleQueryResult eval = Helper.runTupleQuery(getQuery(), localConnection)) {
 			while (eval.hasNext()) {
 				final BindingSet next = eval.next();
 				if (next.hasBinding("dt")) {

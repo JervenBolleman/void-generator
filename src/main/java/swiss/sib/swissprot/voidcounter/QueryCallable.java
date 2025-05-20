@@ -8,17 +8,17 @@ import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 
-public abstract class QueryCallable<T> implements Callable<Exception> {
+public abstract class QueryCallable<T, C extends Variables> implements Callable<Exception> {
 	private static final int DEFAULT_SLEEP = 60*1000;
 	private static final int MAX_ATTEMPTS = 3;
 	protected static final long SWITCH_TO_OPTIMIZED_COUNT_AT = 100_000_000L;
-	protected final CommonVariables cv;
+	protected final C cv;
 	protected volatile boolean running = false;
 	private int attempt = 0;
 	private volatile String query;
 	private Exception exception;
 
-	protected QueryCallable(CommonVariables cv) {
+	protected QueryCallable(C cv) {
 		super();
 		this.cv = cv;
 	}
@@ -44,7 +44,7 @@ public abstract class QueryCallable<T> implements Callable<Exception> {
 					try {
 						Thread.sleep(sleepInMilliSeconds);
 					} catch (InterruptedException e1) {
-						Thread.interrupted();
+						Thread.currentThread().interrupt();
 						return e;
 					}
 				} catch (Exception e) {

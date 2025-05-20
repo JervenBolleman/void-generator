@@ -15,15 +15,15 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctIriSubjectsAndObjectsInAGraph extends QueryCallable<SubObjCount> {
+final class CountDistinctIriSubjectsAndObjectsInAGraph extends QueryCallable<SubObjCount, CommonGraphVariables> {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInAGraph.class);
 	private final String query;
 
-	public CountDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
+	public CountDistinctIriSubjectsAndObjectsInAGraph(CommonGraphVariables cv, OptimizeFor optimizeFor) {
 		super(cv);
 		query = Helper.loadSparqlQuery("count_distinct_subjects_objects_in_a_graph", optimizeFor);
 	}

@@ -3,8 +3,6 @@ package swiss.sib.swissprot.voidcounter.sparql;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -22,11 +20,11 @@ import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>> {
+public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryCallable<List<LinkSetToOtherGraph>, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToDistinctClassInOtherGraph.class);
 	private static final String CLAZZ = "clazz";
 	private static final String COUNT = "count";
@@ -39,8 +37,6 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	private final ClassPartition source;
 	private final String classExclusion;
 
-	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
-
 	private final GraphDescription otherGraph;
 
 	private final Counters counters;
@@ -49,10 +45,10 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 
 	//TODO pass in a different waiter/limiter and logic to make sure that the other graph class list is known before we start here.
 	//this can't use the current limiter logic as that would deadlock.
-	public IsSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
+	public IsSourceClassLinkedToDistinctClassInOtherGraph(CommonGraphVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source,
 			GraphDescription otherGraph,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, String classExclusion, Counters counters, OptimizeFor optimizeFor) {
+			String classExclusion, Counters counters, OptimizeFor optimizeFor) {
 		super(cv);
 		this.counters = counters;
 		this.optimizeFor = optimizeFor;
@@ -60,7 +56,6 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		this.pp = predicatePartition;
 		this.source = source;
 		this.otherGraph = otherGraph;
-		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
 		this.rawQuery = Helper.loadSparqlQuery("inter_graph_links_grouped_by_type", optimizeFor);
 	}
@@ -84,7 +79,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 		} else {
 			for (ClassPartition cp : otherGraph.getClasses()) {
 				LinkSetToOtherGraph ls = new LinkSetToOtherGraph(pp, sourceType, cp.getClazz(), otherGraph, cv.gd().getGraph());
-				scheduler.apply(counters.countTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp));
+				counters.countTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp);
 			}
 			return List.of();    
 		}

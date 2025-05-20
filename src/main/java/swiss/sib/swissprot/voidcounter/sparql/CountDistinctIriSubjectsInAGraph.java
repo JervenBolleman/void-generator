@@ -7,17 +7,17 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctIriSubjectsInAGraph extends QueryCallable<Long> {
+final class CountDistinctIriSubjectsInAGraph extends QueryCallable<Long, CommonGraphVariables> {
 
 	private static final String SUBJECTS = "subjects";
 	private final String rq;
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsInAGraph.class);
 
 
-	public CountDistinctIriSubjectsInAGraph(CommonVariables cv, OptimizeFor opti) {
+	public CountDistinctIriSubjectsInAGraph(CommonGraphVariables cv, OptimizeFor opti) {
 		super(cv);
 		this.rq = Helper.loadSparqlQuery("count_distinct_iri_subjects_in_all_graphs",
 				opti);

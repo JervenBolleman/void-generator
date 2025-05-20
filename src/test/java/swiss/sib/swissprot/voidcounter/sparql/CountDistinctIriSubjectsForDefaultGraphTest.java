@@ -46,7 +46,7 @@ class CountDistinctIriSubjectsForDefaultGraphTest {
 		final ServiceDescription sd = new ServiceDescription();
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 		final var counter = new CountDistinctIriSubjectsForDefaultGraph(cv, of);
 		counter.call();
@@ -71,7 +71,7 @@ class CountDistinctIriSubjectsForDefaultGraphTest {
 		bag.setGraphName(RDF.BAG.stringValue());
 		sd.putGraphDescription(bag);
 		Lock writeLock = new ReentrantLock();
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 		final var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsForDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();

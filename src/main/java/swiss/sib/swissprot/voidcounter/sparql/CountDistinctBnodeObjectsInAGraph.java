@@ -9,16 +9,16 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctBnodeObjectsInAGraph extends QueryCallable<Long> {
+final class CountDistinctBnodeObjectsInAGraph extends QueryCallable<Long, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInAGraph.class);
 	private static final String OBJECTS = "objects";
 
 	private final String countDistinctBnodeObjectsInAllGraphs;
 
-	public CountDistinctBnodeObjectsInAGraph(CommonVariables cv, OptimizeFor optimizeFor) {
+	public CountDistinctBnodeObjectsInAGraph(CommonGraphVariables cv, OptimizeFor optimizeFor) {
 		super(cv);
 		countDistinctBnodeObjectsInAllGraphs = Helper.loadSparqlQuery("count_distinct_bnode_objects_in_a_graphs",
 				optimizeFor);

@@ -29,12 +29,14 @@ import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
+import swiss.sib.swissprot.voidcounter.Variables;
 
 class IsSourceClassLinkedToTargetClassTest {
 	private Repository repository;
 	private ExecutorService executors;
+
 	@BeforeEach
 	void setup() throws IOException {
 
@@ -52,8 +54,8 @@ class IsSourceClassLinkedToTargetClassTest {
 	@EnumSource(OptimizeFor.class)
 	void one(OptimizeFor of) throws IOException {
 
-		Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler = (q)->{
-			return CompletableFuture.supplyAsync(q::call, executors); 
+		Function<QueryCallable<?, ? extends Variables>, CompletableFuture<Exception>> scheduler = (q) -> {
+			return CompletableFuture.supplyAsync(q::call, executors);
 		};
 		try (RepositoryConnection connection = repository.getConnection()) {
 			connection.begin();
@@ -79,8 +81,10 @@ class IsSourceClassLinkedToTargetClassTest {
 		ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		Lock writeLock = new ReentrantLock();
-		CommonVariables cv = new CommonVariables(sd , bag, repository, s->{}, writeLock, new Semaphore(1), finishedQueries);
-		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, scheduler, null, new SparqlCounters(of), of);
+		CommonGraphVariables cv = new CommonGraphVariables(sd, bag, repository, s -> {
+		}, writeLock, new Semaphore(1), finishedQueries);
+		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, null,
+				new SparqlCounters(of, scheduler), of);
 		counter.call();
 		assertEquals(1, pp.getLinkSets().size());
 		assertEquals(1, finishedQueries.get());

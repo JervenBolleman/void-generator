@@ -10,14 +10,10 @@ import org.eclipse.rdf4j.repository.Repository;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
 
-public record CommonVariables(ServiceDescription sd, Repository repository,
+public record CommonGraphVariables(ServiceDescription sd, GraphDescription gd, Repository repository,
 		Consumer<ServiceDescription> saver, Lock writeLock, Semaphore limiter, AtomicInteger finishedQueries) implements Variables{
 
 	public void save() {
 		saver.accept(sd);
-	}
-
-	public CommonGraphVariables with(GraphDescription gd) {
-		return new CommonGraphVariables(sd(), gd, repository(), saver(), writeLock(), limiter(), finishedQueries());
 	}
 }

@@ -1,9 +1,9 @@
 package swiss.sib.swissprot.voidcounter.sparql;
 
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -13,176 +13,169 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.FindGraphs;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
-import swiss.sib.swissprot.servicedescription.ObjectPartition;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
+import swiss.sib.swissprot.voidcounter.Variables;
 
 public class SparqlCounters implements Counters {
 	private final OptimizeFor optimizeFor;
+	private final Function<QueryCallable<?, ? extends Variables>, CompletableFuture<Exception>> schedule;
 
-	public SparqlCounters(OptimizeFor optimizeFor) {
+	public SparqlCounters(OptimizeFor optimizeFor,
+			Function<QueryCallable<?, ? extends Variables>, CompletableFuture<Exception>> schedule) {
 		this.optimizeFor = optimizeFor;
+		this.schedule = schedule;
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctBnodeSubjectsInAgraph(CommonVariables cv) {
-		return new CountDistinctBnodeSubjectsInAGraph(cv, optimizeFor);
+	public void countDistinctBnodeSubjectsInAgraph(CommonGraphVariables cv) {
+		schedule(new CountDistinctBnodeSubjectsInAGraph(cv, optimizeFor));
 	}
 
-	public QueryCallable<Set<String>> findAllGraphs(CommonVariables cv) {
-		return new FindGraphs(cv, optimizeFor);
+	public CompletableFuture<Exception> findAllGraphs(CommonVariables cv) {
+		return schedule(new FindGraphs(cv, optimizeFor));
 	}
 
-	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInAGraph(CommonVariables cv) {
-		return new CountDistinctIriSubjectsAndObjectsInAGraph(cv, optimizeFor);
-	}
-	public QueryCallable<?> countDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv) {
-		return new CountDistinctIriSubjectsAndObjectsInDefaultGraph(cv, optimizeFor);
+	public void countDistinctIriSubjectsAndObjectsInAGraph(CommonGraphVariables cv) {
+		schedule(new CountDistinctIriSubjectsAndObjectsInAGraph(cv, optimizeFor));
 	}
 
-	@Override
-	public QueryCallable<Long> countDistinctBnodeObjectsInDefaultGraph(CommonVariables cv) {
-		return new CountDistinctBnodeObjectsInDefaultGraph(cv, optimizeFor);
+	public void countDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv) {
+		schedule(new CountDistinctIriSubjectsAndObjectsInDefaultGraph(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctIriObjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctIriObjectsInDefaultGraph(cv, optimizeFor);
-	}
-	
-	@Override
-	public QueryCallable<Long> countDistinctIriObjectsInAGraph(CommonVariables cv) {
-		return new CountDistinctIriObjectsInAGraph(cv, optimizeFor);
+	public void countDistinctBnodeObjectsInDefaultGraph(CommonVariables cv) {
+		schedule(new CountDistinctBnodeObjectsInDefaultGraph(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctLiteralObjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctLiteralObjectsInDefaultGraph(cv, optimizeFor);
+	public void countDistinctIriObjectsForDefaultGraph(CommonVariables cv) {
+		schedule(new CountDistinctIriObjectsInDefaultGraph(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctIriSubjectsForDefaultGraph(CommonVariables cv) {
-		return new CountDistinctIriSubjectsForDefaultGraph(cv, optimizeFor);
+	public void countDistinctIriObjectsInAGraph(CommonGraphVariables cv) {
+		schedule(new CountDistinctIriObjectsInAGraph(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctIriSubjectsInAGraph(CommonVariables cvgd) {
-		return new CountDistinctIriSubjectsInAGraph(cvgd, optimizeFor);
+	public void countDistinctLiteralObjectsForDefaultGraph(CommonVariables cv) {
+		schedule(new CountDistinctLiteralObjectsInDefaultGraph(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv) {
-		return new CountDistinctBnodeSubjectsInDefaultGraph(cv, optimizeFor);
+	public void countDistinctIriSubjectsForDefaultGraph(CommonVariables cv) {
+		schedule(new CountDistinctIriSubjectsForDefaultGraph(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Exception> findPredicatesAndClasses(CommonVariables cv,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Set<IRI> knownPredicates,
+	public void countDistinctIriSubjectsInAGraph(CommonGraphVariables cvgd) {
+		schedule(new CountDistinctIriSubjectsInAGraph(cvgd, optimizeFor));
+	}
+
+	@Override
+	public void countDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv) {
+		schedule(new CountDistinctBnodeSubjectsInDefaultGraph(cv, optimizeFor));
+	}
+
+	@Override
+	public void findPredicatesAndClasses(CommonGraphVariables cv, Set<IRI> knownPredicates,
 			ReadWriteLock rwLock, String classExclusion) {
-		return new FindPredicatesAndClasses(cv, schedule, knownPredicates, rwLock, classExclusion, this);
+		schedule(new FindPredicatesAndClasses(cv, knownPredicates, rwLock, classExclusion, this));
 	}
 
 	@Override
-	public QueryCallable<List<PredicatePartition>> findPredicates(CommonVariables cv, Set<IRI> knownPredicates,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule) {
-		return new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, null, optimizeFor, this);
+	public void findPredicates(CommonGraphVariables cv, Set<IRI> knownPredicates) {
+		schedule(new FindPredicatesAndCountObjects(cv, knownPredicates, null, optimizeFor, this));
 	}
 
 	@Override
-	public QueryCallable<List<ClassPartition>> findDistinctClassses(CommonVariables cv,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
-		return new FindDistinctClassses(cv, schedule, classExclusion, null, optimizeFor);
+	public void findDistinctClassses(CommonGraphVariables cv, String classExclusion) {
+		schedule(new FindDistinctClassses(cv, classExclusion, null, optimizeFor, this));
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctLiteralObjects(CommonVariables cv) {
-		return new CountDistinctLiteralObjects(cv, optimizeFor);
+	public void countDistinctLiteralObjects(CommonGraphVariables cv) {
+		schedule(new CountDistinctLiteralObjects(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countDistinctBnodeSubjects(CommonVariables cv) {
-		return new CountDistinctBnodeSubjectsInDefaultGraph(cv, optimizeFor);
+	public void countTriplesInNamedGraph(CommonGraphVariables cv) {
+		schedule(new TripleCount(cv, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countTriplesInNamedGraph(CommonVariables cv) {
-		return new TripleCount(cv, optimizeFor);
-	}
-
-	@Override
-	public QueryCallable<Long> isSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
+	public void isSourceClassLinkedToTargetClass(CommonGraphVariables cv, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source) {
-		return new IsSourceClassLinkedToTargetClass(cv, target, predicatePartition, source, optimizeFor);
+		schedule(new IsSourceClassLinkedToTargetClass(cv, target, predicatePartition, source, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInGraphs(CommonVariables cv,
-			PredicatePartition predicatePartition, ClassPartition source, 
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion){
-		return new IsSourceClassLinkedToDistinctClassInOtherGraphs(cv, predicatePartition, source, 
-				classExclusion, optimizeFor);
-	}
-	
-	@Override
-	public QueryCallable<List<LinkSetToOtherGraph>> isSourceClassLinkedToDistinctClassInOtherGraph(CommonVariables cv,
-			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
-		return new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, predicatePartition, source, og, schedule,
-				classExclusion, this, optimizeFor);
+	public void isSourceClassLinkedToDistinctClassInGraphs(CommonGraphVariables cv,
+			PredicatePartition predicatePartition, ClassPartition source, String classExclusion) {
+		schedule(new IsSourceClassLinkedToDistinctClassInOtherGraphs(cv, predicatePartition, source, classExclusion,
+				optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Set<IRI>> findDataTypeIfNoClassOrDtKnown(CommonVariables cv,
+	public void isSourceClassLinkedToDistinctClassInOtherGraph(
+			CommonGraphVariables cv, PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
+			String classExclusion) {
+		schedule(new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, predicatePartition, source, og, classExclusion,
+				this, optimizeFor));
+	}
+
+	@Override
+	public void findDataTypeIfNoClassOrDtKnown(CommonGraphVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source) {
-		return new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source, optimizeFor);
+		schedule(new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Exception> findPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes,
-			PredicatePartition predicate, ClassPartition source,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion) {
-		return new FindPredicateLinkSets(cv, classes, predicate, source, schedule, classExclusion, this, optimizeFor);
+	public void findPredicateLinkSets(CommonGraphVariables cv, Set<ClassPartition> classes,
+			PredicatePartition predicate, ClassPartition source, String classExclusion) {
+		schedule(new FindPredicateLinkSets(cv, classes, predicate, source, classExclusion, this, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Set<ObjectPartition>> findNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
-			PredicatePartition predicatePartition, ClassPartition source) {
-		return new FindNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source, optimizeFor);
+	public void findNamedIndividualObjectSubjectForPredicateInGraph(
+			CommonGraphVariables cv, PredicatePartition predicatePartition, ClassPartition source) {
+		schedule(new FindNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<List<PredicatePartition>> findPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
-			Supplier<QueryCallable<?>> onFoundPredicates) {
-		return new FindPredicatesAndCountObjects(cv, knownPredicates, schedule, onFoundPredicates, optimizeFor, this);
+	public void findPredicatesAndCountObjects(CommonGraphVariables cv,
+			Set<IRI> knownPredicates, Consumer<CommonGraphVariables> onFoundPredicates) {
+		schedule(new FindPredicatesAndCountObjects(cv, knownPredicates, onFoundPredicates, optimizeFor, this));
 	}
 
 	@Override
-	public QueryCallable<List<ClassPartition>> findDistinctClassses(CommonVariables cv,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, String classExclusion,
-			Supplier<QueryCallable<?>> onFoundClasses) {
-		return new FindDistinctClassses(cv, schedule, classExclusion, onFoundClasses, optimizeFor);
+	public void findDistinctClassses(CommonGraphVariables cv, String classExclusion,
+			Supplier<QueryCallable<?, CommonGraphVariables>> onFoundClasses) {
+		schedule(new FindDistinctClassses(cv, classExclusion, onFoundClasses, optimizeFor, this));
 	}
 
 	@Override
-	public QueryCallable<Long> countUniqueSubjectPerPredicateInGraph(CommonVariables cv,
+	public void countUniqueSubjectPerPredicateInGraph(CommonGraphVariables cv,
 			PredicatePartition predicatePartition) {
-		return new CountUniqueSubjectPerPredicateInGraph(cv, predicatePartition, optimizeFor);
+		schedule(new CountUniqueSubjectPerPredicateInGraph(cv, predicatePartition, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countUniqueObjectsPerPredicateInGraph(CommonVariables cv,
+	public void countUniqueObjectsPerPredicateInGraph(CommonGraphVariables cv,
 			PredicatePartition predicatePartition) {
-		return new CountUniqueObjectsPerPredicateInGraph(cv, predicatePartition, optimizeFor);
+		schedule(new CountUniqueObjectsPerPredicateInGraph(cv, predicatePartition, optimizeFor));
 	}
 
 	@Override
-	public QueryCallable<Long> countTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
-			PredicatePartition pp) {
-		return new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, optimizeFor);
+	public void countTriplesLinkingTwoTypesInDifferentGraphs(CommonGraphVariables cv,
+			LinkSetToOtherGraph ls, PredicatePartition pp) {
+		schedule(new CountTriplesLinkingTwoTypesInDifferentGraphs(cv, ls, pp, optimizeFor));
 	}
 
 	@Override
@@ -191,7 +184,12 @@ public class SparqlCounters implements Counters {
 	}
 
 	@Override
-	public QueryCallable<?> countDistinctBnodeObjectsInAGraph(CommonVariables gdcv) {
-		return new CountDistinctBnodeObjectsInAGraph(gdcv, optimizeFor);
+	public void countDistinctBnodeObjectsInAGraph(CommonGraphVariables gdcv) {
+		schedule(new CountDistinctBnodeObjectsInAGraph(gdcv, optimizeFor));
+	}
+
+	@Override
+	public CompletableFuture<Exception> schedule(QueryCallable<?, ?> toRun) {
+		return schedule.apply(toRun);
 	}
 }

@@ -12,7 +12,7 @@ import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-final class CountDistinctBnodeSubjectsInDefaultGraph extends QueryCallable<Long> {
+final class CountDistinctBnodeSubjectsInDefaultGraph extends QueryCallable<Long,CommonVariables> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjectsInDefaultGraph.class);
 
 	public CountDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv) {

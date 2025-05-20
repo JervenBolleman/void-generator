@@ -1,9 +1,6 @@
 package swiss.sib.swissprot.voidcounter.sparql;
 
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -17,21 +14,19 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public class FindPredicateLinkSets extends QueryCallable<Exception> {
+public class FindPredicateLinkSets extends QueryCallable<Exception, CommonGraphVariables> {
 	public static final Logger log = LoggerFactory.getLogger(FindPredicateLinkSets.class);
 	private final String rawQuery;
 	private final Set<ClassPartition> classes;
 	private final PredicatePartition pp;
 	private final ClassPartition source;
-	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
 	
 	private PredicatePartition subpredicatePartition;
 
@@ -40,15 +35,14 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private final Counters counters;
 	private final OptimizeFor optimizeFor;
 
-	public FindPredicateLinkSets(CommonVariables cv, Set<ClassPartition> classes, PredicatePartition predicate,
-			ClassPartition source, Function<QueryCallable<?>, CompletableFuture<Exception>> schedule,
+	public FindPredicateLinkSets(CommonGraphVariables cv, Set<ClassPartition> classes, PredicatePartition predicate,
+			ClassPartition source,
 			String classExclusion, Counters counters, OptimizeFor optimizeFor) {
 		super(cv);
 		
 		this.classes = classes;
 		this.pp = predicate;
 		this.source = source;
-		this.schedule = schedule;
 		this.classExclusion = classExclusion;
 		this.counters = counters;
 		this.optimizeFor = optimizeFor;
@@ -65,28 +59,25 @@ public class FindPredicateLinkSets extends QueryCallable<Exception> {
 	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
 			ClassPartition source) {
 
-		schedule.apply(counters.findNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source));
+		counters.findNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source);
 
 		if (optimizeFor.preferGroupBy()) {
-			QueryCallable<List<LinkSetToOtherGraph>> linkOrSubClassPartition = counters
-					.isSourceClassLinkedToDistinctClassInGraphs(cv, predicatePartition, source, schedule,
+			counters
+					.isSourceClassLinkedToDistinctClassInGraphs(cv, predicatePartition, source, 
 							classExclusion);
-			schedule.apply(linkOrSubClassPartition);
 		} else {
 			for (ClassPartition target : targetClasses) {
-				schedule.apply(counters.isSourceClassLinkedToTargetClass(cv,target,
-						predicatePartition, source));
+				counters.isSourceClassLinkedToTargetClass(cv,target,
+						predicatePartition, source);
 			}
 			for (GraphDescription og : cv.sd().getGraphs()) {
 				if (!og.getGraphName().equals(cv.gd().getGraphName())) {
-					schedule.apply(
-							counters.isSourceClassLinkedToDistinctClassInOtherGraph(cv,predicatePartition,
-									source, og, schedule, classExclusion));
+						counters.isSourceClassLinkedToDistinctClassInOtherGraph(cv,predicatePartition,
+								source, og, classExclusion);
 				}
 			}
 		}
-
-		schedule.apply(counters.findDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source));
+		counters.findDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source);
 	}
 
 	private long countTriplesInPredicateClassPartition(final RepositoryConnection connection,

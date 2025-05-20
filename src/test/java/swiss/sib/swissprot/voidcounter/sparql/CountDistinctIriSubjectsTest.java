@@ -23,6 +23,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 
 class CountDistinctIriSubjectsTest {
@@ -46,7 +47,7 @@ class CountDistinctIriSubjectsTest {
 		final ServiceDescription sd = new ServiceDescription();
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
@@ -68,7 +69,7 @@ class CountDistinctIriSubjectsTest {
 		final ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		Lock writeLock = new ReentrantLock();
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		var cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
@@ -78,9 +79,9 @@ class CountDistinctIriSubjectsTest {
 		var gd = new GraphDescription();
 		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
-		cv = new CommonVariables(sd, gd, repository, (s) -> {
+		var gcv = new CommonGraphVariables(sd, gd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
-		var count = new CountDistinctIriSubjectsInAGraph(cv, of);
+		var count = new CountDistinctIriSubjectsInAGraph(gcv, of);
 		count.call();
 		assertEquals(1, gd.getDistinctIriSubjectCount());
 		assertEquals(2, finishedQueries.get());

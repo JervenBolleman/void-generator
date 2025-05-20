@@ -12,7 +12,7 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctBnodeObjectsInDefaultGraph extends QueryCallable<Long> {
+final class CountDistinctBnodeObjectsInDefaultGraph extends QueryCallable<Long, CommonVariables> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeObjectsInDefaultGraph.class);
 	private static final String OBJECTS = "objects";
 

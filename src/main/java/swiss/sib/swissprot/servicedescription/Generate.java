@@ -62,9 +62,11 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFWriter;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
+import swiss.sib.swissprot.voidcounter.Variables;
 import swiss.sib.swissprot.voidcounter.sparql.SparqlCounters;
 import swiss.sib.swissprot.voidcounter.virtuoso.VirtuosoCounters;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
@@ -224,14 +226,26 @@ public class Generate implements Callable<Integer> {
 		this.sd = new ServiceDescription();
 		// At least 1 but no more than one third of the cpus
 		if (maxConcurrency <= 0) {
-			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 5);
+			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
+		}
+		limit = new Semaphore(maxConcurrency);
+		executors = Executors.newFixedThreadPool(maxConcurrency);
+	}
+	
+	public Generate(int maxConcurrency) {
+		super();
+		this.sd = new ServiceDescription();
+		this.maxConcurrency = maxConcurrency;
+		// At least 1 but no more than one third of the cpus
+		if (maxConcurrency <= 0) {
+			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
 		}
 		limit = new Semaphore(maxConcurrency);
 		executors = Executors.newFixedThreadPool(maxConcurrency);
 	}
 
 	private final List<Future<Exception>> futures = Collections.synchronizedList(new ArrayList<>());
-	private final List<QueryCallable<?>> tasks = Collections.synchronizedList(new ArrayList<>());
+	private final List<QueryCallable<?, ? extends Variables>> tasks = Collections.synchronizedList(new ArrayList<>());
 
 	private final ExecutorService executors;
 
@@ -239,7 +253,7 @@ public class Generate implements Callable<Integer> {
 
 	private CompletableFuture<Exception> findingGraphs = null;
 
-	public final CompletableFuture<Exception> schedule(QueryCallable<?> task) {
+	private final CompletableFuture<Exception> schedule(QueryCallable<?, ? extends Variables> task) {
 		scheduledQueries.incrementAndGet();
 		tasks.add(task);
 		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(task::call, executors);
@@ -247,6 +261,7 @@ public class Generate implements Callable<Integer> {
 		futures.add(cf);
 		return cf;
 	}
+	
 
 	public void update() {
 		if (log.isDebugEnabled())
@@ -269,13 +284,13 @@ public class Generate implements Callable<Integer> {
 					this.distinctSubjectIrisFile);
 			ConcurrentHashMap<String, Roaring64NavigableMap> distinctObjectIris = readGraphsWithSerializedBitMaps(
 					this.distinctObjectIrisFile);
-			this.counters = new VirtuosoCounters(distinctSubjectIris, distinctObjectIris);
+			this.counters = new VirtuosoCounters(distinctSubjectIris, distinctObjectIris, this::schedule);
 			saver = sdg -> writeServiceDescriptionAndGraphs(distinctSubjectIris, distinctObjectIris, sdg, iriOfVoid);
 			optimizeFor = "virtuoso";
 		} else {
 			OptimizeFor fromString = OptimizeFor.fromString(optimizeFor);
 			log.info("Optimizing for backing store: {}", fromString);
-			this.counters = new SparqlCounters(fromString);
+			this.counters = new SparqlCounters(fromString, this::schedule);
 			saver = sdg -> writeServiceDescription(sdg, iriOfVoid);
 		}
 
@@ -463,7 +478,7 @@ public class Generate implements Callable<Integer> {
 	private CommonVariables scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
 		Lock writeLock = rwLock.writeLock();
 		
-		CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
+		CommonVariables cv = new CommonVariables(sd, repository, saver, writeLock, limit, finishedQueries);
 		determineGraphNames(sd, saver, writeLock);
 
 		countDistinctObjectsSubjectsInDefaultGraph(cv);
@@ -482,21 +497,20 @@ public class Generate implements Callable<Integer> {
 
 	private void countDistinctObjectsSubjectsInDefaultGraph(CommonVariables cv) {
 		if (countDistinctObjects) {
-			schedule(counters.countDistinctBnodeObjectsInDefaultGraph(cv));
-			schedule(counters.countDistinctLiteralObjectsForDefaultGraph(cv));
+			counters.countDistinctBnodeObjectsInDefaultGraph(cv);
+			counters.countDistinctLiteralObjectsForDefaultGraph(cv);
 			if (!counters.allInUnionGraph() && !countDistinctSubjects) {
-				schedule(counters.countDistinctIriObjectsForDefaultGraph(cv));
-
+				counters.countDistinctIriObjectsForDefaultGraph(cv);
 			}
 		}
 		if (countDistinctSubjects) {
-			schedule(counters.countDistinctBnodeSubjectsInDefaultGraph(cv));
+			counters.countDistinctBnodeSubjectsInDefaultGraph(cv);
 			if (!counters.allInUnionGraph() && !countDistinctObjects) {
-				schedule(counters.countDistinctIriSubjectsForDefaultGraph(cv));
+				counters.countDistinctIriSubjectsForDefaultGraph(cv);
 			}
 		}
 		if (countDistinctSubjects && countDistinctObjects) {
-			schedule(counters.countDistinctIriSubjectsAndObjectsInDefaultGraph(cv));
+			counters.countDistinctIriSubjectsAndObjectsInDefaultGraph(cv);
 		}
 	}
 
@@ -509,9 +523,8 @@ public class Generate implements Callable<Integer> {
 	 */
 	private void determineGraphNames(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock) {
 		if (graphNames.isEmpty()) {
-			CommonVariables cv = new CommonVariables(sd, null, repository, saver, writeLock, limit, finishedQueries);
-			QueryCallable<Set<String>> allGraphs = counters.findAllGraphs(cv);
-			findingGraphs  = schedule(allGraphs);
+			CommonVariables cv = new CommonVariables(sd, repository, saver, writeLock, limit, finishedQueries);
+			findingGraphs = counters.findAllGraphs(cv);
 		} else {
 			for (var graphName : getGraphNames()) {
 				getOrCreateGraphDescriptionObject(graphName, sd);
@@ -537,39 +550,39 @@ public class Generate implements Callable<Integer> {
 
 	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, GraphDescription gd,
 			Semaphore limit, Consumer<ServiceDescription> saver) {
-		CommonVariables cv = new CommonVariables(sd, gd, repository, saver, rwLock.writeLock(), limit, finishedQueries);
+		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, saver, rwLock.writeLock(), limit, finishedQueries);
 		if (findDistinctClasses && findPredicates && detailedCount) {
-			schedule(counters.findPredicatesAndClasses(cv, this::schedule, knownPredicates, rwLock, classExclusion));
+			counters.findPredicatesAndClasses(cv, knownPredicates, rwLock, classExclusion);
 		} else {
 			if (findPredicates) {
-				schedule(counters.findPredicates(cv, knownPredicates, this::schedule));
+				counters.findPredicates(cv, knownPredicates);
 			}
 			if (findDistinctClasses) {
-				schedule(counters.findDistinctClassses(cv, this::schedule, classExclusion));
+				counters.findDistinctClassses(cv, classExclusion);
 			}
 		}
 	}
 
 	private void scheduleBigCountsPerGraph(CommonVariables cv, GraphDescription gd) {
-		CommonVariables gdcv = new CommonVariables(cv.sd(), gd, cv.repository(), cv.saver(), cv.writeLock(), cv.limiter(), cv.finishedQueries());
+		CommonGraphVariables gdcv = cv.with(gd);
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			schedule(counters.countDistinctLiteralObjects(gdcv));
+			counters.countDistinctLiteralObjects(gdcv);
 			if (! countDistinctSubjects) {
-				schedule(counters.countDistinctIriObjectsInAGraph(gdcv));
-				schedule(counters.countDistinctBnodeObjectsInAGraph(gdcv));
+				counters.countDistinctIriObjectsInAGraph(gdcv);
+				counters.countDistinctBnodeObjectsInAGraph(gdcv);
 			}
 		}
 		if (countDistinctSubjects) {
-			schedule(counters.countDistinctBnodeSubjects(gdcv));
+			counters.countDistinctBnodeSubjectsInAgraph(gdcv);
 			if (! countDistinctObjects) {
-				schedule(counters.countDistinctIriSubjectsInAGraph(gdcv));
+				counters.countDistinctIriSubjectsInAGraph(gdcv);
 			}
 		}
 		if (countDistinctObjects && countDistinctSubjects) {
-			schedule(counters.countDistinctIriSubjectsAndObjectsInAGraph(gdcv));
+			counters.countDistinctIriSubjectsAndObjectsInAGraph(gdcv);
 		}
-		schedule(counters.countTriplesInNamedGraph(gdcv));
+		counters.countTriplesInNamedGraph(gdcv);
 	}
 
 	private GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {

@@ -10,14 +10,14 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctLiteralObjects extends QueryCallable<Long> {
+final class CountDistinctLiteralObjects extends QueryCallable<Long, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctLiteralObjects.class);
 	private final String rawQuery;
 
-	public CountDistinctLiteralObjects(CommonVariables cv, OptimizeFor optimizeFor) {
+	public CountDistinctLiteralObjects(CommonGraphVariables cv, OptimizeFor optimizeFor) {
 		super(cv);
 		rawQuery = Helper.loadSparqlQuery("count_distinct_literal_objects_in_all_graphs", optimizeFor);
 	}

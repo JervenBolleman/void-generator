@@ -12,7 +12,7 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class CountDistinctIriObjectsInDefaultGraph extends QueryCallable<Long> {
+public final class CountDistinctIriObjectsInDefaultGraph extends QueryCallable<Long, CommonVariables> {
 	private static final String OBJECTS = "objects";
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriObjectsInDefaultGraph.class);
 

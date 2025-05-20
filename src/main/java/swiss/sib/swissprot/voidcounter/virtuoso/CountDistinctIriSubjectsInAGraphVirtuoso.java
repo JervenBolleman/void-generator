@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 
 final class CountDistinctIriSubjectsInAGraphVirtuoso extends CountDistinctIriInAGraphVirtuoso {
 
@@ -15,7 +15,7 @@ final class CountDistinctIriSubjectsInAGraphVirtuoso extends CountDistinctIriInA
 
 	
 
-	public CountDistinctIriSubjectsInAGraphVirtuoso(CommonVariables cv, Map<String, Roaring64NavigableMap> graphIriIds) {
+	public CountDistinctIriSubjectsInAGraphVirtuoso(CommonGraphVariables cv, Map<String, Roaring64NavigableMap> graphIriIds) {
 		super(cv, (l) -> cv.sd().setDistinctIriSubjectCount(l), GraphDescription::setDistinctIriSubjectCount, graphIriIds);
 	}
 

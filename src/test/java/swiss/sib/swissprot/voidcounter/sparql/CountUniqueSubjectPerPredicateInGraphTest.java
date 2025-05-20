@@ -28,7 +28,7 @@ import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.ServiceDescription;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 
 public class CountUniqueSubjectPerPredicateInGraphTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(CountUniqueSubjectPerPredicateInGraphTest.class);
@@ -71,7 +71,7 @@ public class CountUniqueSubjectPerPredicateInGraphTest {
 		sd.putGraphDescription(gd);
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, gd, repository, s->{}, writeLock,
+		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, s->{}, writeLock,
 				new Semaphore(1), finishedQueries);
 		var counter = new CountUniqueSubjectPerPredicateInGraph(cv, pp, of);
 		counter.call();

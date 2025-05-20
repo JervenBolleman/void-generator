@@ -13,19 +13,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 class CountUniqueObjectsPerPredicateInGraph
-    extends QueryCallable<Long>
+    extends QueryCallable<Long, CommonGraphVariables>
 {
 	private static final Logger log = LoggerFactory.getLogger(CountUniqueObjectsPerPredicateInGraph.class);
 
 	private final PredicatePartition predicatePartition;
 	
-	public CountUniqueObjectsPerPredicateInGraph(CommonVariables cv, PredicatePartition predicatePartition)
+	public CountUniqueObjectsPerPredicateInGraph(CommonGraphVariables cv, PredicatePartition predicatePartition)
 	{
 		super(cv);
 		assert cv.repository() instanceof VirtuosoRepository;

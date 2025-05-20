@@ -10,10 +10,10 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> {
+public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(IsSourceClassLinkedToTargetClass.class);
 
 	private static final String SUBJECTS = "subjects";
@@ -25,7 +25,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long> 
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 
-	public IsSourceClassLinkedToTargetClass(CommonVariables cv, ClassPartition target,
+	public IsSourceClassLinkedToTargetClass(CommonGraphVariables cv, ClassPartition target,
 			PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
 		super(cv);
 		

@@ -18,10 +18,10 @@ import swiss.sib.swissprot.servicedescription.ObjectPartition;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<ObjectPartition>> {
+public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCallable<Set<ObjectPartition>, CommonGraphVariables> {
 	private final String rawQuery;
 	private static final Logger log = LoggerFactory
 			.getLogger(FindNamedIndividualObjectSubjectForPredicateInGraph.class);
@@ -31,7 +31,7 @@ public class FindNamedIndividualObjectSubjectForPredicateInGraph extends QueryCa
 	private final ClassPartition cp;
 
 
-	public FindNamedIndividualObjectSubjectForPredicateInGraph(CommonVariables cv,
+	public FindNamedIndividualObjectSubjectForPredicateInGraph(CommonGraphVariables cv,
 			PredicatePartition predicatePartition, ClassPartition cp, OptimizeFor optimizeFor) {
 		super(cv);
 		

@@ -8,14 +8,14 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public class TripleCount extends QueryCallable<Long> {
+public class TripleCount extends QueryCallable<Long, CommonGraphVariables> {
 	private final String count;
 	private static final Logger log = LoggerFactory.getLogger(TripleCount.class);
 
-	public TripleCount(CommonVariables cv, OptimizeFor optimizeFor) {
+	public TripleCount(CommonGraphVariables cv, OptimizeFor optimizeFor) {
 		super(cv);
 		this.count = Helper.loadSparqlQuery("count_triples_in_named_graphs", optimizeFor);
 	}

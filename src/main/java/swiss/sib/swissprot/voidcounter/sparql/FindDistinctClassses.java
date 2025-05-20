@@ -3,8 +3,6 @@ package swiss.sib.swissprot.voidcounter.sparql;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -23,30 +21,28 @@ import org.slf4j.LoggerFactory;
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
+import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class FindDistinctClassses extends QueryCallable<List<ClassPartition>> {
+public final class FindDistinctClassses extends QueryCallable<List<ClassPartition>, CommonGraphVariables> {
 	private static final String REPLACE = "###REPLACE###";
 	private final String nestedLoopQuery;
 	private final String groupByQuery;
 	private static final Logger log = LoggerFactory.getLogger(FindDistinctClassses.class);
 
-	private final Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler;
 	private final String classExclusion;
-	private final Supplier<QueryCallable<?>> onSuccess;
-	private final CommonVariables cv;
+	private final Supplier<QueryCallable<?, CommonGraphVariables>> onSuccess;
 	private final OptimizeFor optimizeFor;
+	private final Counters counters;
 
-	public FindDistinctClassses(CommonVariables cv,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> scheduler, 
-			String classExclusion, Supplier<QueryCallable<?>> onSuccess, OptimizeFor optimizeFor) {
+	public FindDistinctClassses(CommonGraphVariables cv,
+			String classExclusion, Supplier<QueryCallable<?, CommonGraphVariables>> onSuccess, OptimizeFor optimizeFor, Counters counters) {
 		super(cv);
-		this.cv = cv;
-		this.scheduler = scheduler;
 		this.classExclusion = classExclusion;
 		this.onSuccess = onSuccess;
 		this.optimizeFor = optimizeFor;
+		this.counters = counters;
 		this.nestedLoopQuery = Helper.loadSparqlQuery("distinct_types_in_a_graph", optimizeFor);
 		this.groupByQuery = Helper.loadSparqlQuery("count_occurences_of_distinct_types_in_a_graph", optimizeFor);
 	}
@@ -77,7 +73,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		else
 			nested(connection, classesList, tq);
 		if (onSuccess != null) {
-			scheduler.apply(onSuccess.get());
+			counters.schedule(onSuccess.get());
 		}
 		return classesList;
 	}
@@ -115,7 +111,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			}
 		}
 		for (ClassPartition cp : classesList) {
-			scheduler.apply(new CountMembersOfClassPartition(cv, cp, optimizeFor));
+			counters.schedule(new CountMembersOfClassPartition(cv, cp, optimizeFor));
 		}
 	}
 
@@ -153,14 +149,14 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		return log;
 	}
 
-	private final class CountMembersOfClassPartition extends QueryCallable<Long> {
-		private final String count_type_arcs;
+	private final class CountMembersOfClassPartition extends QueryCallable<Long, CommonGraphVariables> {
+		private final String countTypeArcs;
 
-		public CountMembersOfClassPartition(CommonVariables cv, ClassPartition cp,
+		public CountMembersOfClassPartition(CommonGraphVariables cv, ClassPartition cp,
 				OptimizeFor optimizeFor) {
 			super(cv);
 			this.cp = cp;
-			this.count_type_arcs = Helper.loadSparqlQuery("count_triples_for_type_in_graph", optimizeFor);
+			this.countTypeArcs = Helper.loadSparqlQuery("count_triples_for_type_in_graph", optimizeFor);
 		}
 
 		private final ClassPartition cp;
@@ -187,7 +183,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			MapBindingSet bs = new MapBindingSet();
 			bs.setBinding("graph", cv.gd().getGraph());
 			bs.setBinding("class", cp.getClazz());
-			setQuery(count_type_arcs, bs);
+			setQuery(countTypeArcs, bs);
 			return Helper.getSingleLongFromSparql(getQuery(), connection, "count");
 		}
 

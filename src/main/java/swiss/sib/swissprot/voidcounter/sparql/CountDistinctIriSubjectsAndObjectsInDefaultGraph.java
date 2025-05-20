@@ -18,7 +18,7 @@ import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 final class CountDistinctIriSubjectsAndObjectsInDefaultGraph extends
-		QueryCallable<SubObjCount> {
+		QueryCallable<SubObjCount, CommonVariables> {
 
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctIriSubjectsAndObjectsInDefaultGraph.class);
 	private final String query;

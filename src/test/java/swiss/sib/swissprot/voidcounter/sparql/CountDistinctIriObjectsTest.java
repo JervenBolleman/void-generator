@@ -46,7 +46,7 @@ class CountDistinctIriObjectsTest {
 		final ServiceDescription sd = new ServiceDescription();
 		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 
 		var count = new CountDistinctIriObjectsInDefaultGraph(cv, of);
@@ -56,9 +56,8 @@ class CountDistinctIriObjectsTest {
 
 		var gd = new GraphDescription();
 		gd.setGraph(RDF.BAG);
-		cv = new CommonVariables(sd, gd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
-		var count2 = new CountDistinctIriObjectsInAGraph(cv, OptimizeFor.SPARQL);
+		var gcv = cv.with(gd);
+		var count2 = new CountDistinctIriObjectsInAGraph(gcv, OptimizeFor.SPARQL);
 		count2.call();
 		assertEquals(0, gd.getDistinctIriObjectCount());
 		assertEquals(2, finishedQueries.get());
@@ -78,7 +77,7 @@ class CountDistinctIriObjectsTest {
 		final ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		Lock writeLock = new ReentrantLock();
-		CommonVariables cv = new CommonVariables(sd, null, repository, (s) -> {
+		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
 		}, writeLock, new Semaphore(1), finishedQueries);
 
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(cv, of);
@@ -89,9 +88,8 @@ class CountDistinctIriObjectsTest {
 		var gd = new GraphDescription();
 		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
-		cv = new CommonVariables(sd, gd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
-		var count2 = new CountDistinctIriObjectsInAGraph(cv, OptimizeFor.SPARQL);
+		var gcv = cv.with(gd);
+		var count2 = new CountDistinctIriObjectsInAGraph(gcv, OptimizeFor.SPARQL);
 		count2.call();
 		assertEquals(1, gd.getDistinctIriObjectCount());
 		assertEquals(2, finishedQueries.get());

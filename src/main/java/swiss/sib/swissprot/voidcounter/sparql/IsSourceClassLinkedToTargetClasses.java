@@ -18,10 +18,10 @@ import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<IRI, Long>> {
+public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<IRI, Long>, CommonGraphVariables> {
 	private static final String TARGET_TYPE = "targetType";
 	private static final String SUBJECTS = "subjects";
 
@@ -34,7 +34,7 @@ public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 
-	public IsSourceClassLinkedToTargetClasses(CommonVariables cv, Collection<ClassPartition> targets,
+	public IsSourceClassLinkedToTargetClasses(CommonGraphVariables cv, Collection<ClassPartition> targets,
 			PredicatePartition predicatePartition, ClassPartition source, OptimizeFor optimizeFor) {
 		super(cv);
 		this.predicate = predicatePartition.getPredicate();

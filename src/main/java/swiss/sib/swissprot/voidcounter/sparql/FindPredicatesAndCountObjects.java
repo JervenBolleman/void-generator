@@ -5,9 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -26,30 +24,28 @@ import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class FindPredicatesAndCountObjects extends QueryCallable<List<PredicatePartition>> {
+public final class FindPredicatesAndCountObjects extends QueryCallable<List<PredicatePartition>, CommonGraphVariables> {
 
 	private static final Logger log = LoggerFactory.getLogger(FindPredicatesAndCountObjects.class);
 
 	private final Map<IRI, IRI> knownPredicates;
-	private final Function<QueryCallable<?>, CompletableFuture<Exception>> schedule;
-	private final Supplier<QueryCallable<?>> onSuccess;
+	private final Consumer<CommonGraphVariables> onSuccess;
 	private final String rawQuery;
 
 	private final Counters counters;
 
-	public FindPredicatesAndCountObjects(CommonVariables cv, Set<IRI> knownPredicates,
-			Function<QueryCallable<?>, CompletableFuture<Exception>> schedule, Supplier<QueryCallable<?>> onSuccess,
+	public FindPredicatesAndCountObjects(CommonGraphVariables cv, Set<IRI> knownPredicates,
+			Consumer<CommonGraphVariables> onSuccess,
 			OptimizeFor optimizeFor, Counters counters) {
 		super(cv);
 		this.counters = counters;
 		this.rawQuery = Helper.loadSparqlQuery("find_predicates_count_objects", optimizeFor);
 		this.knownPredicates = new HashMap<>();
 		knownPredicates.stream().forEach(p -> this.knownPredicates.put(p, p));
-		this.schedule = schedule;
 
 		this.onSuccess = onSuccess;
 	}
@@ -86,7 +82,7 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 		} finally {
 			cv.save();
 			if (onSuccess != null) {
-				schedule.apply(onSuccess.get());
+				onSuccess.accept(cv);
 			}
 		}
 	}
@@ -118,8 +114,8 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 			cv.writeLock().unlock();
 		}
 		for (PredicatePartition predicatePartition : predicates) {
-			schedule.apply(counters.countUniqueSubjectPerPredicateInGraph(cv, predicatePartition));
-			schedule.apply(counters.countUniqueObjectsPerPredicateInGraph(cv, predicatePartition));
+			counters.countUniqueSubjectPerPredicateInGraph(cv, predicatePartition);
+			counters.countUniqueObjectsPerPredicateInGraph(cv, predicatePartition);
 		}
 	}
 

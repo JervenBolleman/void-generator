@@ -9,7 +9,7 @@ import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-final class CountDistinctIriSubjectsInDefaultGraph extends QueryCallable<Long> {
+final class CountDistinctIriSubjectsInDefaultGraph extends QueryCallable<Long, CommonVariables> {
 
 	private static final String SUBJECTS = "subjects";
 	private final String rawQuery;

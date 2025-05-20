@@ -7,15 +7,15 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-final class CountDistinctBnodeSubjectsInAGraph extends QueryCallable<Long> {
+final class CountDistinctBnodeSubjectsInAGraph extends QueryCallable<Long, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(CountDistinctBnodeSubjectsInAGraph.class);
 	
-	public CountDistinctBnodeSubjectsInAGraph(CommonVariables cv) {
+	public CountDistinctBnodeSubjectsInAGraph(CommonGraphVariables cv) {
 		super(cv);
 		assert cv.repository() instanceof VirtuosoRepository;
 		

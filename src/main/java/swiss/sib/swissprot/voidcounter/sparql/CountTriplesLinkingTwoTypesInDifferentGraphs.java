@@ -17,10 +17,10 @@ import swiss.sib.swissprot.servicedescription.LinkSetToOtherGraph;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCallable<Long> {
+public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCallable<Long, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(CountTriplesLinkingTwoTypesInDifferentGraphs.class);
 
 	private static final String LSC = "lsc";
@@ -30,7 +30,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 
 	private final PredicatePartition predicatePartition;
 
-	public CountTriplesLinkingTwoTypesInDifferentGraphs(CommonVariables cv, LinkSetToOtherGraph ls,
+	public CountTriplesLinkingTwoTypesInDifferentGraphs(CommonGraphVariables cv, LinkSetToOtherGraph ls,
 			PredicatePartition predicatePartition, OptimizeFor optimizeFor) {
 		super(cv);
 		this.ls = ls;

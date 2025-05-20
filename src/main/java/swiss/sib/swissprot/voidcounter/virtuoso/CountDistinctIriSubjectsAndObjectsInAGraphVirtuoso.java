@@ -24,12 +24,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
 final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
-		QueryCallable<swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.SubObj> {
+		QueryCallable<swiss.sib.swissprot.voidcounter.virtuoso.CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso.SubObj, CommonGraphVariables> {
 
 	private static final int MAX_IN_PROCESS = 16;
 	private static final Semaphore IN_PROCESS = new Semaphore(MAX_IN_PROCESS);
@@ -53,7 +53,7 @@ final class CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso extends
 	
 	private final AtomicInteger runningQueries = new AtomicInteger(0);
 
-	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(CommonVariables cv,
+	public CountDistinctIriSubjectsAndObjectsInAGraphVirtuoso(CommonGraphVariables cv,
 			Map<String, Roaring64NavigableMap> graphSubjectIriIds,
 			Map<String, Roaring64NavigableMap> graphObjectIriIds) {
 		super(cv);

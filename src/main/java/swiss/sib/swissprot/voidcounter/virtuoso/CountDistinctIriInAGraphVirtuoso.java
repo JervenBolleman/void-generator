@@ -16,17 +16,17 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
-abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Long> {
+abstract class CountDistinctIriInAGraphVirtuoso extends QueryCallable<Long, CommonGraphVariables> {
 
 	private final Consumer<Long> allSetter;
 	private final BiConsumer<GraphDescription, Long> graphSetter;
 	private final Map<String, Roaring64NavigableMap> graphIriIds;
 
-	protected CountDistinctIriInAGraphVirtuoso(CommonVariables cv, Consumer<Long> allSetter,
+	protected CountDistinctIriInAGraphVirtuoso(CommonGraphVariables cv, Consumer<Long> allSetter,
 			BiConsumer<GraphDescription, Long> graphSetter, Map<String, Roaring64NavigableMap> graphIriIds2) {
 		super(cv);
 		this.allSetter = allSetter;

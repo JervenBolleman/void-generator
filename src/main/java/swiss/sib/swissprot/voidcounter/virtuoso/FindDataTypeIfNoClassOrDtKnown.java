@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
+import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
 
@@ -29,12 +29,12 @@ import virtuoso.rdf4j.driver.VirtuosoRepositoryConnection;
  * @author jbollema
  *
  */
-final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>> {
+final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(FindDataTypeIfNoClassOrDtKnown.class);
 	private final PredicatePartition predicatePartition;
 	private final ClassPartition source;
 
-	public FindDataTypeIfNoClassOrDtKnown(CommonVariables cv, PredicatePartition predicatePartition,
+	public FindDataTypeIfNoClassOrDtKnown(CommonGraphVariables cv, PredicatePartition predicatePartition,
 			ClassPartition source) {
 		super(cv);
 		this.predicatePartition = predicatePartition;
