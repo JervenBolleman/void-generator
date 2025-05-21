@@ -9,7 +9,10 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.ValueComparator;
 
-
+/**
+ * A ClassPartion
+ * @see <a href="https://www.w3.org/TR/void/#class-property-partitions"/>void:ClassPartition</a>
+ */
 
 public class ClassPartition
     implements Comparable<ClassPartition>

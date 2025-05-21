@@ -12,6 +12,10 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.ValueComparator;
 
 
+/**
+ * A PredicatePartion
+ * @see <a href="https://www.w3.org/TR/void/#class-property-partitions"/>void:propertyPartition</a>
+ */
 public class PredicatePartition
     implements Comparable<PredicatePartition>
 {

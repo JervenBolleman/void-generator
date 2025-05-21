@@ -1,5 +1,8 @@
 package swiss.sib.swissprot.servicedescription;
 
+/**
+ * Stores the links between two classes and the predicate used to link them.
+ */
 public class ClassLinkSet
     implements Comparable<ClassLinkSet>
 {
