@@ -1,11 +1,13 @@
-@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/qlever/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
 
-ex:count_distinct_iri_subjects a sh:SPARQLExecutable,
+
+ex:count_distinct_bnode_subjects a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Count the number of distinct Blanknodes used in the subject position of triples in the default graph"^^rdf:HTML ;
     sh:prefixes _:sparql_examples_prefixes ;

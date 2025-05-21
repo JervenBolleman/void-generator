@@ -1,9 +1,11 @@
-@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/> .
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/sparql/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schema: <https://schema.org/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
+
 
 ex:inter_graph_links_grouped_by_type_and_target_graph a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
