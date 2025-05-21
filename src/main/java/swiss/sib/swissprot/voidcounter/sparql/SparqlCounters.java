@@ -131,7 +131,7 @@ public class SparqlCounters implements Counters {
 	}
 
 	@Override
-	public void findDataTypeIfNoClassOrDtKnown(CommonGraphVariables cv,
+	public void findDataTypePartition(CommonGraphVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source) {
 		schedule(new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source, optimizeFor));
 	}
@@ -139,7 +139,8 @@ public class SparqlCounters implements Counters {
 	@Override
 	public void findPredicateLinkSets(CommonGraphVariables cv, Set<ClassPartition> classes,
 			PredicatePartition predicate, ClassPartition source, String classExclusion) {
-		schedule(new FindPredicateLinkSets(cv, classes, predicate, source, classExclusion, this, optimizeFor));
+		schedule(new FindPredicateLinkSets(cv, classes, predicate, source, classExclusion, this, optimizeFor))
+			.thenApply(null);
 	}
 
 	@Override

@@ -124,11 +124,6 @@ public class PredicatePartition
 		dataTypePartitions.put(resourceOf, new DataTypePartition(resourceOf));
 	}
 
-	public void putDatatypePartition(DataTypePartition resourceOf)
-	{
-		dataTypePartitions.put(resourceOf.getDatatype(), resourceOf);
-	}
-
 	public void putSubjectPartition(ObjectPartition subTarget)
 	{
 		subjectPartitions.put(subTarget.getObject(), subTarget);

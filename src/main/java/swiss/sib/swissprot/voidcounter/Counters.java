@@ -58,7 +58,7 @@ public interface Counters {
 			PredicatePartition predicatePartition, ClassPartition source, GraphDescription og,
 			String classExclusion);
 
-	void findDataTypeIfNoClassOrDtKnown(CommonGraphVariables cv, PredicatePartition predicatePartition,
+	void findDataTypePartition(CommonGraphVariables cv, PredicatePartition predicatePartition,
 			ClassPartition source);
 
 	void findPredicateLinkSets(CommonGraphVariables cv, Set<ClassPartition> classes,

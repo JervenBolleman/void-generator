@@ -140,7 +140,7 @@ public class VirtuosoCounters implements Counters {
 	}
 
 	@Override
-	public void findDataTypeIfNoClassOrDtKnown(CommonGraphVariables cv,
+	public void findDataTypePartition(CommonGraphVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source) {
 		schedule(new FindDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source));
 	}

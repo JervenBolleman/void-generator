@@ -8,7 +8,6 @@ import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.query.impl.MapBindingSet;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
-import org.eclipse.rdf4j.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,15 +20,12 @@ import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public class FindPredicateLinkSets extends QueryCallable<Exception, CommonGraphVariables> {
+public class FindPredicateLinkSets extends QueryCallable<PredicatePartition, CommonGraphVariables> {
 	public static final Logger log = LoggerFactory.getLogger(FindPredicateLinkSets.class);
 	private final String rawQuery;
 	private final Set<ClassPartition> classes;
 	private final PredicatePartition pp;
 	private final ClassPartition source;
-	
-	private PredicatePartition subpredicatePartition;
-
 	
 	private final String classExclusion;
 	private final Counters counters;
@@ -49,16 +45,8 @@ public class FindPredicateLinkSets extends QueryCallable<Exception, CommonGraphV
 		this.rawQuery = Helper.loadSparqlQuery("count_subjects_with_a_type_and_predicate", optimizeFor);
 	}
 
-	private void findDatatypeOrSubclassPartitions(Set<ClassPartition> targetClasses,
-			ClassPartition source, PredicatePartition subpredicatePartition) {
-		if (subpredicatePartition.getDataTypePartitions().isEmpty()) {
-			findSubClassParititions(targetClasses, subpredicatePartition, source);
-		}
-	}
-
-	private void findSubClassParititions(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
-			ClassPartition source) {
-
+	private static void nextSteps(Set<ClassPartition> targetClasses, PredicatePartition predicatePartition,
+			ClassPartition source, Counters counters, CommonGraphVariables cv, OptimizeFor optimizeFor, String classExclusion) {
 		counters.findNamedIndividualObjectSubjectForPredicateInGraph(cv, predicatePartition, source);
 
 		if (optimizeFor.preferGroupBy()) {
@@ -77,7 +65,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception, CommonGraphV
 				}
 			}
 		}
-		counters.findDataTypeIfNoClassOrDtKnown(cv, predicatePartition, source);
+		counters.findDataTypePartition(cv, predicatePartition, source);
 	}
 
 	private long countTriplesInPredicateClassPartition(final RepositoryConnection connection,
@@ -113,22 +101,18 @@ public class FindPredicateLinkSets extends QueryCallable<Exception, CommonGraphV
 	}
 
 	@Override
-	protected Exception run(RepositoryConnection connection) throws Exception {
+	protected PredicatePartition run(RepositoryConnection connection) throws Exception {
 
-		try {
-			subpredicatePartition = new PredicatePartition(pp.getPredicate());
-			long tripleCount = countTriplesInPredicateClassPartition(connection, pp, source);
-			subpredicatePartition.setTripleCount(tripleCount);
+		var subpredicatePartition = new PredicatePartition(pp.getPredicate());
+		long tripleCount = countTriplesInPredicateClassPartition(connection, pp, source);
+		subpredicatePartition.setTripleCount(tripleCount);
 
-		} catch (RepositoryException e) {
-			log.error("Finding class and predicate link sets failed", e);
-			return e;
-		}
-		return null;
+		
+		return subpredicatePartition;
 	}
 
 	@Override
-	protected void set(Exception t) {
+	protected void set(PredicatePartition subpredicatePartition) {
 		if (subpredicatePartition.getTripleCount() > 0) {
 			try {
 				cv.writeLock().lock();
@@ -137,7 +121,7 @@ public class FindPredicateLinkSets extends QueryCallable<Exception, CommonGraphV
 				cv.writeLock().unlock();
 			}
 			if (subpredicatePartition.getTripleCount() != 0) {
-				findDatatypeOrSubclassPartitions(classes, source, subpredicatePartition);
+				nextSteps(classes, subpredicatePartition, source, counters, cv, optimizeFor, classExclusion);
 			}
 			cv.save();
 		}
