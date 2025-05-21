@@ -5,7 +5,7 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 
-ex:select_distinct_datatypes sh:SPARQLExecutable,
+ex:select_distinct_datatypes a sh:SPARQLExecutable,
         sh:SPARQLSelectExecutable ;
     rdfs:comment "Select the distinct datatypes."^^rdf:HTML ;
     sh:prefixes _:sparql_examples_prefixes ;
@@ -17,8 +17,7 @@ WHERE {
     FILTER(isLiteral(?target)) .
     BIND(datatype(?target) as ?dt)
   }
-}
-""" ;
+}""" ;
     schema:keywords "void" , "predicate", "distinct", "type", "datatype" ;
     schema:target [
         rdfs:subClassOf sd:Service

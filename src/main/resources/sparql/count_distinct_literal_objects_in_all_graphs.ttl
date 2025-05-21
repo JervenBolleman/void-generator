@@ -16,7 +16,8 @@ ex:count_distinct_literal_objects_in_all_graphs a sh:SPARQLExecutable,
 	SELECT DISTINCT ?object { 
 	GRAPH ?graph {
 	  ?subject ?predicate ?object . 
-	  FILTER (!(isIRI(?object))|| !isBlank(?object)))
+	  FILTER (isLiteral(?object))
+       }
     }
   } 
 }""" ;
