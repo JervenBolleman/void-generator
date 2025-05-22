@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.query.impl.MapBindingSet;
@@ -99,8 +100,8 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 			while (tqr.hasNext()) {
 				BindingSet next = tqr.next();
 				long count = ((Literal) next.getBinding(COUNT).getValue()).longValue();
-				if (count > 0) {
-					IRI targetType = (IRI) next.getBinding(CLAZZ).getValue();
+				Value clazz = next.getBinding(CLAZZ).getValue();
+				if (count > 0 && clazz instanceof IRI targetType ) {
 					LinkSetToOtherGraph subTarget = new LinkSetToOtherGraph(pp, targetType, sourceType,
 							otherGraph, cv.gd().getGraph());
 					subTarget.setTripleCount(count);
