@@ -21,7 +21,7 @@ final class CountDistinctBnodeSubjectsInAGraph extends QueryCallable<Long, Commo
 	public CountDistinctBnodeSubjectsInAGraph(CommonGraphVariables cv, OptimizeFor optimizeFor) {
 		super(cv);
 		
-		this.rq = Helper.loadSparqlQuery("count_distinct_bnode_subjects_in_all_graphs", optimizeFor);
+		this.rq = Helper.loadSparqlQuery("count_distinct_bnode_objects_in_a_graph", optimizeFor);
 	}
 
 	@Override
