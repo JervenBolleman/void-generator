@@ -40,7 +40,14 @@ public class SparqlCounters implements Counters {
 	}
 
 	public void countDistinctIriSubjectsAndObjectsInAGraph(CommonGraphVariables cv) {
-		schedule(new CountDistinctIriSubjectsAndObjectsInAGraph(cv, optimizeFor));
+		// If we are optimizing for Qlever, we count subjects and objects separately
+		// this allows lazy evaluation of the results, meaning a lot less memory is used.
+		if (optimizeFor.equals(OptimizeFor.QLEVER)) {
+			schedule(new CountDistinctIriSubjectsInAGraph(cv, optimizeFor));
+			schedule(new CountDistinctIriObjectsInAGraph(cv, optimizeFor));
+		} else {
+			schedule(new CountDistinctIriSubjectsAndObjectsInAGraph(cv, optimizeFor));
+		}
 	}
 
 	public void countDistinctIriSubjectsAndObjectsInDefaultGraph(CommonVariables cv) {
