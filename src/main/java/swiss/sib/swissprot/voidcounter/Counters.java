@@ -2,8 +2,6 @@ package swiss.sib.swissprot.voidcounter;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
 
@@ -39,13 +37,13 @@ public interface Counters {
 	default void findPredicatesAndClasses(CommonVariables cv, Set<IRI> knownPredicates, GraphDescription gd, boolean findDistinctClasses, boolean findPredicates, boolean detailedCount, String classExclusion) {
 		CommonGraphVariables gcv = cv.with(gd);
 		if (findDistinctClasses && findPredicates && detailedCount) {
-			findPredicatesAndClasses(gcv, knownPredicates, classExclusion);
+			findPredicatesAndClassesInAGraph(gcv, knownPredicates, classExclusion);
 		} else {
 			if (findPredicates) {
-				findPredicates(gcv, knownPredicates);
+				findPredicatesInAGraph(gcv, knownPredicates);
 			}
 			if (findDistinctClasses) {
-				findDistinctClassses(gcv, classExclusion);
+				findDistinctClasssesInAGraph(gcv, classExclusion);
 			}
 		}
 	}
@@ -55,7 +53,7 @@ public interface Counters {
 		CommonGraphVariables gdcv = cv.with(gd);
 		// Objects are hardest to count so schedules first.
 		if (countDistinctObjects) {
-			countDistinctLiteralObjects(gdcv);
+			countDistinctLiteralObjectsInAGraph(gdcv);
 			if (! countDistinctSubjects) {
 				countDistinctIriObjectsInAGraph(gdcv);
 				countDistinctBnodeObjectsInAGraph(gdcv);
@@ -87,15 +85,15 @@ public interface Counters {
 
 	void countDistinctBnodeSubjectsInDefaultGraph(CommonVariables cv);
 
-	void findPredicatesAndClasses(CommonGraphVariables cv,
+	void findPredicatesAndClassesInAGraph(CommonGraphVariables cv,
 			Set<IRI> knownPredicates,
 			String classExclusion);
 
-	void findPredicates(CommonGraphVariables cv, Set<IRI> knownPredicates);
+	void findPredicatesInAGraph(CommonGraphVariables cv, Set<IRI> knownPredicates);
 
-	void findDistinctClassses(CommonGraphVariables cv, String classExclusion);
+	void findDistinctClasssesInAGraph(CommonGraphVariables cv, String classExclusion);
 
-	void countDistinctLiteralObjects(CommonGraphVariables cv);
+	void countDistinctLiteralObjectsInAGraph(CommonGraphVariables cv);
 
 	void countTriplesInNamedGraph(CommonGraphVariables cv);
 
@@ -123,12 +121,6 @@ public interface Counters {
 
 	void findNamedIndividualObjectSubjectForPredicateInGraph(CommonGraphVariables cv,
 			PredicatePartition predicatePartition, ClassPartition source);
-
-	void findPredicatesAndCountObjects(CommonGraphVariables cv, Set<IRI> knownPredicates,
-			Consumer<CommonGraphVariables> onFoundPredicates);
-
-	void findDistinctClassses(CommonGraphVariables cv,
-			String classExclusion, Supplier<QueryCallable<?, CommonGraphVariables>> onFoundClasses);
 
 	void countUniqueSubjectPerPredicateInGraph(CommonGraphVariables cv, PredicatePartition predicatePartition);
 

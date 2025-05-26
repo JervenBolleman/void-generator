@@ -76,7 +76,7 @@ class CountUniqueSubjectPerPredicateInGraph
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

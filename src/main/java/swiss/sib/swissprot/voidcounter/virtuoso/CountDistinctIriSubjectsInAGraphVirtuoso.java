@@ -42,7 +42,7 @@ final class CountDistinctIriSubjectsInAGraphVirtuoso extends CountDistinctIriInA
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

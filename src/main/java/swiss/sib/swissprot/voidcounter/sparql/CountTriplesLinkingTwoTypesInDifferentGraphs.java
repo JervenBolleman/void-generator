@@ -77,12 +77,13 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 		bs.setBinding("linkingGraphName", ls.getLinkingGraph());
 		setQuery(countTriplesLinking, bs);
 
-		TupleQueryResult tq = Helper.runTupleQuery(getQuery(), connection);
-		if (tq.hasNext()) {
-			BindingSet next = tq.next();
-			return ((Literal) next.getBinding(LSC).getValue()).longValue();
-		} else {
-			return 0L;
+		try (TupleQueryResult tq = Helper.runTupleQuery(getQuery(), connection)){
+			if (tq.hasNext()) {
+				BindingSet next = tq.next();
+				return ((Literal) next.getBinding(LSC).getValue()).longValue();
+			} else {
+				return 0L;
+			}
 		}
 	}
 
@@ -101,7 +102,7 @@ public final class CountTriplesLinkingTwoTypesInDifferentGraphs extends QueryCal
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

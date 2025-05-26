@@ -82,7 +82,7 @@ class IsSourceClassLinkedToTargetClassTest {
 		CommonGraphVariables cv = new CommonGraphVariables(sd, bag, repository, s -> {
 		}, new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, null,
-				new SparqlCounters(of, scheduler), of);
+				new SparqlCounters(of, scheduler, scheduler), of);
 		counter.call();
 		assertEquals(1, pp.getLinkSets().size());
 		assertEquals(1, finishedQueries.get());

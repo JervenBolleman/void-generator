@@ -132,7 +132,7 @@ final class CountDistinctBnodeObjectsInAllGraphs extends QueryCallable<Long, Com
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

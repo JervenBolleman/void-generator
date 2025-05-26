@@ -3,7 +3,6 @@ package swiss.sib.swissprot.voidcounter.sparql;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -25,22 +24,20 @@ import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-public final class FindDistinctClassses extends QueryCallable<List<ClassPartition>, CommonGraphVariables> {
+public final class FindDistinctClasssesInAGraph extends QueryCallable<List<ClassPartition>, CommonGraphVariables> {
 	private static final String REPLACE = "###REPLACE###";
 	private final String nestedLoopQuery;
 	private final String groupByQuery;
-	private static final Logger log = LoggerFactory.getLogger(FindDistinctClassses.class);
+	private static final Logger log = LoggerFactory.getLogger(FindDistinctClasssesInAGraph.class);
 
 	private final String classExclusion;
-	private final Supplier<QueryCallable<?, CommonGraphVariables>> onSuccess;
 	private final OptimizeFor optimizeFor;
 	private final Counters counters;
 
-	public FindDistinctClassses(CommonGraphVariables cv,
-			String classExclusion, Supplier<QueryCallable<?, CommonGraphVariables>> onSuccess, OptimizeFor optimizeFor, Counters counters) {
+	public FindDistinctClasssesInAGraph(CommonGraphVariables cv,
+			String classExclusion, OptimizeFor optimizeFor, Counters counters) {
 		super(cv);
 		this.classExclusion = classExclusion;
-		this.onSuccess = onSuccess;
 		this.optimizeFor = optimizeFor;
 		this.counters = counters;
 		this.nestedLoopQuery = Helper.loadSparqlQuery("distinct_types_in_a_graph", optimizeFor);
@@ -72,9 +69,6 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 			groupBy(connection, classesList, tq);
 		else
 			nested(connection, classesList, tq);
-		if (onSuccess != null) {
-			counters.schedule(onSuccess.get());
-		}
 		return classesList;
 	}
 
@@ -145,7 +139,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 
@@ -202,7 +196,7 @@ public final class FindDistinctClassses extends QueryCallable<List<ClassPartitio
 		}
 
 		@Override
-		protected Logger getLog() {
+		public Logger getLog() {
 			return log;
 		}
 

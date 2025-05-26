@@ -105,7 +105,7 @@ final class FindDataTypeIfNoClassOrDtKnown extends QueryCallable<Set<IRI>, Commo
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

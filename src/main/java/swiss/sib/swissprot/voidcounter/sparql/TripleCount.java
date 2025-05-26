@@ -48,7 +48,7 @@ public class TripleCount extends QueryCallable<Long, CommonGraphVariables> {
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

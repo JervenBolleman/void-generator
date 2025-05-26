@@ -84,7 +84,7 @@ final class CountDistinctLiteralObjects extends QueryCallable<Long, CommonGraphV
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

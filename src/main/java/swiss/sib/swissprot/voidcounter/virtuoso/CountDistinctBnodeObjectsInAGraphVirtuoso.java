@@ -42,7 +42,7 @@ public final class CountDistinctBnodeObjectsInAGraphVirtuoso extends CountDistin
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

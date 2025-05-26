@@ -17,8 +17,7 @@ public class FindPredicatesAndCountObjectsTest extends CommonTest {
 	@EnumSource(OptimizeFor.class)
 	void empty(OptimizeFor of) throws IOException {
 		var cv = createCommonVariables();
-		var counters = new SparqlCounters(of, null);
-		var counter = new FindPredicatesAndCountObjects(cv.with(emptyGd), Set.of(), null, of, counters);
+		var counter = new FindPredicatesAndCountObjects(cv.with(emptyGd), Set.of(), of);
 		assertNull(counter.call());
 		assertEquals(1, cv.finishedQueries().get());
 	}

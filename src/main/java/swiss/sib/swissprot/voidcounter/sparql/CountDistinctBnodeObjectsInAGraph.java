@@ -57,7 +57,7 @@ final class CountDistinctBnodeObjectsInAGraph extends QueryCallable<Long, Common
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

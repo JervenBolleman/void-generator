@@ -153,7 +153,7 @@ public final class IsSourceClassLinkedToDistinctClassInOtherGraph extends QueryC
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

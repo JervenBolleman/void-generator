@@ -65,7 +65,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		ServiceDescription sd = new ServiceDescription();
 		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, s->{},  new ReentrantReadWriteLock(), limiter, finishedQueries);
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
-				predicatePartition, sourceClass, ogd, null, new SparqlCounters(of, (s) -> null), of);
+				predicatePartition, sourceClass, ogd, null, new SparqlCounters(of, (s) -> null, (s) -> null), of);
 		try (RepositoryConnection connection = repository.getConnection()) {
 			SimpleValueFactory vf = SimpleValueFactory.getInstance();
 			connection.begin();
@@ -85,7 +85,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		ServiceDescription sd = new ServiceDescription();
 		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, null,  new ReentrantReadWriteLock(), limiter, finishedQueries);
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv,  
-				predicatePartition, sourceClass, ogd, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(fr, (s) -> null), fr);
+				predicatePartition, sourceClass, ogd, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(fr, (s) -> null, (s) -> null), fr);
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
 		assertEquals(1, predicatePartition.getLinkSets().size());
@@ -98,7 +98,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, null,  new ReentrantReadWriteLock(), limiter, finishedQueries);
 		ogd.getClasses().add(new ClassPartition(targetClass.getClazz()));
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
-				predicatePartition, sourceClass, ogd, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(of, (s) -> null), of);		
+				predicatePartition, sourceClass, ogd, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(of, (s) -> null, (s) -> null), of);		
 		Exception call = isSourceClassLinkedToTargetClass.call();
 		assertNull(call);
 		assertEquals(1, predicatePartition.getLinkSets().size());

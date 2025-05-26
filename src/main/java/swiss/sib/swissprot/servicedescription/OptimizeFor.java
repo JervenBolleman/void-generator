@@ -1,7 +1,7 @@
 package swiss.sib.swissprot.servicedescription;
 
 public enum OptimizeFor {
-	SPARQL(true, false), VIRTUOSO(false, true), QLEVER(true, true), SPARQLUNION(true, true);
+	SPARQL(true, false), VIRTUOSO(false, true), QLEVER(false, true), SPARQLUNION(true, true);
 
 	private final boolean preferGroupBy;
 	private final boolean allInUnionGraph;

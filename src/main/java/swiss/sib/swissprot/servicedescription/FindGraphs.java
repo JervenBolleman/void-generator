@@ -94,7 +94,7 @@ public class FindGraphs extends QueryCallable<Set<String>, CommonVariables> {
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 

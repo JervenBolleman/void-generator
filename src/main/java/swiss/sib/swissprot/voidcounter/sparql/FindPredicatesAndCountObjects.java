@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -25,7 +24,6 @@ import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.PredicatePartition;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
 import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
-import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 public final class FindPredicatesAndCountObjects extends QueryCallable<List<PredicatePartition>, CommonGraphVariables> {
@@ -33,21 +31,14 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 	private static final Logger log = LoggerFactory.getLogger(FindPredicatesAndCountObjects.class);
 
 	private final Map<IRI, IRI> knownPredicates;
-	private final Consumer<CommonGraphVariables> onSuccess;
 	private final String rawQuery;
 
-	private final Counters counters;
-
 	public FindPredicatesAndCountObjects(CommonGraphVariables cv, Set<IRI> knownPredicates,
-			Consumer<CommonGraphVariables> onSuccess,
-			OptimizeFor optimizeFor, Counters counters) {
+			OptimizeFor optimizeFor) {
 		super(cv);
-		this.counters = counters;
 		this.rawQuery = Helper.loadSparqlQuery("find_predicates_count_objects", optimizeFor);
 		this.knownPredicates = new HashMap<>();
 		knownPredicates.stream().forEach(p -> this.knownPredicates.put(p, p));
-
-		this.onSuccess = onSuccess;
 	}
 
 	private List<PredicatePartition> findPredicates(GraphDescription gd, RepositoryConnection connection)
@@ -55,34 +46,32 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 		MapBindingSet bs = new MapBindingSet();
 		bs.setBinding("graph", gd.getGraph());
 		setQuery(rawQuery, bs);
+		List<PredicatePartition> res = new ArrayList<>();
 		try (TupleQueryResult predicateQuery = Helper.runTupleQuery(getQuery(), connection)) {
-			List<PredicatePartition> res = new ArrayList<>();
 			while (predicateQuery.hasNext()) {
-
 				BindingSet next = predicateQuery.next();
-				Binding predicate = next.getBinding("predicate");
-				Binding predicateCount = next.getBinding("count");
-				if (predicateCount != null && predicate != null) {
-					IRI valueOf = (IRI) predicate.getValue();
-					PredicatePartition pp;
-					// Normalize in memory
-					if (knownPredicates.containsKey(valueOf)) {
-						pp = new PredicatePartition(knownPredicates.get(valueOf));
-					} else {
-						pp = new PredicatePartition(valueOf);
-					}
-					final long count = ((Literal) predicateCount.getValue()).longValue();
-					if (count > 0) {
-						pp.setTripleCount(count);
-						res.add(pp);
-					}
-				}
+				bindingSetToPredicateCount(res, next);
 			}
-			return res;
-		} finally {
-			cv.save();
-			if (onSuccess != null) {
-				onSuccess.accept(cv);
+		}
+		return res;
+	}
+
+	private void bindingSetToPredicateCount(List<PredicatePartition> res, BindingSet next) {
+		Binding predicate = next.getBinding("predicate");
+		Binding predicateCount = next.getBinding("count");
+		if (predicateCount != null && predicate != null) {
+			IRI valueOf = (IRI) predicate.getValue();
+			PredicatePartition pp;
+			// Normalize in memory
+			if (knownPredicates.containsKey(valueOf)) {
+				pp = new PredicatePartition(knownPredicates.get(valueOf));
+			} else {
+				pp = new PredicatePartition(valueOf);
+			}
+			final long count = ((Literal) predicateCount.getValue()).longValue();
+			if (count > 0) {
+				pp.setTripleCount(count);
+				res.add(pp);
 			}
 		}
 	}
@@ -113,14 +102,10 @@ public final class FindPredicatesAndCountObjects extends QueryCallable<List<Pred
 		} finally {
 			cv.writeLock().unlock();
 		}
-		for (PredicatePartition predicatePartition : predicates) {
-			counters.countUniqueSubjectPerPredicateInGraph(cv, predicatePartition);
-			counters.countUniqueObjectsPerPredicateInGraph(cv, predicatePartition);
-		}
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

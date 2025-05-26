@@ -57,7 +57,7 @@ final class CountDistinctIriSubjectsInDefaultGraph extends QueryCallable<Long, C
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

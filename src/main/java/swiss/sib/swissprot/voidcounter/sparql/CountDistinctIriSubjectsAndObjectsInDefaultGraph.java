@@ -75,7 +75,7 @@ final class CountDistinctIriSubjectsAndObjectsInDefaultGraph extends
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 

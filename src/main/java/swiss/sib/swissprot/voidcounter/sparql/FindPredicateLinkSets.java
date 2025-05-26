@@ -128,7 +128,7 @@ public class FindPredicateLinkSets extends QueryCallable<PredicatePartition, Com
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

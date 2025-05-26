@@ -60,7 +60,7 @@ final class CountDistinctIriSubjectsInAGraph extends QueryCallable<Long, CommonG
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

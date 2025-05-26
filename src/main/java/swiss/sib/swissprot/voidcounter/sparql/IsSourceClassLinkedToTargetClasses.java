@@ -101,7 +101,7 @@ public final class IsSourceClassLinkedToTargetClasses extends QueryCallable<Map<
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

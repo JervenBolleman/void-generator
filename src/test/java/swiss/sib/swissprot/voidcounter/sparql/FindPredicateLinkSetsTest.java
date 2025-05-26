@@ -20,7 +20,7 @@ public class FindPredicateLinkSetsTest extends CommonTest {
     @EnumSource(OptimizeFor.class)
     void empty(OptimizeFor of) throws IOException {
         var cv = createCommonVariables();
-    	var counters = new SparqlCounters(of, schedule);
+    	var counters = new SparqlCounters(of, schedule, schedule);
 		var targets = Set.of(new ClassPartition(RDF.TYPE));
 		var source = new ClassPartition(RDF.LIST);
 		var pre = new PredicatePartition(RDF.PREDICATE);

@@ -2,8 +2,8 @@ package swiss.sib.swissprot.voidcounter.sparql;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -16,19 +16,20 @@ import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
 
-class FindClassPredicatePairs extends QueryCallable<Void, CommonGraphVariables> {
+class FindClassPredicatePairs extends QueryCallable<Exception, CommonGraphVariables> {
 	private static final Logger log = LoggerFactory.getLogger(FindClassPredicatePairs.class);
-	private final ReadWriteLock rwLock;
 	private final String classExclusion;
 	private final Counters counters;
+	private final CompletableFuture<Exception>[] future;
 
+	@SafeVarargs
 	public FindClassPredicatePairs(CommonGraphVariables cv,
-			ReadWriteLock rwLock, String classExclusion,
-			Counters counters) {
+			String classExclusion,
+			Counters counters, CompletableFuture<Exception>... future) {
 		super(cv);
-		this.rwLock = rwLock;
 		this.classExclusion = classExclusion;
 		this.counters = counters;
+		this.future = future;
 	}
 
 	@Override
@@ -43,11 +44,18 @@ class FindClassPredicatePairs extends QueryCallable<Void, CommonGraphVariables> 
 	}
 
 	@Override
-	protected Void run(RepositoryConnection connection) throws Exception {
+	protected Exception run(RepositoryConnection connection) {
 		Set<ClassPartition> classes;
 		Set<PredicatePartition> predicates;
-
-		final Lock readLock = rwLock.readLock();
+		if (future != null) {
+			for (CompletableFuture<Exception> f : future) {
+				var join = f.join();
+				if (join != null) {
+					return join;
+				}
+			}
+		}
+		final Lock readLock = cv.readLock();
 		try {
 			readLock.lock();
 			classes = new HashSet<>(cv.gd().getClasses());
@@ -67,12 +75,12 @@ class FindClassPredicatePairs extends QueryCallable<Void, CommonGraphVariables> 
 	}
 
 	@Override
-	protected void set(Void t) {
+	protected void set(Exception t) {
 
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 

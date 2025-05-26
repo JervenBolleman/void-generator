@@ -36,7 +36,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphsTest {
 	private ClassPartition sourceClass = new ClassPartition(
 			SimpleValueFactory.getInstance().createIRI("http://example.com/sourceClass"));
 	private ClassPartition targetClass = new ClassPartition(
-			SimpleValueFactory.getInstance().createIRI("http://example.com/targetClass"));;
+			SimpleValueFactory.getInstance().createIRI("http://example.com/targetClass"));
 	private PredicatePartition predicatePartition;
 	private GraphDescription sourceGraph;
 	private AtomicInteger finishedQueries;

@@ -23,6 +23,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -151,12 +152,11 @@ public class Generate implements Callable<Integer> {
 	@Option(names = {
 			"--data-release-date" }, description = "Set a 'date' of release for the sparql-endpoint data and the datasets")
 	private String dataReleaseDate;
-	
-	@Option(names = { "--optimize-for" }, description = "Which store to optimize for. Virtuoso, Qlever or a SPARQLunion (all triples are in named graphs and the default graph is the union of all named graphs", defaultValue = "sparql")
+
+	@Option(names = {
+			"--optimize-for" }, description = "Which store to optimize for. Virtuoso, Qlever or a SPARQLunion (all triples are in named graphs and the default graph is the union of all named graphs", defaultValue = "sparql")
 	private String optimizeFor = "sparql";
 
-	
-	
 	public static void main(String[] args) {
 		int exitCode = new CommandLine(new Generate()).execute(args);
 		System.exit(exitCode);
@@ -212,62 +212,56 @@ public class Generate implements Callable<Integer> {
 			sr.setHttpClient(hcb.build());
 			repository = sr;
 		}
-		update();
+		var update = update();
 		// Virtuoso was not started by us so we should not send it a shutdown command
 		if (virtuosoJdcb == null) {
 			repository.shutDown();
 		}
-		return 0;
+		if (update > 0) {
+			log.error("There were {} queries that did not finish", update);
+			return update;
+		} else {
+			return 0;
+		}
 	}
 
 	public Generate() {
 		super();
 		this.sd = new ServiceDescription();
 		// At least 1 but no more than one third of the cpus
-		if (maxConcurrency <= 0) {
-			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
-		}
-		limit = new Semaphore(maxConcurrency);
-		executors = Executors.newFixedThreadPool(maxConcurrency);
-	}
-	
-	public Generate(int maxConcurrency) {
-		super();
-		this.sd = new ServiceDescription();
-		this.maxConcurrency = maxConcurrency;
-		// At least 1 but no more than one third of the cpus
-		if (maxConcurrency <= 0) {
-			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
-		}
-		limit = new Semaphore(maxConcurrency);
-		executors = Executors.newFixedThreadPool(maxConcurrency);
 	}
 
 	private final List<Future<Exception>> futures = Collections.synchronizedList(new ArrayList<>());
 	private final List<QueryCallable<?, ? extends Variables>> tasks = Collections.synchronizedList(new ArrayList<>());
 
-	private final ExecutorService executors;
-
-	private final Semaphore limit;
+	private ExecutorService executor;
+	private Executor delayedExecutor;
+	private Semaphore limit;
 
 	private CompletableFuture<Exception> findingGraphs = null;
 
 	private final CompletableFuture<Exception> schedule(QueryCallable<?, ? extends Variables> task) {
 		scheduledQueries.incrementAndGet();
 		tasks.add(task);
-		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(task::call, executors);
-
+		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(task::call, executor);
 		futures.add(cf);
 		return cf;
 	}
-	
 
-	public void update() {
+	private final CompletableFuture<Exception> scheduleAgain(QueryCallable<?, ? extends Variables> task) {
+		scheduledQueries.incrementAndGet();
+		tasks.add(task);
+		CompletableFuture<Exception> cf = CompletableFuture.supplyAsync(task::call, delayedExecutor);
+		futures.add(cf);
+		return cf;
+	}
+
+	public int update() {
 		if (log.isDebugEnabled())
 			log.debug("Void listener for {}", graphNames.stream().collect(Collectors.joining(", ")));
 		if (dataReleaseDate != null) {
 			sd.setReleaseDate(LocalDate.from(DateTimeFormatter.ISO_DATE.parse(dataReleaseDate)));
-		} 
+		}
 		sd.setVersion(dataVersion);
 		if (commaSeperatedKnownPredicates != null) {
 			this.knownPredicates = COMMA.splitAsStream(commaSeperatedKnownPredicates).map(VF::createIRI)
@@ -275,6 +269,13 @@ public class Generate implements Callable<Integer> {
 		} else
 			this.knownPredicates = new HashSet<>();
 		this.iriOfVoid = SimpleValueFactory.getInstance().createIRI(iriOfVoidAsString);
+		if (maxConcurrency <= 0) {
+			maxConcurrency = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
+		}
+		limit = new Semaphore(maxConcurrency);
+		executor = Executors.newFixedThreadPool(maxConcurrency);
+		delayedExecutor = CompletableFuture.delayedExecutor(1, TimeUnit.MINUTES, executor);
+
 		Consumer<ServiceDescription> saver;
 		if (repository instanceof VirtuosoRepository) {
 			this.distinctSubjectIrisFile = new File(sdFile.getAbsolutePath() + ".distinct-subjects");
@@ -289,26 +290,27 @@ public class Generate implements Callable<Integer> {
 		} else {
 			OptimizeFor fromString = OptimizeFor.fromString(optimizeFor);
 			log.info("Optimizing for backing store: {}", fromString);
-			this.counters = new SparqlCounters(fromString, this::schedule);
+			this.counters = new SparqlCounters(fromString, this::schedule, this::scheduleAgain);
 			saver = sdg -> writeServiceDescription(sdg, iriOfVoid);
 		}
 
 		CommonVariables cv = scheduleCounters(sd, saver);
 
-		waitForCountToFinish(futures);
+		int res = waitForCountToFinish(futures);
 		if (add) {
 			log.debug("Starting the count of the void data itself using {}", maxConcurrency);
 			countTheVoidDataItself(iriOfVoid, cv);
-			waitForCountToFinish(futures);
+			res += waitForCountToFinish(futures);
 			saveResults(iriOfVoid, saver);
 
 			log.debug("Starting the count of the void data itself a second time using {}", maxConcurrency);
 
 			countTheVoidDataItself(iriOfVoid, cv);
-			waitForCountToFinish(futures);
+			res += waitForCountToFinish(futures);
 		}
 		saveResults(iriOfVoid, saver);
-		executors.shutdown();
+		executor.shutdown();
+		return res;
 	}
 
 	private ConcurrentHashMap<String, Roaring64NavigableMap> readGraphsWithSerializedBitMaps(File file) {
@@ -413,10 +415,11 @@ public class Generate implements Callable<Integer> {
 		String voidGraphUri = voidGraph.toString();
 		GraphDescription voidGraphDescription = getOrCreateGraphDescriptionObject(voidGraphUri, sd);
 		counters.countSpecifics(cv, voidGraphDescription, countDistinctSubjects, countDistinctObjects);
-		counters.findPredicatesAndClasses(cv, knownPredicates, voidGraphDescription, findDistinctClasses, findPredicates, detailedCount, classExclusion);
+		counters.findPredicatesAndClasses(cv, knownPredicates, voidGraphDescription, findDistinctClasses,
+				findPredicates, detailedCount, classExclusion);
 	}
 
-	private void waitForCountToFinish(List<Future<Exception>> futures) {
+	private int waitForCountToFinish(List<Future<Exception>> futures) {
 		try {
 			int loop = 0;
 			while (!futures.isEmpty()) {
@@ -441,6 +444,7 @@ public class Generate implements Callable<Integer> {
 		} else {
 			log.error("Finished more queries than scheduled: " + finishedQueries.get() + "/" + scheduledQueries.get());
 		}
+		return scheduledQueries.get() - finishedQueries.get();
 	}
 
 	private int checkProgress(List<Future<Exception>> futures, int loop, final int last, final Future<Exception> next)
@@ -457,8 +461,7 @@ public class Generate implements Callable<Integer> {
 			// This is ok we just try again in the loop.
 		}
 		if (loop == 60) {
-			
-			
+
 			logRunningQueries();
 			loop = 0;
 		}
@@ -475,12 +478,12 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private CommonVariables scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
-	
+
 		CommonVariables cv = new CommonVariables(sd, repository, saver, rwLock, limit, finishedQueries);
 		determineGraphNames(sd, saver);
 
 		counters.countDistinctObjectsSubjectsInDefaultGraph(cv, countDistinctSubjects, countDistinctObjects);
-		
+
 		for (GraphDescription gd : getGraphs()) {
 			counters.countSpecifics(cv, gd, countDistinctSubjects, countDistinctObjects);
 		}
@@ -488,16 +491,16 @@ public class Generate implements Callable<Integer> {
 		// Ensure that we first do the big counts before starting on counting the
 		// smaller sets.
 		for (GraphDescription gd : getGraphs()) {
-			counters.findPredicatesAndClasses(cv, knownPredicates, gd, findDistinctClasses, findPredicates, detailedCount, classExclusion);
+			counters.findPredicatesAndClasses(cv, knownPredicates, gd, findDistinctClasses, findPredicates,
+					detailedCount, classExclusion);
 		}
 		return cv;
 	}
 
-	
-
 	/**
 	 * Ensure that the graph description exists so that we won't have an issue
 	 * accessing them at any point.
+	 * 
 	 * @param sd
 	 * @param saver
 	 * @param writeLock
@@ -509,29 +512,23 @@ public class Generate implements Callable<Integer> {
 		} else {
 			for (var graphName : getGraphNames()) {
 				getOrCreateGraphDescriptionObject(graphName, sd);
-			}	
+			}
 		}
 	}
-	
-	private Set<String> getGraphNames(){
+
+	private Set<String> getGraphNames() {
 		if (findingGraphs != null && !findingGraphs.isDone()) {
 			findingGraphs.join();
 		}
 		return graphNames;
 	}
-	
-	private Collection<GraphDescription> getGraphs(){
+
+	private Collection<GraphDescription> getGraphs() {
 		if (findingGraphs != null && !findingGraphs.isDone()) {
 			findingGraphs.join();
 		}
 		return sd.getGraphs();
 	}
-
-	
-
-	
-
-	
 
 	private GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
 		GraphDescription pgd = sd.getGraph(graphName);
@@ -670,7 +667,7 @@ public class Generate implements Callable<Integer> {
 	public void setOptimizeFor(String optimizeFor) {
 		this.optimizeFor = optimizeFor;
 	}
-	
+
 	public void setMaxConcurrency(int maxConcurrency) {
 		this.maxConcurrency = maxConcurrency;
 	}

@@ -4,19 +4,14 @@ import java.util.concurrent.Callable;
 
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 
 public abstract class QueryCallable<T, C extends Variables> implements Callable<Exception> {
-	private static final int DEFAULT_SLEEP = 60*1000;
-	private static final int MAX_ATTEMPTS = 3;
 	protected static final long SWITCH_TO_OPTIMIZED_COUNT_AT = 100_000_000L;
 	protected final C cv;
 	protected volatile boolean running = false;
-	private int attempt = 0;
 	private volatile String query;
-	private Exception exception;
 
 	protected QueryCallable(C cv) {
 		super();
@@ -27,35 +22,17 @@ public abstract class QueryCallable<T, C extends Variables> implements Callable<
 	public Exception call() {
 		try {
 			cv.limiter().acquireUninterruptibly();
-			while (attempt < MAX_ATTEMPTS)
-				try (RepositoryConnection localConnection = cv.repository().getConnection()) {
-					execute(localConnection);
-					return null;
-				} catch (QueryEvaluationException e) {
-					//If we ran out of resources we wait a bit and try again a little bit later.
-					getLog().debug("Failed due to: {} at attempt {}", e.getMessage(), attempt);
-					exception = e;
-					++attempt;
-					int sleepInMilliSeconds = DEFAULT_SLEEP;
-					if (e.getMessage().contains("allocate")) {
-						//not enough ram for qlever sleep longer
-						sleepInMilliSeconds = DEFAULT_SLEEP * 5;
-					}
-					try {
-						Thread.sleep(sleepInMilliSeconds);
-					} catch (InterruptedException e1) {
-						Thread.currentThread().interrupt();
-						return e;
-					}
-				} catch (Exception e) {
-					logFailed(e);
-					return e;
-				}
+			try (RepositoryConnection localConnection = cv.repository().getConnection()) {
+				execute(localConnection);
+				return null;
+			} catch (Exception e) {
+				logFailed(e);
+				return e;
+			}
 		} finally {
 			running = false;
 			cv.limiter().release();
 		}
-		return exception;
 	}
 
 	private final void execute(RepositoryConnection localConnection) throws Exception {
@@ -104,5 +81,5 @@ public abstract class QueryCallable<T, C extends Variables> implements Callable<
 		setQuery(sb);
 	}
 
-	protected abstract Logger getLog();
+	public abstract Logger getLog();
 }

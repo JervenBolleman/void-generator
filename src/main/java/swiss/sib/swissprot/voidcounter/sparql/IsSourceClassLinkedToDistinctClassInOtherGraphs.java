@@ -121,7 +121,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphs extends QueryCallab
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 

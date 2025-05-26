@@ -78,7 +78,7 @@ public final class IsSourceClassLinkedToTargetClass extends QueryCallable<Long, 
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

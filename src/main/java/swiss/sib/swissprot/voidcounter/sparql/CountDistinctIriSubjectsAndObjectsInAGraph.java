@@ -77,7 +77,7 @@ final class CountDistinctIriSubjectsAndObjectsInAGraph extends QueryCallable<Sub
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 

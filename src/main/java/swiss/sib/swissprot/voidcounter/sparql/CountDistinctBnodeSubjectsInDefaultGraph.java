@@ -58,7 +58,7 @@ final class CountDistinctBnodeSubjectsInDefaultGraph extends QueryCallable<Long,
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

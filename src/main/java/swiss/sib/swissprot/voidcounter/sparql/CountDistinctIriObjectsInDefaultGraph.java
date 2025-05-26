@@ -62,7 +62,7 @@ public final class CountDistinctIriObjectsInDefaultGraph extends QueryCallable<L
 	}
 
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

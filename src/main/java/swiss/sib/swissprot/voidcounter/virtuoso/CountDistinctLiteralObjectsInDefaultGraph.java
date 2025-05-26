@@ -88,7 +88,7 @@ final class CountDistinctLiteralObjectsInDefaultGraph extends QueryCallable<Long
 	}
 	
 	@Override
-	protected Logger getLog() {
+	public Logger getLog() {
 		return log;
 	}
 }

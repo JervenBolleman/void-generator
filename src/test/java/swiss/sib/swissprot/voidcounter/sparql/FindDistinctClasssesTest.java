@@ -16,8 +16,8 @@ public class FindDistinctClasssesTest extends CommonTest {
 	@EnumSource(OptimizeFor.class)
 	void empty(OptimizeFor of) throws IOException {
 		var cv = createCommonVariables();
-		var counters = new SparqlCounters(of, schedule);
-		var counter = new FindDistinctClassses(cv.with(emptyGd), null, null, of, counters);
+		var counters = new SparqlCounters(of, schedule, schedule);
+		var counter = new FindDistinctClasssesInAGraph(cv.with(emptyGd), null, of, counters);
 		assertNull(counter.call());
 		assertEquals(1, cv.finishedQueries().get());
 	}
