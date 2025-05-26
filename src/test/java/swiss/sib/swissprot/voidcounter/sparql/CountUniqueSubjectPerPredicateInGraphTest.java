@@ -6,8 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -69,9 +68,8 @@ public class CountUniqueSubjectPerPredicateInGraphTest {
 		PredicatePartition pp = new PredicatePartition(RDF.FIRST);
 		gd.getPredicates().add(pp);
 		sd.putGraphDescription(gd);
-		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, s->{}, writeLock,
+		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, s->{},  new ReentrantReadWriteLock(),
 				new Semaphore(1), finishedQueries);
 		var counter = new CountUniqueSubjectPerPredicateInGraph(cv, pp, of);
 		counter.call();

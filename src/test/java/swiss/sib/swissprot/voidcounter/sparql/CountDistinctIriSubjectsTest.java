@@ -5,8 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -45,10 +44,9 @@ class CountDistinctIriSubjectsTest {
 	void empty(OptimizeFor of) throws IOException {
 
 		final ServiceDescription sd = new ServiceDescription();
-		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		}, new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(0, sd.getDistinctIriSubjectCount());
@@ -68,9 +66,8 @@ class CountDistinctIriSubjectsTest {
 		}
 		final ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		Lock writeLock = new ReentrantLock();
 		var cv = new CommonVariables(sd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		}, new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriSubjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();
 		assertEquals(1, sd.getDistinctIriSubjectCount());
@@ -80,7 +77,7 @@ class CountDistinctIriSubjectsTest {
 		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
 		var gcv = new CommonGraphVariables(sd, gd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		},  new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 		var count = new CountDistinctIriSubjectsInAGraph(gcv, of);
 		count.call();
 		assertEquals(1, gd.getDistinctIriSubjectCount());

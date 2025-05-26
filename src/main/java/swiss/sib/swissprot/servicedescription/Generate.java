@@ -62,7 +62,6 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import swiss.sib.swissprot.servicedescription.io.ServiceDescriptionRDFWriter;
-import swiss.sib.swissprot.voidcounter.CommonGraphVariables;
 import swiss.sib.swissprot.voidcounter.CommonVariables;
 import swiss.sib.swissprot.voidcounter.Counters;
 import swiss.sib.swissprot.voidcounter.QueryCallable;
@@ -413,8 +412,8 @@ public class Generate implements Callable<Integer> {
 	private void countTheVoidDataItself(IRI voidGraph, CommonVariables cv) {
 		String voidGraphUri = voidGraph.toString();
 		GraphDescription voidGraphDescription = getOrCreateGraphDescriptionObject(voidGraphUri, sd);
-		scheduleBigCountsPerGraph(cv, voidGraphDescription);
-		countSpecificThingsPerGraph(cv.sd(), knownPredicates, voidGraphDescription, cv.limiter(), cv.saver());
+		counters.countSpecifics(cv, voidGraphDescription, countDistinctSubjects, countDistinctObjects);
+		counters.findPredicatesAndClasses(cv, knownPredicates, voidGraphDescription, findDistinctClasses, findPredicates, detailedCount, classExclusion);
 	}
 
 	private void waitForCountToFinish(List<Future<Exception>> futures) {
@@ -476,43 +475,25 @@ public class Generate implements Callable<Integer> {
 	}
 
 	private CommonVariables scheduleCounters(ServiceDescription sd, Consumer<ServiceDescription> saver) {
-		Lock writeLock = rwLock.writeLock();
-		
-		CommonVariables cv = new CommonVariables(sd, repository, saver, writeLock, limit, finishedQueries);
-		determineGraphNames(sd, saver, writeLock);
+	
+		CommonVariables cv = new CommonVariables(sd, repository, saver, rwLock, limit, finishedQueries);
+		determineGraphNames(sd, saver);
 
-		countDistinctObjectsSubjectsInDefaultGraph(cv);
+		counters.countDistinctObjectsSubjectsInDefaultGraph(cv, countDistinctSubjects, countDistinctObjects);
 		
 		for (GraphDescription gd : getGraphs()) {
-			scheduleBigCountsPerGraph(cv, gd);
+			counters.countSpecifics(cv, gd, countDistinctSubjects, countDistinctObjects);
 		}
 
 		// Ensure that we first do the big counts before starting on counting the
 		// smaller sets.
 		for (GraphDescription gd : getGraphs()) {
-			countSpecificThingsPerGraph(sd, knownPredicates, gd, limit, saver);
+			counters.findPredicatesAndClasses(cv, knownPredicates, gd, findDistinctClasses, findPredicates, detailedCount, classExclusion);
 		}
 		return cv;
 	}
 
-	private void countDistinctObjectsSubjectsInDefaultGraph(CommonVariables cv) {
-		if (countDistinctObjects) {
-			counters.countDistinctBnodeObjectsInDefaultGraph(cv);
-			counters.countDistinctLiteralObjectsForDefaultGraph(cv);
-			if (!counters.allInUnionGraph() && !countDistinctSubjects) {
-				counters.countDistinctIriObjectsForDefaultGraph(cv);
-			}
-		}
-		if (countDistinctSubjects) {
-			counters.countDistinctBnodeSubjectsInDefaultGraph(cv);
-			if (!counters.allInUnionGraph() && !countDistinctObjects) {
-				counters.countDistinctIriSubjectsForDefaultGraph(cv);
-			}
-		}
-		if (countDistinctSubjects && countDistinctObjects) {
-			counters.countDistinctIriSubjectsAndObjectsInDefaultGraph(cv);
-		}
-	}
+	
 
 	/**
 	 * Ensure that the graph description exists so that we won't have an issue
@@ -521,9 +502,9 @@ public class Generate implements Callable<Integer> {
 	 * @param saver
 	 * @param writeLock
 	 */
-	private void determineGraphNames(ServiceDescription sd, Consumer<ServiceDescription> saver, Lock writeLock) {
+	private void determineGraphNames(ServiceDescription sd, Consumer<ServiceDescription> saver) {
 		if (graphNames.isEmpty()) {
-			CommonVariables cv = new CommonVariables(sd, repository, saver, writeLock, limit, finishedQueries);
+			CommonVariables cv = new CommonVariables(sd, repository, saver, rwLock, limit, finishedQueries);
 			findingGraphs = counters.findAllGraphs(cv);
 		} else {
 			for (var graphName : getGraphNames()) {
@@ -548,42 +529,9 @@ public class Generate implements Callable<Integer> {
 
 	
 
-	private void countSpecificThingsPerGraph(ServiceDescription sd, Set<IRI> knownPredicates, GraphDescription gd,
-			Semaphore limit, Consumer<ServiceDescription> saver) {
-		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, saver, rwLock.writeLock(), limit, finishedQueries);
-		if (findDistinctClasses && findPredicates && detailedCount) {
-			counters.findPredicatesAndClasses(cv, knownPredicates, rwLock, classExclusion);
-		} else {
-			if (findPredicates) {
-				counters.findPredicates(cv, knownPredicates);
-			}
-			if (findDistinctClasses) {
-				counters.findDistinctClassses(cv, classExclusion);
-			}
-		}
-	}
+	
 
-	private void scheduleBigCountsPerGraph(CommonVariables cv, GraphDescription gd) {
-		CommonGraphVariables gdcv = cv.with(gd);
-		// Objects are hardest to count so schedules first.
-		if (countDistinctObjects) {
-			counters.countDistinctLiteralObjects(gdcv);
-			if (! countDistinctSubjects) {
-				counters.countDistinctIriObjectsInAGraph(gdcv);
-				counters.countDistinctBnodeObjectsInAGraph(gdcv);
-			}
-		}
-		if (countDistinctSubjects) {
-			counters.countDistinctBnodeSubjectsInAgraph(gdcv);
-			if (! countDistinctObjects) {
-				counters.countDistinctIriSubjectsInAGraph(gdcv);
-			}
-		}
-		if (countDistinctObjects && countDistinctSubjects) {
-			counters.countDistinctIriSubjectsAndObjectsInAGraph(gdcv);
-		}
-		counters.countTriplesInNamedGraph(gdcv);
-	}
+	
 
 	private GraphDescription getOrCreateGraphDescriptionObject(String graphName, ServiceDescription sd) {
 		GraphDescription pgd = sd.getGraph(graphName);

@@ -2,7 +2,6 @@ package swiss.sib.swissprot.voidcounter.sparql;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -85,8 +84,8 @@ public class SparqlCounters implements Counters {
 
 	@Override
 	public void findPredicatesAndClasses(CommonGraphVariables cv, Set<IRI> knownPredicates,
-			ReadWriteLock rwLock, String classExclusion) {
-		schedule(new FindPredicatesAndClasses(cv, knownPredicates, rwLock, classExclusion, this));
+			String classExclusion) {
+		schedule(new FindPredicatesAndClasses(cv, knownPredicates, classExclusion, this));
 	}
 
 	@Override

@@ -5,7 +5,6 @@ import static swiss.sib.swissprot.servicedescription.OptimizeFor.VIRTUOSO;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -92,9 +91,8 @@ public class VirtuosoCounters implements Counters {
 
 	@Override
 	public void findPredicatesAndClasses(CommonGraphVariables cv,
-			Set<IRI> knownPredicates,
-			ReadWriteLock rwLock, String classExclusion) {
-		schedule(new FindPredicatesAndClasses(cv, knownPredicates, rwLock, classExclusion, this));
+			Set<IRI> knownPredicates, String classExclusion) {
+		schedule(new FindPredicatesAndClasses(cv, knownPredicates, classExclusion, this));
 	}
 
 	@Override

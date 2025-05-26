@@ -3,7 +3,6 @@ package swiss.sib.swissprot.voidcounter.sparql;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -24,14 +23,11 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception, Com
 	private final Set<IRI> knownPredicates;
 		private final String classExclusion;
 	private final Counters counters;
-	private final ReadWriteLock rwLock;
 
 	public FindPredicatesAndClasses(CommonGraphVariables cv,
-			Set<IRI> knownPredicates,
-			ReadWriteLock rwLock,  String classExclusion, Counters counters) {
+			Set<IRI> knownPredicates, String classExclusion, Counters counters) {
 		super(cv);
 		this.knownPredicates = knownPredicates;
-		this.rwLock = rwLock;
 		this.classExclusion = classExclusion;
 		this.counters = counters;
 	}
@@ -50,7 +46,7 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception, Com
 
 	@Override
 	protected Exception run(RepositoryConnection connection) throws Exception {
-		Supplier<QueryCallable<?, CommonGraphVariables>> onFoundClasses = () -> new FindClassPredicatePairs(cv, rwLock, classExclusion, counters);
+		Supplier<QueryCallable<?, CommonGraphVariables>> onFoundClasses = () -> new FindClassPredicatePairs(cv, classExclusion, counters);
 		Consumer<CommonGraphVariables> onFoundPredicates = (cv) -> 
 			counters.findDistinctClassses(cv, classExclusion, onFoundClasses);
 		
@@ -65,15 +61,13 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception, Com
 	
 	private static class FindClassPredicatePairs extends QueryCallable<Void, CommonGraphVariables> {
 		private static final Logger log = LoggerFactory.getLogger(FindClassPredicatePairs.class);
-		private final ReadWriteLock rwLock;
 		private final String classExclusion;
 		private final Counters counters;
 
 		public FindClassPredicatePairs(CommonGraphVariables cv,
-				ReadWriteLock rwLock, String classExclusion,
+				String classExclusion,
 				Counters counters) {
 			super(cv);
-			this.rwLock = rwLock;
 			this.classExclusion = classExclusion;
 			this.counters = counters;
 		}
@@ -94,7 +88,7 @@ public final class FindPredicatesAndClasses extends QueryCallable<Exception, Com
 			Set<ClassPartition> classes;
 			Set<PredicatePartition> predicates;
 
-			final Lock readLock = rwLock.readLock();
+			final Lock readLock = cv.readLock();
 			try {
 				readLock.lock();
 				classes = new HashSet<>(cv.gd().getClasses());

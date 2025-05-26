@@ -8,8 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.Statement;
@@ -80,9 +79,8 @@ class IsSourceClassLinkedToTargetClassTest {
 		li.getClasses().add(target);
 		ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		Lock writeLock = new ReentrantLock();
 		CommonGraphVariables cv = new CommonGraphVariables(sd, bag, repository, s -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		}, new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 		var counter = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, pp, source, li, null,
 				new SparqlCounters(of, scheduler), of);
 		counter.call();

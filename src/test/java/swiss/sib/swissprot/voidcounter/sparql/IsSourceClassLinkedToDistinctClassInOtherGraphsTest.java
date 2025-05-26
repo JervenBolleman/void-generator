@@ -5,8 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -40,7 +39,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphsTest {
 			SimpleValueFactory.getInstance().createIRI("http://example.com/targetClass"));;
 	private PredicatePartition predicatePartition;
 	private GraphDescription sourceGraph;
-	private Lock writeLock;
 	private AtomicInteger finishedQueries;
 	private Semaphore limiter;
 	private GraphDescription targetGraph;
@@ -57,14 +55,13 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphsTest {
 		sourceGraph.setGraphName("http://example.com/graph");
 		targetGraph = new GraphDescription();
 		targetGraph.setGraphName("http://example.com/otherGraph");
-		writeLock = new ReentrantLock();
 		finishedQueries = new AtomicInteger(0);
 		limiter = new Semaphore(1);
 		sd = new ServiceDescription();
 		sd.putGraphDescription(targetGraph);
 		sd.putGraphDescription(sourceGraph);
 		addTestData();
-		cv = new CommonGraphVariables(sd , sourceGraph, repository, s->{}, writeLock, limiter, finishedQueries);
+		cv = new CommonGraphVariables(sd , sourceGraph, repository, s->{},  new ReentrantReadWriteLock(), limiter, finishedQueries);
 	}
 
 	@ParameterizedTest

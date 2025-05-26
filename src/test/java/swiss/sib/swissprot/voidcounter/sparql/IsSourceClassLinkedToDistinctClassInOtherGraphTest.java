@@ -5,8 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -40,7 +39,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 			SimpleValueFactory.getInstance().createIRI("http://example.com/targetClass"));;
 	private PredicatePartition predicatePartition;
 	private GraphDescription gd;
-	private Lock writeLock;
 	private AtomicInteger finishedQueries;
 	private Semaphore limiter;
 	private GraphDescription ogd;
@@ -56,7 +54,6 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 		gd.setGraphName("http://example.com/graph");
 		ogd = new GraphDescription();
 		ogd.setGraphName("http://example.com/otherGraph");
-		writeLock = new ReentrantLock();
 		finishedQueries = new AtomicInteger(0);
 		limiter = new Semaphore(1);
 		addTestData();
@@ -66,7 +63,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	@EnumSource(OptimizeFor.class) 
 	public void testRun(OptimizeFor of) throws Exception {
 		ServiceDescription sd = new ServiceDescription();
-		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, s->{}, writeLock, limiter, finishedQueries);
+		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, s->{},  new ReentrantReadWriteLock(), limiter, finishedQueries);
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
 				predicatePartition, sourceClass, ogd, null, new SparqlCounters(of, (s) -> null), of);
 		try (RepositoryConnection connection = repository.getConnection()) {
@@ -86,7 +83,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	@EnumSource(OptimizeFor.class) 
 	public void testRunExclude(OptimizeFor fr) throws Exception {
 		ServiceDescription sd = new ServiceDescription();
-		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, null, writeLock, limiter, finishedQueries);
+		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, null,  new ReentrantReadWriteLock(), limiter, finishedQueries);
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv,  
 				predicatePartition, sourceClass, ogd, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(fr, (s) -> null), fr);
 		Exception call = isSourceClassLinkedToTargetClass.call();
@@ -98,7 +95,7 @@ public class IsSourceClassLinkedToDistinctClassInOtherGraphTest {
 	@EnumSource(OptimizeFor.class) 
 	public void testWithOtherKnown(OptimizeFor of) throws Exception {
 		ServiceDescription sd = new ServiceDescription();
-		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, null, writeLock, limiter, finishedQueries);
+		CommonGraphVariables cv = new CommonGraphVariables(sd , gd, repository, null,  new ReentrantReadWriteLock(), limiter, finishedQueries);
 		ogd.getClasses().add(new ClassPartition(targetClass.getClazz()));
 		IsSourceClassLinkedToDistinctClassInOtherGraph isSourceClassLinkedToTargetClass = new IsSourceClassLinkedToDistinctClassInOtherGraph(cv, 
 				predicatePartition, sourceClass, ogd, "strStarts(str(?clazz), 'http://example.com/')", new SparqlCounters(of, (s) -> null), of);		

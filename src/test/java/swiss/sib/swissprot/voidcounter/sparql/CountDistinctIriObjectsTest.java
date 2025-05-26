@@ -5,8 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -44,10 +43,9 @@ class CountDistinctIriObjectsTest {
 	void empty(OptimizeFor of) throws IOException {
 
 		final ServiceDescription sd = new ServiceDescription();
-		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		}, new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 
 		var count = new CountDistinctIriObjectsInDefaultGraph(cv, of);
 		count.call();
@@ -76,9 +74,8 @@ class CountDistinctIriObjectsTest {
 		}
 		final ServiceDescription sd = new ServiceDescription();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
-		Lock writeLock = new ReentrantLock();
 		CommonVariables cv = new CommonVariables(sd, repository, (s) -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		}, new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 
 		var countDistinctIriObjectsForAllGraphs = new CountDistinctIriObjectsInDefaultGraph(cv, of);
 		countDistinctIriObjectsForAllGraphs.call();

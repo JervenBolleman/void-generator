@@ -8,8 +8,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
 import org.eclipse.rdf4j.model.Statement;
@@ -66,10 +65,9 @@ public class FindPredicatesTest {
 		final GraphDescription gd = new GraphDescription();
 		gd.setGraphName("https://sparql.uniprot.org/uniprot");
 		sd.putGraphDescription(gd);
-		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, s -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		},  new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 
 		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
 				Set.of(), (c) -> {}, OptimizeFor.SPARQL, new SparqlCounters(of, schedule));
@@ -93,10 +91,9 @@ public class FindPredicatesTest {
 		final GraphDescription gd = new GraphDescription();
 		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
-		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, s -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		},  new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 
 		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
 				Set.of(), (c) -> {}, OptimizeFor.SPARQL, new SparqlCounters(of, schedule));
@@ -120,10 +117,9 @@ public class FindPredicatesTest {
 		final GraphDescription gd = new GraphDescription();
 		gd.setGraph(RDF.BAG);
 		sd.putGraphDescription(gd);
-		Lock writeLock = new ReentrantLock();
 		AtomicInteger finishedQueries = new AtomicInteger(0);
 		CommonGraphVariables cv = new CommonGraphVariables(sd, gd, repository, s -> {
-		}, writeLock, new Semaphore(1), finishedQueries);
+		},  new ReentrantReadWriteLock(), new Semaphore(1), finishedQueries);
 		final FindPredicatesAndCountObjects countDistinctIriSubjectsForAllGraphs = new FindPredicatesAndCountObjects(cv,
 				Set.of(), (c) -> {}, of, new SparqlCounters(of, schedule));
 		countDistinctIriSubjectsForAllGraphs.call();

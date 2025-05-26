@@ -16,6 +16,8 @@ public sealed interface Variables permits CommonGraphVariables, CommonVariables 
 
 	Consumer<ServiceDescription> saver();
 
+	Lock readLock();
+
 	Lock writeLock();
 
 	Semaphore limiter();
