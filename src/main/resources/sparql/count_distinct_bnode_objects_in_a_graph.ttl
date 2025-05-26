@@ -13,7 +13,7 @@ ex:count_distinct_bnode_objects_in_a_graph a sh:SPARQLExecutable,
     sh:prefixes _:sparql_examples_prefixes ;
     sh:select """
 SELECT
-    ?graph (COUNT(DISTINCT ?object) AS ?objects)
+    (COUNT(DISTINCT ?object) AS ?objects)
 WHERE {
     GRAPH ?graph {
         ?subject ?predicate ?object .
