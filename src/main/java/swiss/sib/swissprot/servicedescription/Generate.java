@@ -71,7 +71,8 @@ import swiss.sib.swissprot.voidcounter.sparql.SparqlCounters;
 import swiss.sib.swissprot.voidcounter.virtuoso.VirtuosoCounters;
 import virtuoso.rdf4j.driver.VirtuosoRepository;
 
-@Command(name = "void-generate", mixinStandardHelpOptions = true, version = "0.1", description = "Generate a void file")
+@Command(name = "void-generate", mixinStandardHelpOptions = true, description = "Generate a void file", versionProvider = GitPropertiesVersionFetch.class)
+
 public class Generate implements Callable<Integer> {
 
 	protected static final Logger log = LoggerFactory.getLogger(Generate.class);
@@ -156,10 +157,26 @@ public class Generate implements Callable<Integer> {
 	@Option(names = {
 			"--optimize-for" }, description = "Which store to optimize for. Virtuoso, Qlever or a SPARQLunion (all triples are in named graphs and the default graph is the union of all named graphs", defaultValue = "sparql")
 	private String optimizeFor = "sparql";
+	
+	@Option(names = {"-V", "--version"}, versionHelp = true, description = "display version info")
+	boolean versionInfoRequested;
+	
+	@Option(names = {"?", "-h", "--help"}, usageHelp = true, description = "display this help message")
+	boolean usageHelpRequested;
 
 	public static void main(String[] args) {
-		int exitCode = new CommandLine(new Generate()).execute(args);
-		System.exit(exitCode);
+		var cl = new CommandLine(new Generate());
+		if (cl.isUsageHelpRequested()) {
+			cl.usage(System.out);
+		} else if (cl.isVersionHelpRequested()) {
+			cl.printVersionHelp(System.out);
+		} else if (args.length == 0) {
+			cl.usage(System.out);
+			System.exit(1);
+		} else {
+			int exitCode = cl.execute(args);
+			System.exit(exitCode);
+		}
 	}
 
 	final AtomicInteger scheduledQueries = new AtomicInteger();
