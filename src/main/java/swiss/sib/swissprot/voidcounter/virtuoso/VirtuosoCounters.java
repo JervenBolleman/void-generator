@@ -2,11 +2,24 @@ package swiss.sib.swissprot.voidcounter.virtuoso;
 
 import static swiss.sib.swissprot.servicedescription.OptimizeFor.VIRTUOSO;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
 
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.ClassPartition;
 import swiss.sib.swissprot.servicedescription.GraphDescription;
@@ -27,6 +40,7 @@ import swiss.sib.swissprot.voidcounter.sparql.SparqlCounters;
 import swiss.sib.swissprot.voidcounter.sparql.TripleCount;
 
 public class VirtuosoCounters extends SparqlCounters {
+	private static final Logger log = LoggerFactory.getLogger(VirtuosoCounters.class);
 	private final ConcurrentMap<String, Roaring64NavigableMap> distinctSubjectIris;
 	private final ConcurrentMap<String, Roaring64NavigableMap> distinctObjectIris;
 
@@ -162,5 +176,65 @@ public class VirtuosoCounters extends SparqlCounters {
 	@Override
 	public void countDistinctBnodeObjectsInAGraph(CommonGraphVariables gdcv) {
 		schedule(new CountDistinctBnodeObjectsInAGraphVirtuoso(gdcv, distinctObjectIris));
+	}
+
+	public static void writeGraphsWithSerializedBitMaps(File targetFile,
+			ConcurrentMap<String, Roaring64NavigableMap> map) {
+		if (!targetFile.exists()) {
+			try {
+				if (!targetFile.createNewFile()) {
+					throw new RuntimeException("Can't create file we need later");
+				}
+			} catch (IOException e) {
+				throw new RuntimeException("Can't create file we need later:", e);
+			}
+		}
+		try (FileOutputStream fos = new FileOutputStream(targetFile);
+				BufferedOutputStream bos = new BufferedOutputStream(fos);
+				ObjectOutputStream dos = new ObjectOutputStream(bos)) {
+			dos.writeInt(map.size());
+			for (Map.Entry<String, Roaring64NavigableMap> en : map.entrySet()) {
+				dos.writeUTF(en.getKey());
+				Roaring64NavigableMap value = en.getValue();
+				value.runOptimize();
+				value.writeExternal(dos);
+			}
+	
+		} catch (IOException e) {
+			log.error("IO issue", e);
+		}
+	}
+	
+	public void writeGraphs(File distinctSubjectIrisFile,
+			File distinctObjectIrisFile, ReadWriteLock rwLock) {
+		final Lock readLock = rwLock.readLock();
+		try {
+			readLock.lock();
+			VirtuosoCounters.writeGraphsWithSerializedBitMaps(distinctSubjectIrisFile, distinctSubjectIris);
+			VirtuosoCounters.writeGraphsWithSerializedBitMaps(distinctObjectIrisFile, distinctObjectIris);
+
+		} finally {
+			readLock.unlock();
+		}
+	}
+
+	public static ConcurrentMap<String, Roaring64NavigableMap> readGraphsWithSerializedBitMaps(File file, boolean forcedRefresh) {
+		ConcurrentHashMap<String, Roaring64NavigableMap> map = new ConcurrentHashMap<>();
+		if (file.exists() && !forcedRefresh) {
+			try (FileInputStream fis = new FileInputStream(file); ObjectInputStream bis = new ObjectInputStream(fis)) {
+				int numberOfGraphs = bis.readInt();
+				for (int i = 0; i < numberOfGraphs; i++) {
+					String graph = bis.readUTF();
+					Roaring64NavigableMap rb = new Roaring64NavigableMap();
+					rb.readExternal(bis);
+					map.put(graph, rb);
+				}
+			} catch (IOException e) {
+				log.error("IO error", e);
+			} catch (ClassNotFoundException e) {
+				log.error("Class can't be found code out of sync", e);
+			}
+		}
+		return map;
 	}
 }
