@@ -688,4 +688,8 @@ public class Generate implements Callable<Integer> {
 	public void setMaxConcurrency(int maxConcurrency) {
 		this.maxConcurrency = maxConcurrency;
 	}
+	
+	public void setClassExclusion(String classExclusion) {
+		this.classExclusion = classExclusion;
+	}
 }
