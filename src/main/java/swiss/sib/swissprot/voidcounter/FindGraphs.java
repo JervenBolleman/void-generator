@@ -1,4 +1,4 @@
-package swiss.sib.swissprot.servicedescription;
+package swiss.sib.swissprot.voidcounter;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -11,9 +11,9 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import swiss.sib.swissprot.servicedescription.GraphDescription;
+import swiss.sib.swissprot.servicedescription.OptimizeFor;
 import swiss.sib.swissprot.servicedescription.sparql.Helper;
-import swiss.sib.swissprot.voidcounter.CommonVariables;
-import swiss.sib.swissprot.voidcounter.QueryCallable;
 
 /**
  * This class is responsible for finding all graphs in the repository that are
