@@ -1,4 +1,4 @@
-package swiss.sib.swissprot.servicedescription.sparql;
+package swiss.sib.swissprot.voidcounter.sparql;
 
 import java.io.IOException;
 import java.util.Iterator;

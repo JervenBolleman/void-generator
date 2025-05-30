@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import swiss.sib.swissprot.servicedescription.GraphDescription;
 import swiss.sib.swissprot.servicedescription.OptimizeFor;
-import swiss.sib.swissprot.servicedescription.sparql.Helper;
+import swiss.sib.swissprot.voidcounter.sparql.Helper;
 
 /**
  * This class is responsible for finding all graphs in the repository that are
