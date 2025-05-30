@@ -630,4 +630,14 @@ public class Generate implements Callable<Integer> {
 	public void setPassword(String password) {
 		this.password = password;
 	}
+
+	//For testing purposes
+	int getScheduledQueries() {
+		return scheduledQueries.get();
+	}
+
+	//For testing purposes
+	int getFinishedQueries() {
+		return finishedQueries.get();
+	}
 }

@@ -67,7 +67,7 @@ public class GenerateTest {
 		g.setRepositoryLocator("https://example.org/sparql");
 		g.setOptimizeFor(of);
 		g.update();
-		assertEquals(g.finishedQueries.get(), g.scheduledQueries.get());
+		assertEquals(g.getFinishedQueries(), g.getScheduledQueries());
 		assertTrue(sdFile.exists());
 		assertTrue(sdFile.length() > 0);
 	}
