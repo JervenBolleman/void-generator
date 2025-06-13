@@ -186,6 +186,15 @@ public class ServiceDescriptionStatementGenerator {
 	private String hash(String graphName) {
 		return new MD5().evaluate(vf, vf.createLiteral(graphName)).stringValue().substring(0, 8);
 	}
+	
+	private String hash(Value... iris) {
+		StringBuilder sb = new StringBuilder();
+		for (Value iri : iris) {
+			sb.append(iri.stringValue());
+			sb.append('_');
+		}
+		return hash(sb.toString());
+	}
 
 	protected void describePredicatePartitions(GraphDescription gd, String voidLocation, IRI namedGraph, IRI graph) {
 		for (PredicatePartition predicate : gd.getPredicates()) {
@@ -254,17 +263,17 @@ public class ServiceDescriptionStatementGenerator {
 
 					generateLinkset(voidLocation, classClassPartition, ls, graph);
 				}
-				generateClassPartitionsAsLinkset(namedGraph, cp, pp, ppr, voidLocation, classClassPartition, gd, graph);
+				generateClassPartitionsAsLinkset(namedGraph, cp, pp, voidLocation, classClassPartition, gd, graph);
 			}
 		}
 	}
 
-	private void generateClassPartitionsAsLinkset(IRI namedGraph, ClassPartition cp, PredicatePartition pp, IRI ppr,
+	private void generateClassPartitionsAsLinkset(IRI namedGraph, ClassPartition cp, PredicatePartition pp,
 			String voidLocation, IRI iriOfType, GraphDescription gp, IRI graph) {
 		for (ClassPartition cpp : pp.getClassPartitions()) {
+			String hash = hash(pp.getPredicate(),  cp.getClazz(), cpp.getClazz(), gp.getGraph(), gp.getGraph());
 			Resource bNode = vf.createIRI(voidLocation,
-					"#linkset_" + hash(pp.getPredicate().getLocalName() + "_" + cp.getClazz().getLocalName() + "_"
-							+ cpp.getClazz().getLocalName() + "_" + gp.getGraph().getLocalName()));
+					"#linkset_" + hash + pp.getPredicate().getLocalName());
 			statement(bNode, RDF.TYPE, VOID.LINKSET);
 			statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
 			statement(bNode, VOID.SUBJECTS_TARGET, iriOfType);
@@ -274,12 +283,15 @@ public class ServiceDescriptionStatementGenerator {
 	}
 
 	public void generateLinkset(String voidLocation, IRI dataSetClassPartition, LinkSetToOtherGraph ls, IRI graph) {
+		var pp = ls.getPredicatePartition();
+		var hash = hash(pp.getPredicate(), ls.getSourceType(), ls.getTargetType(), ls.getOtherGraph().getGraph(),
+				graph);
+
 		Resource bNode = vf.createIRI(voidLocation, "#linkset_"
-				+ hash(ls.getPredicatePartition().getPredicate().stringValue() + "_" + ls.getSourceType().stringValue()
-						+ "_" + ls.getTargetType().stringValue() + ls.getOtherGraph().getGraph())
-				+ ls.getPredicatePartition());
+				+ hash
+				+ pp.getPredicate().getLocalName());
 		statement(bNode, RDF.TYPE, VOID.LINKSET);
-		statement(bNode, VOID.LINK_PREDICATE, ls.getPredicatePartition().getPredicate());
+		statement(bNode, VOID.LINK_PREDICATE, pp.getPredicate());
 		statement(bNode, VOID.SUBJECTS_TARGET, dataSetClassPartition);
 		if (ls.getTripleCount() > 0) {
 			statement(bNode, VOID.TRIPLES, vf.createLiteral(ls.getTripleCount()));
@@ -333,7 +345,7 @@ public class ServiceDescriptionStatementGenerator {
 	private IRI getResourceForSubPartition(IRI namedGraph, IRI clazz, IRI predicate, String voidLocation) {
 		return vf.createIRI(voidLocation,
 				namedGraph.getLocalName() + '!'
-						+ hash(namedGraph.stringValue() + clazz.stringValue() + predicate.stringValue()) + '!' + '-'
+						+ hash(namedGraph, clazz, predicate) + '!' + '-'
 						+ clazz.getLocalName() + '-' + predicate.getLocalName());
 	}
 
@@ -341,8 +353,7 @@ public class ServiceDescriptionStatementGenerator {
 			String voidLocation) {
 		return vf.createIRI(voidLocation,
 				namedGraph.getLocalName() + '!'
-						+ hash(namedGraph.stringValue() + sourceClass.stringValue() + predicate.stringValue()
-								+ targetClass.stringValue())
+						+ hash(namedGraph, sourceClass, predicate, targetClass)
 						+ '!' + '-' + sourceClass.getLocalName() + '-' + predicate.getLocalName() + '-'
 						+ targetClass.getLocalName());
 	}

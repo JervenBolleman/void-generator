@@ -205,3 +205,19 @@ _:distinctBlankNodeSubjects
     sh:path void_ext:distinctBlankNodeSubjects ;
     sh:minCount 0 ;
     sh:maxCount 1 .
+
+_:linksetShape a sh:NodeShape ;
+    sh:targetClass void:Linkset ;
+    sh:property [
+        sh:path void:linkPredicate ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] , [
+        sh:path void:subjectsTarget ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] , [
+        sh:path void:objectsTarget ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
