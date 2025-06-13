@@ -1,0 +1,207 @@
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix pav: <http://purl.org/pav/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix void_ext: <http://ldf.fi/void-ext#> .
+
+_:ServiceShape a sh:NodeShape ;
+    sh:targetClass sd:Service ;
+    sh:property [
+        sh:message "A service without an endpoint IRI is not that helpful" ;
+        sh:path sd:endpoint ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] , [
+        sh:message "The Service should have at least one resultFormat known" ;
+        sh:path sd:resultFormat ;
+        sh:minCount 1 ;
+    ] , [
+        sh:message "We should support at least one kind of SPARQL" ;
+        sh:path sd:supportedLanguage ;
+        sh:minCount 1
+    ] , [
+        sh:message "would be niced if special features where mentioned" ;
+        sh:path sd:feature ;
+        sh:minCount 0 ;
+    ] , [
+        sh:message "Can have at most one default dataset" ;
+        sh:path sd:defaultDataset ;
+        sh:maxCount 1
+    ] .
+
+_:defaultDatasetShape a sh:NodeShape ;
+    sh:targetSubjectsOf sd:defaultGraph ;
+    sh:targetObjectsOf sd:defaultDataset ;
+    sh:class sd:Dataset ;
+    sh:property [
+        sh:message "A release version is appreciated" ;
+        sh:path pav:version ;
+        sh:minCount 0 ;
+        sh:maxCount 1
+    ] , [
+        sh:path sd:namedGraph ;
+        sh:minCount 1
+    ] ;
+    sh:or (
+         sh:property [
+              sh:path dcterms:issued ;
+              sh:minCount 1 ;
+              sh:maxCount 1
+          ]
+
+          sh:property [
+              sh:path dcterms:published ;
+              sh:minCount 1 ;
+              sh:maxCount 1
+          ]
+      ) .
+
+_:defaultGraphShape a sh:NodeShape ;
+    # we follow the sd:defaultGraph to know that this
+    sh:targetObjectsOf sd:defaultGraph ;
+    sh:and ( _:distinctCountsShape ) ;
+    sh:or (
+         sh:property [
+              sh:path dcterms:issued ;
+              sh:minCount 1;
+              sh:maxCount 1;
+          ]
+          sh:property [
+              sh:path dcterms:published ;
+              sh:minCount 1;
+              sh:maxCount 1;
+          ]
+      ) , (
+        [ sh:class sd:Graph ]
+        [ sh:class sd:NamedGraph ]
+      ).
+
+_:namedGraphShape a sh:NodeShape ;
+    sh:targetObjectsOf sd:namedGraph ;
+    sh:class sd:NamedGraph ;
+    sh:property [
+        sh:message "A named graph needs a name" ;
+        sh:path sd:name ;
+        sh:minCount 1;
+        sh:maxCount 1;
+    ] , [
+        sh:message "A named graph needs a graph" ;
+        sh:path sd:graph ;
+        sh:minCount 1;
+        sh:maxCount 1;
+    ] .
+
+_:graphShape a sh:NodeShape ;
+    sh:targetObjectsOf sd:graph ;
+    sh:targetClass sd:Graph ;
+    sh:and ( _:distinctCountsShape ) ;
+    sh:property [
+        sh:message "Number of distinct classes is appreciated (owl:Class or rdfs:Class)" ;
+        sh:path void:classes ;
+        sh:minCount 0;
+        sh:maxCount 1;
+    ] , [
+        sh:message "Links to class partitions are appreciated (owl:Class or rdfs:Class)" ;
+        sh:path void:classPartition ;
+        sh:minCount 0;
+    ] , [
+        sh:message "Links to property partitions are appreciated" ;
+        sh:path void:propertyPartition ;
+        sh:minCount 0;
+    ] .
+
+_:classPartitionShape a sh:NodeShape ;
+    sh:targetObjectsOf void:classPartition ;
+    sh:class void:Dataset ;
+    sh:and (_:distinctCountsShape ) ;
+    sh:property [
+        sh:message "A ClassPartition must link to it's class" ;
+        sh:path void:class ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] , [
+        sh:message "The number of distinct occurences of a class is appreciated" ;
+        sh:path void:entities ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] , [
+        sh:message "Links to the propertyPartition's of a class are appreciated" ;
+        sh:path void:propertyPartition  ;
+    ] .
+
+_:propertyPatition a sh:NodeShape ;
+    sh:targetObjectsOf void:propertyPartition ;
+    # sh:class void:Dataset ; should be added
+    sh:and (_:distinctCountsShape ) ;
+    sh:property [
+        sh:message "A PropertyPartition must link to it's property" ;
+        sh:path void:property ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] , [
+        sh:message "The number of distinct occurences of a proprety is appreciated" ;
+        sh:path void:triples ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] , [
+        sh:message "Links to the datatypePartition's of a propertyPartition are appreciated" ;
+        sh:path void_ext:datatypePartition  ;
+    ] .
+
+
+_:distinctCountsShape a sh:NodeShape ;
+    sh:property
+        _:distinctTriples ,
+        _:distinctObjects ,
+        _:distinctSubjects ,
+        _:distinctLiterals ,
+        _:distinctBlankNodeObjects ,
+        _:distinctIRIReferenceSubjects ,
+        _:distinctBlankNodeSubjects .
+
+_:distinctTriples sh:message "The size of the graph in distinct triples is appreciated" ;
+    sh:path void:triples ;
+    sh:minCount 0 ;
+    sh:maxCount 1 .
+
+
+_:distinctObjects sh:message "The number of distinct objects in the graph is appreciated" ;
+    sh:path void:distinctObjects ;
+    sh:minCount 0 ;
+    sh:maxCount 1 .
+
+_:distinctSubjects
+    sh:message "The number of distinct subjects in the graph is appreciated" ;
+    sh:path void:distinctSubjects ;
+    sh:minCount 0 ;
+    sh:maxCount 1 .
+
+_:distinctLiterals
+    sh:message "The number of distinct literals in the graph is appreciated" ;
+    sh:path void_ext:distinctLiterals ;
+    sh:minCount 0 ;
+    sh:maxCount 1 .
+
+_:distinctBlankNodeObjects
+    sh:message "The number of distinct Blanknode objects in the graph is appreciated" ;
+    sh:path void_ext:distinctBlankNodeObjects ;
+    sh:minCount 0 ;
+    sh:maxCount 1 .
+
+_:distinctIRIReferenceSubjects
+    sh:message "The number of distinct IRI subjects in the graph is appreciated" ;
+    sh:path void_ext:distinctIRIReferenceSubjects ;
+    sh:minCount 0 ;
+    sh:maxCount 1 .
+
+_:distinctBlankNodeSubjects
+    sh:message "The number of distinct bnode subjects in the graph is appreciated" ;
+    sh:path void_ext:distinctBlankNodeSubjects ;
+    sh:minCount 0 ;
+    sh:maxCount 1 .
