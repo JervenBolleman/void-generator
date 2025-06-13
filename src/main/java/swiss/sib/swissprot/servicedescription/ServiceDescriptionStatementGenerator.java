@@ -192,6 +192,7 @@ public class ServiceDescriptionStatementGenerator {
 			IRI dataSetPropertyPartition = getResourceForPartition(namedGraph, getIRI(predicate.getPredicate()),
 					voidLocation);
 			statement(dataSetPropertyPartition, VOID.PROPERTY, predicate.getPredicate());
+			statement(dataSetPropertyPartition, RDF.TYPE, VOID.DATASET);
 			for (ClassPartition ppcp : predicate.getClassPartitions()) {
 				Resource cppr = getResourceForSubPartition(namedGraph, predicate.getPredicate(), ppcp.getClazz(),
 						voidLocation);
