@@ -1,0 +1,26 @@
+@prefix ex: <https://purl.expasy.org/sparql-examples/void-generator/qlever/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
+
+
+ex:select_distinct_datatypes a sh:SPARQLExecutable,
+        sh:SPARQLSelectExecutable ;
+    rdfs:comment "Select the distinct datatypes."^^rdf:HTML ;
+    sh:prefixes _:sparql_examples_prefixes ;
+    sh:select """SELECT ?dt
+WHERE {
+  GRAPH ?graphName {
+    ?subject a ?sourceType .
+	?subject ?predicate ?target .
+    FILTER(isLiteral(?target)) .
+    BIND(datatype(?target) as ?dt)
+  }
+} GROUP BY ?dt""" ;
+    schema:keywords "void" , "predicate", "distinct", "type", "datatype" ;
+    schema:target [
+        rdfs:subClassOf sd:Service
+    ] .
