@@ -70,16 +70,15 @@ public class FindPredicateLinkSets extends QueryCallable<PredicatePartition, Com
 	private long countTriplesInPredicateClassPartition(final RepositoryConnection connection,
 			PredicatePartition predicatePartition, ClassPartition source) {
 
-		try {
-			MapBindingSet bs = new MapBindingSet();
-			bs.setBinding("graph", cv.gd().getGraph());
-			bs.setBinding("sourceClass", source.getClazz());
-			bs.setBinding("predicate", predicatePartition.getPredicate());
-			setQuery(rawQuery, bs);
-			try (TupleQueryResult triples = Helper.runTupleQuery(getQuery(), connection)) {
-				if (triples.hasNext()) {
-					return ((Literal) triples.next().getBinding("count").getValue()).longValue();
-				}
+		MapBindingSet bs = new MapBindingSet();
+		bs.setBinding("graph", cv.gd().getGraph());
+		bs.setBinding("sourceClass", source.getClazz());
+		bs.setBinding("predicate", predicatePartition.getPredicate());
+		setQuery(rawQuery, bs);
+
+		try (TupleQueryResult triples = Helper.runTupleQuery(getQuery(), connection)) {
+			if (triples.hasNext()) {
+				return ((Literal) triples.next().getBinding("count").getValue()).longValue();
 			}
 		} catch (MalformedQueryException | QueryEvaluationException e) {
 			log.error("query failed", e);
